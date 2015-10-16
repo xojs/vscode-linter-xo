@@ -3,7 +3,6 @@
 import { runSingleFileValidator, SingleFileValidator, InitializeResponse, IValidationRequestor, IDocument, Diagnostic, Severity, Files } from 'vscode-languageworker';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as objectAssign from 'object-assign';
 
 let lintText: any = null;
 let lintConfig: Object = null;
@@ -52,7 +51,10 @@ let validator : SingleFileValidator = {
 			const fsPath = Files.uriToFilePath(uri);
 			const contents = document.getText();
 
-			const report = lintText(contents, objectAssign({cwd: path.dirname(fsPath)}, lintConfig));
+			let options:any = lintConfig || {};
+			options.cwd = path.dirname(fsPath);
+
+			const report = lintText(contents, options);
 
 			let diagnostics: Diagnostic[] = [];
 
