@@ -54,7 +54,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "tsc",
-    "compile": "tsc -watch -p ./"
+    "vscode:prepublish": "./node_modules/.bin/tsc",
+    "compile": "./node_modules/.bin/tsc -watch -p ./"
   }
 }
