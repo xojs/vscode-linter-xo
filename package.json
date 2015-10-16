@@ -1,0 +1,60 @@
+{
+  "name": "linter-xo",
+  "version": "0.1.0",
+  "publisher": "SamVerschueren",
+  "engines": {
+    "vscode": "*"
+  },
+  "dependencies": {
+    "object-assign": "^4.0.1",
+    "vscode-languageworker": "*",
+    "xo": "^0.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^1.6.2"
+  },
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "xo configuration",
+      "properties": {
+        "xo.enable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Control whether xo is enabled or not."
+        },
+        "xo.options": {
+          "type": "object",
+          "default": {},
+          "description": "The xo options object to provide args to the xo command."
+        }
+      }
+    },
+    "languageWorkers": {
+      "activate": [
+        "onLanguage:javascript",
+        "onLanguage:javascriptreact"
+      ],
+      "executable": {
+        "run": {
+          "nodeModule": "out/extension.js"
+        },
+        "debug": {
+          "nodeModule": "out/extension.js",
+          "execArgv": [
+            "--nolazy",
+            "--debug=5871"
+          ]
+        }
+      },
+      "watchFiles": [
+        "**/*.js"
+      ],
+      "settings": "xo"
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "tsc",
+    "compile": "tsc -watch -p ./"
+  }
+}
