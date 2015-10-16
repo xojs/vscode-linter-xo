@@ -1,7 +1,7 @@
 'use strict';
 var vscode_languageworker_1 = require('vscode-languageworker');
 var path = require('path');
-var objectAssign = require('object-assign');
+var object_assign_1 = require('object-assign');
 var lintText = null;
 var lintConfig = null;
 function makeDiagnostic(problem) {
@@ -45,7 +45,7 @@ var validator = {
             var uri = document.uri;
             var fsPath = vscode_languageworker_1.Files.uriToFilePath(uri);
             var contents = document.getText();
-            var report = lintText(contents, objectAssign({ cwd: path.dirname(fsPath) }, lintConfig));
+            var report = lintText(contents, object_assign_1["default"]({ cwd: path.dirname(fsPath) }, lintConfig));
             var diagnostics = [];
             report.results.forEach(function (result) {
                 result.messages.forEach(function (message) {

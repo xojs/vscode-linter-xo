@@ -2,9 +2,9 @@
 
 import { runSingleFileValidator, SingleFileValidator, InitializeResponse, IValidationRequestor, IDocument, Diagnostic, Severity, Files } from 'vscode-languageworker';
 
-import path = require('path');
-import fs = require('fs');
-import objectAssign = require('object-assign');
+import * as path from 'path';
+import * as fs from 'fs';
+import objectAssign from 'object-assign';
 
 let lintText: any = null;
 let lintConfig: Object = null;
