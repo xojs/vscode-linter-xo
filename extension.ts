@@ -1,10 +1,9 @@
 'use strict';
 
 import { runSingleFileValidator, SingleFileValidator, InitializeResponse, IValidationRequestor, IDocument, Diagnostic, Severity, Files } from 'vscode-languageworker';
-
 import * as path from 'path';
 import * as fs from 'fs';
-import objectAssign from 'object-assign';
+import * as objectAssign from 'object-assign';
 
 let lintText: any = null;
 let lintConfig: Object = null;
