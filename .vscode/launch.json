@@ -1,17 +1,18 @@
+
+// A launch configuration that compiles the extension and then opens it inside a new window
 {
   "version": "0.1.0",
-  // List of configurations. Add new configurations or edit existing ones.
   "configurations": [
     {
-      "name": "Attach to Language Worker",
-      "type": "node",
-      "request": "attach",
-      // TCP/IP address. Default is "localhost".
-      "address": "localhost",
-      // Port to attach to.
-      "port": 5871,
+      "name": "Launch Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--extensionDevelopmentPath=${workspaceRoot}" ],
+      "stopOnEntry": false,
+      "sourceMaps": true,
       "outDir": "out",
-      "sourceMaps": true
+      "preLaunchTask": "npm"
     }
   ]
 }
