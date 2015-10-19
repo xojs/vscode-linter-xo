@@ -1,6 +1,6 @@
 {
   "name": "linter-xo",
-  "version": "0.1.1",  
+  "version": "0.1.1",
   "description": "Linter for XO",
   "publisher": "samverschueren",
   "engines": {
@@ -16,7 +16,7 @@
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "xo configuration",
+      "title": "XO configuration",
       "properties": {
         "xo.enable": {
           "type": "boolean",
