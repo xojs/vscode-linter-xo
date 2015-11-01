@@ -1,6 +1,6 @@
 {
   "name": "linter-xo",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Linter for XO",
   "publisher": "samverschueren",
   "engines": {
