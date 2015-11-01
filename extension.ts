@@ -27,7 +27,7 @@ let validator : SingleFileValidator = {
 		return Files.resolveModule(rootFolder, 'xo').then(xo => {
 			lintText = xo.lintText;
 			return null;
-		}, (error) => {
+		}, () => {
 			return Promise.reject({
 				success: false,
 				message: 'Failed to load xo library. Please install xo in your workspace folder using \'npm install xo\' and then press Retry.',
