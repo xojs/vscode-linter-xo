@@ -5,9 +5,9 @@
 
 ## Install
 
-Press <kbd>F1</kbd> and narrow down the list commands by typing `extension`. Pick `Extensions: Install Extension`.
+Press `F1` and narrow down the list commands by typing `extension`. Pick `Extensions: Install Extension`.
 
-![](https://github.com/SamVerschueren/vscode-linter-xo/raw/master/screenshot.png)
+![](https://github.com/SamVerschueren/vscode-linter-xo/raw/master/xo/media/install.gif)
 
 Simply pick the `linter-xo` extension from the list
 
@@ -32,7 +32,7 @@ You can also pass in extra options via the settings file.
 }
 ```
 
-Settings can also be set in the `package.json` file.
+Or via the `package.json` file.
 
 ```json
 {
