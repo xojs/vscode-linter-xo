@@ -4,4 +4,4 @@ typings/**
 **/*.map
 .gitignore
 tsconfig.json
-screenshot.png
+logo.svg

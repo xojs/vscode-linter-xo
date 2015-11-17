@@ -1,0 +1,10 @@
+{
+  "files.exclude": {
+    "out": true,
+    "server": true
+  },
+  "search.exclude": {
+    "out": true,
+    "server": true
+  }
+}

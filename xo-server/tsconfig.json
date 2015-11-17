@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
+    "target": "ES5",
     "module": "commonjs",
-    "outDir": "out",
-    "sourceMap": true
+    "moduleResolution": "node",
+    "outDir": "../xo/server"
   },
   "exclude": [
     "node_modules"

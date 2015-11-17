@@ -1,0 +1,58 @@
+{
+  "name": "linter-xo",
+  "version": "0.1.2",
+  "description": "Linter for XO",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SamVerschueren/vscode-linter-xo"
+  },
+  "author": {
+    "name": "Sam Verschueren",
+    "email": "sam.verschueren@gmail.com",
+    "url": "github.com/SamVerschueren"
+  },
+  "publisher": "samverschueren",
+  "icon": "logo.svg",
+  "categories": [
+    "Linters"
+  ],
+  "engines": {
+    "vscode": "0.10.x"
+  },
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact"
+  ],
+  "main": "./out/extension",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "XO configuration",
+      "properties": {
+        "xo.enable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Control whether xo is enabled or not."
+        },
+        "xo.options": {
+          "type": "object",
+          "default": {},
+          "description": "The xo options object to provide args to the xo command."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "cd ../xo-server && npm run compile && cd ../xo && npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "dependencies": {
+    "vscode-languageclient": "0.10.x"
+  },
+  "devDependencies": {
+    "vscode": "0.10.x",
+    "typescript": "^1.6.2"
+  }
+}

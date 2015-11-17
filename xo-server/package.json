@@ -1,0 +1,28 @@
+{
+  "name": "linter-xo",
+  "version": "0.1.2",
+  "description": "Linter for XO",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SamVerschueren/vscode-linter-xo"
+  },
+  "author": {
+    "name": "Sam Verschueren",
+    "email": "sam.verschueren@gmail.com",
+    "url": "github.com/SamVerschueren"
+  },
+  "engines": {
+    "node": "*"
+  },
+  "scripts": {
+    "compile": "installServerIntoExtension ../xo ./package.json ./tsconfig.json && tsc -p ./",
+    "watch": "installServerIntoExtension ../xo ./package.json ./tsconfig.json && tsc --watch -p ./"
+  },
+  "dependencies": {
+    "vscode-languageserver": "0.10.x"
+  },
+  "devDependencies": {
+    "typescript": "^1.6.2"
+  }
+}
