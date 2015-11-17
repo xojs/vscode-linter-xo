@@ -16,7 +16,7 @@
     "url": "github.com/SamVerschueren"
   },
   "publisher": "samverschueren",
-  "icon": "logo.svg",
+  "icon": "icon.svg",
   "categories": [
     "Linters"
   ],
