@@ -7,6 +7,9 @@
     "type": "git",
     "url": "https://github.com/SamVerschueren/vscode-linter-xo"
   },
+  "bugs": {
+    "url": "https://github.com/SamVerschueren/vscode-linter-xo/issues"
+	},
   "author": {
     "name": "Sam Verschueren",
     "email": "sam.verschueren@gmail.com",
