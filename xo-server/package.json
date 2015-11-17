@@ -1,6 +1,6 @@
 {
   "name": "linter-xo",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "Linter for XO",
   "license": "MIT",
   "repository": {
