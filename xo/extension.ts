@@ -21,7 +21,7 @@ export function activate(context: ExtensionContext) {
 			configurationSection: 'xo',
 			fileEvents: workspace.createFileSystemWatcher('package.json')
 		}
-	}
+	};
 
 	let client = new LanguageClient('XO Linter', serverOptions, clientOptions);
 	context.subscriptions.push(new SettingMonitor(client, 'xo.enable').start());
