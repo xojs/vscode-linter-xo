@@ -44,7 +44,13 @@
           "description": "The xo options object to provide args to the xo command."
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "XO:Fix",
+        "title": "XO:Fix"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "cd ../xo-server && npm run compile && cd ../xo && npm run compile",

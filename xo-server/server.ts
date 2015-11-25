@@ -65,6 +65,17 @@ class Linter {
 		this.connection.onDidChangeWatchedFiles(params => {
 			this.validateAll();
 		});
+		this.connection.onRequest({method: 'xo:fix'}, (uri: string) => {
+			const fsPath = Files.uriToFilePath(uri);
+			const contents = fs.readFileSync(fsPath).toString('utf8');
+
+			const report = this.lib.lintText(contents, {
+				cwd: path.dirname(fsPath),
+				fix: true
+			});
+
+			return report.results[0].output;
+		});
 	}
 
 	public listen(): void {
