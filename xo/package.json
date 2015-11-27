@@ -9,7 +9,7 @@
   },
   "bugs": {
     "url": "https://github.com/SamVerschueren/vscode-linter-xo/issues"
-	},
+  },
   "author": {
     "name": "Sam Verschueren",
     "email": "sam.verschueren@gmail.com",
@@ -47,8 +47,8 @@
     },
     "commands": [
       {
-        "command": "XO:Fix",
-        "title": "XO:Fix"
+        "command": "xo.fix",
+        "title": "XO › Fix"
       }
     ]
   },
@@ -58,7 +58,8 @@
     "watch": "tsc -watch -p ./"
   },
   "dependencies": {
-    "vscode-languageclient": "0.10.x"
+    "vscode-languageclient": "0.10.x",
+    "vscode-set-text": "^1.0.0"
   },
   "devDependencies": {
     "vscode": "0.10.x",

@@ -4,6 +4,8 @@ import * as path from 'path';
 import { workspace, window, commands, Disposable, ExtensionContext, Range, Position } from 'vscode';
 import { LanguageClient, LanguageClientOptions, SettingMonitor } from 'vscode-languageclient';
 
+import setText from 'vscode-set-text';
+
 export function activate(context: ExtensionContext) {
 
 	// We need to go one level up since an extension compile the js code into
@@ -25,7 +27,7 @@ export function activate(context: ExtensionContext) {
 
 	let client = new LanguageClient('XO Linter', serverOptions, clientOptions);
 
-	const disposable = commands.registerCommand('XO:Fix', () => {
+	const disposable = commands.registerCommand('xo.fix', () => {
 		const editor = window.activeTextEditor;
 
 		if (editor) {
@@ -35,20 +37,9 @@ export function activate(context: ExtensionContext) {
 				.then(() => {
 					return client.sendRequest({method: 'xo:fix'}, document.uri);
 				})
-				.then((result: string) =>
-					new Promise(resolve => {
-						editor.edit(builder => {
-							const lastLine = document.lineAt(document.lineCount - 2);
-
-							const start = new Position(0, 0);
-							const end = new Position(document.lineCount - 1, lastLine.text.length);
-
-							builder.replace(new Range(start, end), result);
-
-							resolve();
-						});
-					})
-				)
+				.then((result: string) => {
+					return setText(result);
+				})
 				.catch(err => {
 					window.showErrorMessage(err.message || err);
 				});
