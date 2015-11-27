@@ -3,15 +3,25 @@
 > Linter for [XO](https://github.com/sindresorhus/xo)
 
 
-## Install
-
-Press `F1` and narrow down the list commands by typing `extension`. Pick `Extensions: Install Extension`.
-
-![](https://github.com/SamVerschueren/vscode-linter-xo/raw/master/xo/media/install.gif)
-
-Simply pick the `linter-xo` extension from the list
-
 ## Usage
+
+Install [XO](https://github.com/sindresorhus/xo) in your workspace folder.
+
+```
+$ npm install --save-dev xo
+```
+
+
+## Fix issues
+
+Press `F1` and choose `XO › Fix`
+
+![](https://github.com/SamVerschueren/vscode-linter-xo/raw/master/xo/media/fix.gif)
+
+> Tip: Bind a keyboard shortcut to `xo.fix`
+
+
+## Settings
 
 Enable the linter in the VS Code Settings.
 
