@@ -21,7 +21,7 @@
     "Linters"
   ],
   "engines": {
-    "vscode": "0.10.x"
+    "vscode": "^0.10.8"
   },
   "activationEvents": [
     "onLanguage:javascript",
@@ -53,16 +53,18 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "cd ../xo-server && npm run compile && cd ../xo && npm run compile",
+    "vscode:prepublish": "npm run update-vscode && cd ../xo-server && npm run compile && cd ../xo && npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "update-vscode": "node ./node_modules/vscode/bin/install",
+    "postinstall": "npm run update-vscode"
   },
   "dependencies": {
     "vscode-languageclient": "^2.0.0",
     "vscode-set-text": "^1.0.0"
   },
   "devDependencies": {
-    "vscode": "0.10.x",
-    "typescript": "^1.6.2"
+    "typescript": "^1.8.10",
+    "vscode": "^0.11.10"
   }
 }
