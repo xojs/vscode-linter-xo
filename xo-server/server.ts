@@ -64,8 +64,7 @@ class Linter {
 		this.connection.onDidChangeWatchedFiles(params => {
 			this.validateAll();
 		});
-		this.connection.onRequest({method: 'xo:fix'}, (uri: string) => {
-			const fsPath = Files.uriToFilePath(uri);
+		this.connection.onRequest({method: 'xo:fix'}, (fsPath: string) => {
 			const contents = fs.readFileSync(fsPath).toString('utf8');
 
 			const report = this.lib.lintText(contents, {

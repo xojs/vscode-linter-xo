@@ -33,7 +33,7 @@ export function activate(context: ExtensionContext) {
 
 			Promise.resolve()
 				.then(() => {
-					return client.sendRequest({method: 'xo:fix'}, document.uri);
+					return client.sendRequest({method: 'xo:fix'}, document.uri.fsPath);
 				})
 				.then((result: string) => {
 					return setText(result);
