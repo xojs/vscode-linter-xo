@@ -127,13 +127,7 @@ class Linter {
 
 		const report = this.lib.lintText(contents, options);
 
-		let diagnostics: Diagnostic[] = [];
-
-		report.results.forEach(result => {
-			result.messages.forEach(message => {
-				diagnostics.push(makeDiagnostic(message));
-			});
-		});
+		const diagnostics: Diagnostic[] = report.results[0].messages.map(makeDiagnostic);
 
 		this.connection.sendDiagnostics({uri: uri, diagnostics});
 	}
