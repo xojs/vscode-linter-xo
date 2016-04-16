@@ -69,6 +69,7 @@ class Linter {
 
 			const report = this.lib.lintText(contents, {
 				cwd: path.dirname(fsPath),
+				filename: fsPath,
 				fix: true
 			});
 
@@ -123,6 +124,7 @@ class Linter {
 
 		let options:any = this.options;
 		options.cwd = path.dirname(fsPath);
+		options.filename = fsPath
 
 		const report = this.lib.lintText(contents, options);
 
