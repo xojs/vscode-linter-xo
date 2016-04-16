@@ -1,16 +1,15 @@
 'use strict';
-
+import * as path from 'path';
+import * as fs from 'fs';
 import {
 	createConnection, IConnection,
-	ResponseError, RequestType, IRequestHandler, NotificationType, INotificationHandler,
+	ResponseError, RequestType, NotificationType,
 	InitializeParams, InitializeResult, InitializeError,
 	DidChangeConfigurationParams, DidChangeWatchedFilesParams,
 	Diagnostic, DiagnosticSeverity, Position, Files,
-	TextDocuments, ITextDocument,
+	TextDocument, TextDocuments,
 	ErrorMessageTracker
 } from 'vscode-languageserver';
-import * as path from 'path';
-import * as fs from 'fs';
 
 interface Settings {
 	xo: {
@@ -110,7 +109,7 @@ class Linter {
 		tracker.sendErrors(this.connection);
 	}
 
-	private validateSingle(document: ITextDocument): void {
+	private validateSingle(document: TextDocument): void {
 		try {
 			this.validate(document);
 		} catch (err) {
@@ -118,7 +117,7 @@ class Linter {
 		}
 	}
 
-	private validate(document: ITextDocument): void {
+	private validate(document: TextDocument): void {
 		const uri = document.uri;
 		const fsPath = Files.uriToFilePath(uri);
 		const contents = document.getText();
@@ -139,7 +138,7 @@ class Linter {
 		this.connection.sendDiagnostics({uri: uri, diagnostics});
 	}
 
-	private getMessage(err: any, document: ITextDocument): string {
+	private getMessage(err: any, document: TextDocument): string {
 		if (typeof err.message === 'string' || err.message instanceof String) {
 			return <string>err.message;
 		} else {

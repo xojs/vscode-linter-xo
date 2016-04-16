@@ -58,7 +58,7 @@
     "watch": "tsc -watch -p ./"
   },
   "dependencies": {
-    "vscode-languageclient": "0.10.x",
+    "vscode-languageclient": "^2.0.0",
     "vscode-set-text": "^1.0.0"
   },
   "devDependencies": {

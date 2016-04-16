@@ -1,18 +1,16 @@
 'use strict';
-
 import * as path from 'path';
 import { workspace, window, commands, Disposable, ExtensionContext, Range, Position } from 'vscode';
-import { LanguageClient, LanguageClientOptions, SettingMonitor } from 'vscode-languageclient';
-
+import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions } from 'vscode-languageclient';
 import setText from 'vscode-set-text';
 
 export function activate(context: ExtensionContext) {
 
 	// We need to go one level up since an extension compile the js code into
 	// the output folder.
-	const serverModule = path.join(__dirname, '..', 'server', 'server.js');
+	const serverModule = context.asAbsolutePath(path.join('server', 'server.js'));
 	const debugOptions = {execArgv: ["--nolazy", "--debug=6004"]};
-	const serverOptions = {
+	const serverOptions: ServerOptions = {
 		run: {module: serverModule},
 		debug: {module: serverModule, options: debugOptions}
 	};
