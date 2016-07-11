@@ -52,6 +52,7 @@ class Linter {
 		this.connection = createConnection(process.stdin, process.stdout);
 		this.documents = new TextDocuments();
 		this.documents.onDidChangeContent(event => this.validateSingle(event.document));
+		this.documents.onDidClose(event => this.connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] }));
 		this.documents.listen(this.connection);
 
 		this.connection.onInitialize(params => this.initialize(params));
