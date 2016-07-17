@@ -14,7 +14,7 @@ $ npm install --save-dev xo
 
 ## Fix issues
 
-Press `F1` and choose `XO › Fix`
+Press `F1` and choose `XO: Fix all auto-fixable problems`
 
 ![](https://github.com/SamVerschueren/vscode-linter-xo/raw/master/xo/media/fix.gif)
 

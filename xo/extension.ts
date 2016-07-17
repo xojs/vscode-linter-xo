@@ -1,49 +1,78 @@
 'use strict';
 import * as path from 'path';
-import { workspace, window, commands, Disposable, ExtensionContext, Range, Position } from 'vscode';
-import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions } from 'vscode-languageclient';
-import setText from 'vscode-set-text';
+import { workspace, window, commands, Disposable, ExtensionContext, Command } from 'vscode';
+import { LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind, TextDocumentIdentifier, TextEdit, Protocol2Code } from 'vscode-languageclient';
+
+interface AllFixesParams {
+	textDocument: TextDocumentIdentifier;
+}
+
+interface AllFixesResult {
+	documentVersion: number,
+	edits: TextEdit[]
+}
+
+namespace AllFixesRequest {
+	export const type: RequestType<AllFixesParams, AllFixesResult, void> = { get method() { return 'textDocument/xo/allFixes'; } };
+}
 
 export function activate(context: ExtensionContext) {
-
 	// We need to go one level up since an extension compile the js code into
 	// the output folder.
-	const serverModule = context.asAbsolutePath(path.join('server', 'server.js'));
-	const debugOptions = {execArgv: ["--nolazy", "--debug=6004"]};
-	const serverOptions: ServerOptions = {
-		run: {module: serverModule},
-		debug: {module: serverModule, options: debugOptions}
+	const serverModule = path.join(__dirname, '..', 'server', 'server.js');
+	const debugOptions = {execArgv: ['--nolazy', '--debug=6004']};
+	const serverOptions = {
+		run: {module: serverModule, transport: TransportKind.ipc},
+		debug: {module: serverModule, transport: TransportKind.ipc, options: debugOptions}
 	};
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: ['javascript', 'javascriptreact'],
 		synchronize: {
 			configurationSection: 'xo',
-			fileEvents: workspace.createFileSystemWatcher('package.json')
+			fileEvents: [
+				workspace.createFileSystemWatcher('**/package.json')
+			]
 		}
-	};
-
+	}
 	let client = new LanguageClient('XO Linter', serverOptions, clientOptions);
 
-	const disposable = commands.registerCommand('xo.fix', () => {
-		const editor = window.activeTextEditor;
+	function applyTextEdits(uri: string, documentVersion: number, edits: TextEdit[]) {
+		const textEditor = window.activeTextEditor;
+		if (textEditor && textEditor.document.uri.toString() === uri) {
+			if (textEditor.document.version !== documentVersion) {
+				window.showInformationMessage(`XO fixes are outdated and can't be applied to the document.`);
+			}
 
-		if (editor) {
-			const document = editor.document;
-
-			Promise.resolve()
-				.then(() => {
-					return client.sendRequest({method: 'xo:fix'}, document.uri.fsPath);
-				})
-				.then((result: string) => {
-					return setText(result);
-				})
-				.catch(err => {
-					window.showErrorMessage(err.message || err);
-				});
+			textEditor.edit(mutator => {
+				for(const edit of edits) {
+					mutator.replace(Protocol2Code.asRange(edit.range), edit.newText);
+				}
+			}).then((success) => {
+				if (!success) {
+					window.showErrorMessage('Failed to apply XO fixes to the document. Please consider opening an issue with steps to reproduce.');
+				}
+			});
 		}
-	});
+	}
 
-	context.subscriptions.push(disposable);
-	context.subscriptions.push(new SettingMonitor(client, 'xo.enable').start());
+	function fixAllProblems() {
+		let textEditor = window.activeTextEditor;
+		if (!textEditor) {
+			return;
+		}
+		let uri: string = textEditor.document.uri.toString();
+		client.sendRequest(AllFixesRequest.type, { textDocument: { uri }}).then((result) => {
+			if (result) {
+				applyTextEdits(uri, result.documentVersion, result.edits);
+			}
+		}, (error) => {
+			window.showErrorMessage('Failed to apply XO fixes to the document. Please consider opening an issue with steps to reproduce.');
+		});
+	}
+
+	context.subscriptions.push(
+		new SettingMonitor(client, 'xo.enable').start(),
+		commands.registerCommand('xo.fix', fixAllProblems)
+	);
 }

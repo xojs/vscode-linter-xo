@@ -16,11 +16,11 @@
     "node": "*"
   },
   "scripts": {
-    "compile": "installServerIntoExtension ../xo ./package.json ./tsconfig.json && tsc -p ./",
-    "watch": "installServerIntoExtension ../xo ./package.json ./tsconfig.json && tsc --watch -p ./"
+    "compile": "installServerIntoExtension ../xo ./package.json ./tsconfig.json && tsc -p .",
+    "watch": "installServerIntoExtension ../xo ./package.json ./tsconfig.json && tsc --watch -p ."
   },
   "dependencies": {
-    "vscode-languageserver": "^2.0.0"
+    "vscode-languageserver": "^2.2.1"
   },
   "devDependencies": {
     "typescript": "^1.8.10"

@@ -47,8 +47,9 @@
     },
     "commands": [
       {
-        "command": "xo.fix",
-        "title": "XO › Fix"
+        "title": "Fix all auto-fixable problems",
+				"category": "XO",
+				"command": "xo.fix"
       }
     ]
   },
@@ -56,15 +57,14 @@
     "vscode:prepublish": "npm run update-vscode && cd ../xo-server && npm run compile && cd ../xo && npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "update-vscode": "node ./node_modules/vscode/bin/install",
+		"update-vscode": "node ./node_modules/vscode/bin/install",
     "postinstall": "npm run update-vscode"
   },
   "dependencies": {
-    "vscode-languageclient": "^2.0.0",
-    "vscode-set-text": "^1.0.0"
+    "vscode-languageclient": "^2.3.0"
   },
   "devDependencies": {
     "typescript": "^1.8.10",
-    "vscode": "^0.11.10"
+    "vscode": "^0.11.14"
   }
 }
