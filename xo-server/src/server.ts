@@ -14,6 +14,7 @@ import { makeDiagnostic, computeKey } from './utils';
 import { Fixes, AutoFix, ESLintProblem } from './fixes';
 import { Map } from './map';
 import { Settings } from './settings';
+import { Package } from './package';
 
 interface AllFixesParams {
 	textDocument: TextDocumentIdentifier;
@@ -32,6 +33,7 @@ class Linter {
 
 	private connection: IConnection;
 	private documents: TextDocuments;
+	private package: Package;
 
 	private workspaceRoot: string;
 	private lib: any;
@@ -73,16 +75,16 @@ class Linter {
 
 		this.connection.onRequest(AllFixesRequest.type, (params) => {
 			let result: AllFixesResult = null;
-			let uri = params.textDocument.uri;
-			let textDocument = this.documents.get(uri);
-			let edits = this.codeActions[uri];
+			const uri = params.textDocument.uri;
+			const textDocument = this.documents.get(uri);
+			const edits = this.codeActions[uri];
 
 			function createTextEdit(editInfo: AutoFix): TextEdit {
 				return TextEdit.replace(Range.create(textDocument.positionAt(editInfo.edit.range[0]), textDocument.positionAt(editInfo.edit.range[1])), editInfo.edit.text || '');
 			}
 
 			if (edits) {
-				let fixes = new Fixes(edits);
+				const fixes = new Fixes(edits);
 				if (!fixes.isEmpty()) {
 					result = {
 						documentVersion: fixes.getDocumentVersion(),
@@ -99,68 +101,100 @@ class Linter {
 		this.connection.listen();
 	}
 
-	private initialize(params): Thenable<InitializeResult | ResponseError<InitializeError>> {
+	private initialize(params) {
 		this.workspaceRoot = params.rootPath;
 
-		return Files.resolveModule(this.workspaceRoot, 'xo').then((xo: any) => {
-			if (!xo.lintText) {
-				return new ResponseError(99, 'The XO library doesn\'t export a lintText method.', {retry: false});
-			}
+		this.package = new Package(this.workspaceRoot);
 
-			this.lib = xo;
-
-			return {
-				capabilities: {
-					textDocumentSync: this.documents.syncKind,
-					codeActionProvider: true
-				}
-			};
-		}, err => {
-			throw new ResponseError<InitializeError>(99, 'Failed to load xo library. Please install xo in your workspace folder using \'npm install xo\' and then press Retry.', {retry: true});
-		});
+		return this.resolveModule();
 	}
 
-	private validateMany(documents: TextDocument[]): void {
-		let tracker = new ErrorMessageTracker();
-		documents.forEach(document => {
-			try {
-				this.validate(document);
-			} catch (err) {
-				tracker.add(this.getMessage(err, document));
+	private resolveModule(): Thenable<InitializeResult | ResponseError<InitializeError>> {
+		const result: InitializeResult = {
+			capabilities: {
+				textDocumentSync: this.documents.syncKind,
+				codeActionProvider: true
 			}
-		});
-		tracker.sendErrors(this.connection);
-	}
+		};
 
-	private validateSingle(document: TextDocument): void {
-		try {
-			this.validate(document);
-		} catch (err) {
-			this.connection.window.showErrorMessage(this.getMessage(err, document));
+		if (this.lib) {
+			return Promise.resolve(result);
 		}
+
+		return Files.resolveModule(this.workspaceRoot, 'xo').then(
+			(xo: any) => {
+				if (!xo.lintText) {
+					return new ResponseError(99, 'The XO library doesn\'t export a lintText method.', {retry: false});
+				}
+
+				this.lib = xo;
+
+				return result;
+			},
+			(err) => {
+				if (this.package.isDependency('xo')) {
+					throw new ResponseError<InitializeError>(99, 'Failed to load XO library. Make sure XO is installed in your workspace folder using \'npm install xo\' and then press Retry.', {retry: true});
+				}
+			});
 	}
 
-	private validate(document: TextDocument): void {
-		const uri = document.uri;
-		const fsPath = Files.uriToFilePath(uri);
-		const contents = document.getText();
+	private validateMany(documents: TextDocument[]): Thenable<void> {
+		const tracker = new ErrorMessageTracker();
 
-		const options:any = this.options;
-		options.cwd = path.dirname(fsPath);
-		options.filename = fsPath
-
-		const report = this.lib.lintText(contents, options);
-
-		// Clean previously computed code actions.
-		delete this.codeActions[uri];
-
-		const diagnostics: Diagnostic[] = report.results[0].messages.map(problem => {
-			const diagnostic = makeDiagnostic(problem);
-			this.recordCodeAction(document, diagnostic, problem);
-			return diagnostic;
+		const promises = documents.map(document => {
+			return this.validate(document).then(
+				() => { },
+				err => {
+					tracker.add(this.getMessage(err, document));
+				}
+			)
 		});
 
-		this.connection.sendDiagnostics({uri, diagnostics});
+		return Promise.all(promises)
+			.then(() => {
+				tracker.sendErrors(this.connection);
+			});
+	}
+
+	private validateSingle(document: TextDocument): Thenable<void> {
+		return this.validate(document)
+			.then(
+				() => { },
+				err => {
+					this.connection.window.showErrorMessage(this.getMessage(err, document));
+				}
+			);
+	}
+
+	private validate(document: TextDocument): Thenable<void> {
+		if (!this.package.isDependency('xo')) {
+			// Do not validate if `xo` is not a dependency
+			return Promise.resolve();
+		}
+
+		return this.resolveModule()
+			.then(() => {
+				const uri = document.uri;
+				const fsPath = Files.uriToFilePath(uri);
+				const contents = document.getText();
+
+				const options:any = this.options;
+				options.cwd = path.dirname(fsPath);
+				options.filename = fsPath
+
+				const report = this.lib.lintText(contents, options);
+
+				// Clean previously computed code actions.
+				delete this.codeActions[uri];
+
+				const diagnostics: Diagnostic[] = report.results[0].messages.map(problem => {
+					const diagnostic = makeDiagnostic(problem);
+					this.recordCodeAction(document, diagnostic, problem);
+					return diagnostic;
+				});
+
+				this.connection.sendDiagnostics({uri, diagnostics});
+			});
 	}
 
 	private recordCodeAction(document: TextDocument, diagnostic: Diagnostic, problem: ESLintProblem): void {

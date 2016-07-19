@@ -35,7 +35,8 @@ export function activate(context: ExtensionContext) {
 			]
 		}
 	}
-	let client = new LanguageClient('XO Linter', serverOptions, clientOptions);
+
+	const client = new LanguageClient('XO Linter', serverOptions, clientOptions);
 
 	function applyTextEdits(uri: string, documentVersion: number, edits: TextEdit[]) {
 		const textEditor = window.activeTextEditor;
@@ -57,11 +58,12 @@ export function activate(context: ExtensionContext) {
 	}
 
 	function fixAllProblems() {
-		let textEditor = window.activeTextEditor;
+		const textEditor = window.activeTextEditor;
 		if (!textEditor) {
 			return;
 		}
-		let uri: string = textEditor.document.uri.toString();
+
+		const uri: string = textEditor.document.uri.toString();
 		client.sendRequest(AllFixesRequest.type, { textDocument: { uri }}).then((result) => {
 			if (result) {
 				applyTextEdits(uri, result.documentVersion, result.edits);

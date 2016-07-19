@@ -20,6 +20,7 @@
     "watch": "installServerIntoExtension ../xo ./package.json ./tsconfig.json && tsc --watch -p ."
   },
   "dependencies": {
+    "load-json-file": "^2.0.0",
     "vscode-languageserver": "^2.2.1"
   },
   "devDependencies": {

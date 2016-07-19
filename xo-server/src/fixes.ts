@@ -24,6 +24,9 @@ export interface AutoFix {
 	edit: ESLintAutoFixEdit;
 }
 
+/**
+ * Credits to vscode-eslint (https://github.com/Microsoft/vscode-eslint)
+ */
 export class Fixes {
 	private keys: string[];
 
