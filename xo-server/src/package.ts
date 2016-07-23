@@ -1,7 +1,6 @@
 'use strict';
-import * as fs from 'fs';
 import * as path from 'path';
-const loadJsonFile = require('load-json-file');
+import * as loadJsonFile from 'load-json-file';
 
 export class Package {
 
@@ -12,7 +11,7 @@ export class Package {
 	}
 
 	isDependency(name: string) {
-		const pkg = JSON.parse(fs.readFileSync(path.join(this.workspaceRoot, 'package.json'), 'utf8'));
+		const pkg = loadJsonFile.sync(path.join(this.workspaceRoot, 'package.json'));
 		const deps = pkg.dependencies || {};
 		const devDeps = pkg.devDependencies || {};
 
