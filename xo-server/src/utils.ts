@@ -1,4 +1,3 @@
-'use strict';
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
 
 function parseSeverity(severity: number): number {

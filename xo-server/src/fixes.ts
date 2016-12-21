@@ -1,4 +1,3 @@
-'use strict';
 import { Diagnostic } from 'vscode-languageserver';
 import { Map } from './map';
 import { computeKey } from './utils';

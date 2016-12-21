@@ -1,4 +1,3 @@
-'use strict';
 import * as path from 'path';
 import { workspace, window, commands, ExtensionContext } from 'vscode';
 import { LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind, TextDocumentIdentifier, TextEdit, Protocol2Code } from 'vscode-languageclient';
