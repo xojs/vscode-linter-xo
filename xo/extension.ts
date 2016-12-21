@@ -1,6 +1,6 @@
 'use strict';
 import * as path from 'path';
-import { workspace, window, commands, Disposable, ExtensionContext, Command } from 'vscode';
+import { workspace, window, commands, ExtensionContext } from 'vscode';
 import { LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind, TextDocumentIdentifier, TextEdit, Protocol2Code } from 'vscode-languageclient';
 
 interface AllFixesParams {
@@ -68,7 +68,7 @@ export function activate(context: ExtensionContext) {
 			if (result) {
 				applyTextEdits(uri, result.documentVersion, result.edits);
 			}
-		}, (error) => {
+		}, () => {
 			window.showErrorMessage('Failed to apply XO fixes to the document. Please consider opening an issue with steps to reproduce.');
 		});
 	}

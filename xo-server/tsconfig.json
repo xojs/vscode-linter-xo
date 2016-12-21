@@ -1,10 +1,16 @@
+
 {
 	"compilerOptions": {
-		"target": "ES5",
+		"target": "es6",
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"sourceMap": true,
-		"outDir": "../xo/server"
+		"outDir": "../xo/server",
+		"lib": ["es6"],
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
 	},
 	"exclude": [
 		"node_modules"

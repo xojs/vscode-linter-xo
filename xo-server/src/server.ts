@@ -1,13 +1,11 @@
 'use strict';
 import * as path from 'path';
-import * as fs from 'fs';
 import {
 	createConnection, IConnection,
-	ResponseError, RequestType, RequestHandler, NotificationType, NotificationHandler,
-	InitializeResult, InitializeError,
-	Diagnostic, DiagnosticSeverity, Position, Range, Files,
-	TextDocuments, TextDocument, TextDocumentSyncKind, TextEdit, TextDocumentIdentifier,
-	Command,
+	ResponseError, RequestType, InitializeResult,
+	InitializeError,
+	Diagnostic, Range, Files,
+	TextDocuments, TextDocument, TextEdit, TextDocumentIdentifier,
 	ErrorMessageTracker, IPCMessageReader, IPCMessageWriter
 } from 'vscode-languageserver';
 import { makeDiagnostic, computeKey } from './utils';
@@ -69,7 +67,7 @@ class Linter {
 			this.validateMany(this.documents.all());
 		});
 
-		this.connection.onDidChangeWatchedFiles(params => {
+		this.connection.onDidChangeWatchedFiles(() => {
 			this.validateMany(this.documents.all());
 		});
 
@@ -101,7 +99,7 @@ class Linter {
 		this.connection.listen();
 	}
 
-	private initialize(params) {
+	private initialize(params: {rootPath: string}) {
 		this.workspaceRoot = params.rootPath;
 
 		this.package = new Package(this.workspaceRoot);
@@ -131,7 +129,7 @@ class Linter {
 
 				return result;
 			},
-			(err) => {
+			() => {
 				if (this.package.isDependency('xo')) {
 					throw new ResponseError<InitializeError>(99, 'Failed to load XO library. Make sure XO is installed in your workspace folder using \'npm install xo\' and then press Retry.', {retry: true});
 				}
@@ -160,7 +158,7 @@ class Linter {
 		return this.validate(document)
 			.then(
 				() => { },
-				err => {
+				(err: Error) => {
 					this.connection.window.showErrorMessage(this.getMessage(err, document));
 				}
 			);
@@ -187,7 +185,7 @@ class Linter {
 				// Clean previously computed code actions.
 				delete this.codeActions[uri];
 
-				const diagnostics: Diagnostic[] = report.results[0].messages.map(problem => {
+				const diagnostics: Diagnostic[] = report.results[0].messages.map((problem: any) => {
 					const diagnostic = makeDiagnostic(problem);
 					this.recordCodeAction(document, diagnostic, problem);
 					return diagnostic;

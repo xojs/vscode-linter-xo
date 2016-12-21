@@ -5,10 +5,8 @@ import * as loadJsonFile from 'load-json-file';
 export class Package {
 
 	constructor(
-		private workspaceRoot
-	) {
-
-	}
+		private workspaceRoot: string
+	) { }
 
 	isDependency(name: string) {
 		const pkg = loadJsonFile.sync(path.join(this.workspaceRoot, 'package.json'));
