@@ -175,6 +175,10 @@ class Linter {
 				const fsPath = Files.uriToFilePath(uri);
 				const contents = document.getText();
 
+				if (fsPath === null) {
+					return;
+				}
+
 				const options:any = this.options;
 				options.cwd = path.dirname(fsPath);
 				options.filename = fsPath
