@@ -180,7 +180,7 @@ class Linter {
 				}
 
 				const options:any = this.options;
-				options.cwd = path.dirname(fsPath);
+				options.cwd = this.workspaceRoot;
 				options.filename = fsPath
 
 				const report = this.lib.lintText(contents, options);
