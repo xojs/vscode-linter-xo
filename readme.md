@@ -11,6 +11,12 @@ Install [XO](https://github.com/sindresorhus/xo) in your workspace folder.
 $ npm install --save-dev xo
 ```
 
+In Visual Studio Code, press <kbd>F1</kbd> and narrow down the list of commands by typing `extension`. Pick `Extensions: Install Extension`.
+
+![](https://github.com/SamVerschueren/vscode-linter-xo/raw/master/screenshot.png)
+
+Simply search for the `linter-xo` extension from the list and install it.
+
 
 ## Fix issues
 
@@ -52,6 +58,7 @@ Or via the `package.json` file.
   }
 }
 ```
+
 
 ## License
 
