@@ -4,13 +4,15 @@ import {
 	InitializeError,
 	Diagnostic, Range, Files,
 	TextDocuments, TextDocument, TextEdit, TextDocumentIdentifier,
-	ErrorMessageTracker, IPCMessageReader, IPCMessageWriter
+	ErrorMessageTracker, IPCMessageReader, IPCMessageWriter,
+	NotificationType
 } from 'vscode-languageserver';
 import { makeDiagnostic, computeKey } from './utils';
 import { Fixes, AutoFix, ESLintProblem } from './fixes';
 import { Map } from './map';
 import { Settings } from './settings';
 import { Package } from './package';
+import BufferedMessageQueue from './bufferedMessageQueue';
 
 interface AllFixesParams {
 	textDocument: TextDocumentIdentifier;
@@ -25,6 +27,10 @@ namespace AllFixesRequest {
 	export const type = new RequestType<AllFixesParams, AllFixesResult, void, void>('textDocument/xo/allFixes');
 }
 
+namespace ValidateNotification {
+	export const type: NotificationType<TextDocument, void> = new NotificationType<TextDocument, void>('xo/validate');
+}
+
 class Linter {
 
 	private connection: IConnection;
@@ -35,17 +41,26 @@ class Linter {
 	private lib: any;
 	private options: any;
 	private codeActions: Map<Map<AutoFix>> = Object.create(null);
+	private messageQueue: BufferedMessageQueue;
 
 	constructor() {
 		this.connection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
 		this.documents = new TextDocuments();
+
+		this.messageQueue = new BufferedMessageQueue(this.connection);
+
+		this.messageQueue.onNotification(ValidateNotification.type, (document) => {
+			this.validateSingle(document);
+		}, (document): number => {
+			return document.version
+		});
 
 		// Listen for text document create, change
 		this.documents.listen(this.connection);
 
 		// Validate document if it changed
 		this.documents.onDidChangeContent(event => {
-			this.validateSingle(event.document);
+			this.messageQueue.addNotificationMessage(ValidateNotification.type, event.document, event.document.version);
 		});
 
 		// Clear the diagnostics when document is closed
