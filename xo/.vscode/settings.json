@@ -1,4 +1,4 @@
-// {
+{
 //   "files.exclude": {
 //     "out": true,
 //     "server": true
@@ -7,4 +7,4 @@
 //     "out": true,
 //     "server": true
 //   }
-// }
+}
