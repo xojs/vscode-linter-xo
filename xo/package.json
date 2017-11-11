@@ -21,7 +21,7 @@
     "Linters"
   ],
   "engines": {
-    "vscode": "^1.6.0"
+    "vscode": "^1.16.0"
   },
   "activationEvents": [
     "onLanguage:javascript",
@@ -61,11 +61,11 @@
     "postinstall": "npm run update-vscode"
   },
   "dependencies": {
-    "vscode-languageclient": "^2.6.3"
+    "vscode-languageclient": "^3.5.0"
   },
   "devDependencies": {
     "@types/node": "^6.0.52",
     "typescript": "^2.0.10",
-    "vscode": "^1.0.3"
+    "vscode": "^1.1.6"
   }
 }

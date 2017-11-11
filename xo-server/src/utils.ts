@@ -1,6 +1,6 @@
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
 
-function parseSeverity(severity: number): number {
+function parseSeverity(severity: number): DiagnosticSeverity {
 	switch (severity) {
 		case 1:
 			return DiagnosticSeverity.Warning;

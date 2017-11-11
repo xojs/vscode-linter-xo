@@ -22,7 +22,7 @@ interface AllFixesResult {
 }
 
 namespace AllFixesRequest {
-	export const type: RequestType<AllFixesParams, AllFixesResult, void> = { get method() { return 'textDocument/xo/allFixes'; } };
+	export const type = new RequestType<AllFixesParams, AllFixesResult, void, void>('textDocument/xo/allFixes');
 }
 
 class Linter {
@@ -127,10 +127,11 @@ class Linter {
 
 				return result;
 			},
-			() => {
+			(err) => {
 				if (this.package.isDependency('xo')) {
 					throw new ResponseError<InitializeError>(99, 'Failed to load XO library. Make sure XO is installed in your workspace folder using \'npm install xo\' and then press Retry.', {retry: true});
 				}
+				throw err
 			});
 	}
 

@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { workspace, window, commands, ExtensionContext } from 'vscode';
-import { LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind, TextDocumentIdentifier, TextEdit, Protocol2Code } from 'vscode-languageclient';
+import { LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind, TextDocumentIdentifier, TextEdit } from 'vscode-languageclient';
 
 interface AllFixesParams {
 	textDocument: TextDocumentIdentifier;
@@ -12,7 +12,7 @@ interface AllFixesResult {
 }
 
 namespace AllFixesRequest {
-	export const type: RequestType<AllFixesParams, AllFixesResult, void> = { get method() { return 'textDocument/xo/allFixes'; } };
+	export const type = new RequestType<AllFixesParams, AllFixesResult, void, void>('textDocument/xo/allFixes');
 }
 
 export function activate(context: ExtensionContext) {
@@ -46,7 +46,7 @@ export function activate(context: ExtensionContext) {
 
 			textEditor.edit(mutator => {
 				for(const edit of edits) {
-					mutator.replace(Protocol2Code.asRange(edit.range), edit.newText);
+					mutator.replace(client.protocol2CodeConverter.asRange(edit.range), edit.newText);
 				}
 			}).then((success) => {
 				if (!success) {

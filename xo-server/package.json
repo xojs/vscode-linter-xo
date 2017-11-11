@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "load-json-file": "^2.0.0",
-    "vscode-languageserver": "^2.6.2"
+    "vscode-languageserver": "^3.5.0"
   },
   "devDependencies": {
     "@types/load-json-file": "^2.0.5",
