@@ -19,7 +19,7 @@ export function activate(context: ExtensionContext) {
 	// We need to go one level up since an extension compile the js code into
 	// the output folder.
 	const serverModule = path.join(__dirname, '..', 'server', 'server.js');
-	const debugOptions = {execArgv: ['--nolazy', '--debug=6004', '--inspect']};
+	const debugOptions = {execArgv: ['--nolazy', '--inspect=6004']};
 	const serverOptions = {
 		run: {module: serverModule, transport: TransportKind.ipc},
 		debug: {module: serverModule, transport: TransportKind.ipc, options: debugOptions}
