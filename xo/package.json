@@ -25,7 +25,10 @@
   },
   "activationEvents": [
     "onLanguage:javascript",
-    "onLanguage:javascriptreact"
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onCommand:xo.fix"
   ],
   "main": "./out/extension",
   "contributes": {
