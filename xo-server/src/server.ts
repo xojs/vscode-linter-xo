@@ -108,8 +108,7 @@ class Linter {
 	private resolveModule(): Thenable<InitializeResult | ResponseError<InitializeError>> {
 		const result: InitializeResult = {
 			capabilities: {
-				textDocumentSync: this.documents.syncKind,
-				codeActionProvider: true
+				textDocumentSync: this.documents.syncKind
 			}
 		};
 
