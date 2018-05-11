@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { workspace, window, commands, ExtensionContext } from 'vscode';
-import { LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind, TextDocumentIdentifier, TextEdit, Protocol2Code } from 'vscode-languageclient';
+import { LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind, TextDocumentIdentifier, TextEdit } from 'vscode-languageclient';
 
 interface AllFixesParams {
 	textDocument: TextDocumentIdentifier;
@@ -12,14 +12,14 @@ interface AllFixesResult {
 }
 
 namespace AllFixesRequest {
-	export const type: RequestType<AllFixesParams, AllFixesResult, void> = { get method() { return 'textDocument/xo/allFixes'; } };
+	export const type = new RequestType<AllFixesParams, AllFixesResult, void, void>('textDocument/xo/allFixes');
 }
 
 export function activate(context: ExtensionContext) {
 	// We need to go one level up since an extension compile the js code into
 	// the output folder.
 	const serverModule = path.join(__dirname, '..', 'server', 'server.js');
-	const debugOptions = {execArgv: ['--nolazy', '--debug=6004']};
+	const debugOptions = {execArgv: ['--nolazy', '--inspect=6004']};
 	const serverOptions = {
 		run: {module: serverModule, transport: TransportKind.ipc},
 		debug: {module: serverModule, transport: TransportKind.ipc, options: debugOptions}
@@ -46,7 +46,7 @@ export function activate(context: ExtensionContext) {
 
 			textEditor.edit(mutator => {
 				for(const edit of edits) {
-					mutator.replace(Protocol2Code.asRange(edit.range), edit.newText);
+					mutator.replace(client.protocol2CodeConverter.asRange(edit.range), edit.newText);
 				}
 			}).then((success) => {
 				if (!success) {
