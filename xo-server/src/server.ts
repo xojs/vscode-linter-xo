@@ -201,14 +201,16 @@ class Linter {
 
 				// Clean previously computed code actions.
 				delete this.codeActions[uri];
+				const results = report.results;
+				if(results.length && results[0].hasOwnProperty('messages')) {
+					const diagnostics: Diagnostic[] = report.results[0].messages.map((problem: any) => {
+						const diagnostic = makeDiagnostic(problem);
+						this.recordCodeAction(document, diagnostic, problem);
+						return diagnostic;
+					});
 
-				const diagnostics: Diagnostic[] = report.results[0].messages.map((problem: any) => {
-					const diagnostic = makeDiagnostic(problem);
-					this.recordCodeAction(document, diagnostic, problem);
-					return diagnostic;
-				});
-
-				this.connection.sendDiagnostics({uri, diagnostics});
+					this.connection.sendDiagnostics({uri, diagnostics});
+				}
 			});
 	}
 
