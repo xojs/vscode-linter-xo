@@ -59,6 +59,15 @@ Or via the `package.json` file.
 }
 ```
 
+You can enable the formatter integration to use `xo --fix` as formatter. Requires `xo.enable` to be true. It is disabled by default.
+
+```json
+{
+  "xo.enable": true,
+  "xo.format.enable": true
+}
+```
+
 
 ## License
 

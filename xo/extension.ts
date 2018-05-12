@@ -1,6 +1,17 @@
 import * as path from 'path';
-import { workspace, window, commands, ExtensionContext } from 'vscode';
-import { LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind, TextDocumentIdentifier, TextEdit } from 'vscode-languageclient';
+import {
+	workspace, window, commands, languages,
+	ExtensionContext,
+	TextDocument,
+	DocumentFormattingEditProvider,
+	Disposable,
+	DocumentFilter,
+	TextEdit
+} from 'vscode';
+import {
+	LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind,
+	TextDocumentIdentifier, VersionedTextDocumentIdentifier
+} from 'vscode-languageclient';
 
 interface AllFixesParams {
 	textDocument: TextDocumentIdentifier;
@@ -15,6 +26,33 @@ namespace AllFixesRequest {
 	export const type = new RequestType<AllFixesParams, AllFixesResult, void, void>('textDocument/xo/allFixes');
 }
 
+const defaultLanguages = ['javascript', 'javascriptreact', 'typescript', 'typescriptreact'];
+
+class XOEditProivder implements DocumentFormattingEditProvider {
+	constructor(private _client: LanguageClient) {}
+
+	provideDocumentFormattingEdits(document: TextDocument) {
+		if (!workspace.getConfiguration('xo', document.uri).get<boolean>('format.enable', false)) {
+			return Promise.resolve([]);
+		}
+
+		let textDocument: VersionedTextDocumentIdentifier = {
+			uri: document.uri.toString(),
+			version: document.version
+		};
+		return Promise.resolve(this._client.sendRequest(AllFixesRequest.type, { textDocument: textDocument}).then(result => result.edits));
+	}
+}
+
+let formatterHandler: undefined | Disposable;
+
+function disposeFormatterHandler() {
+    if (formatterHandler) {
+        formatterHandler.dispose();
+    }
+    formatterHandler = undefined;
+}
+
 export function activate(context: ExtensionContext) {
 	// We need to go one level up since an extension compile the js code into
 	// the output folder.
@@ -26,7 +64,7 @@ export function activate(context: ExtensionContext) {
 	};
 
 	const clientOptions: LanguageClientOptions = {
-		documentSelector: ['javascript', 'javascriptreact', 'typescript', 'typescriptreact'],
+		documentSelector: defaultLanguages,
 		synchronize: {
 			configurationSection: 'xo',
 			fileEvents: [
@@ -72,8 +110,30 @@ export function activate(context: ExtensionContext) {
 		});
 	}
 
+	let configuration = workspace.getConfiguration('xo', null);
+
+	const editProivder = new XOEditProivder(client);
+	function registerFormatter() {
+		disposeFormatterHandler();
+		if (!configuration.get<boolean>('format.enable', false) || !configuration.get<boolean>('enable', true)) {
+			return;
+		}
+
+		const filter: DocumentFilter[] = defaultLanguages.map(language => ({
+			scheme: 'file', language
+		}));
+
+		formatterHandler = languages.registerDocumentFormattingEditProvider(filter, editProivder);
+	}
+
+	registerFormatter();
+
 	context.subscriptions.push(
 		new SettingMonitor(client, 'xo.enable').start(),
-		commands.registerCommand('xo.fix', fixAllProblems)
+		commands.registerCommand('xo.fix', fixAllProblems),
+		workspace.onDidChangeConfiguration(registerFormatter),
+		{
+			dispose: disposeFormatterHandler
+		}
 	);
 }
