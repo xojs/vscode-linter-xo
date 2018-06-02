@@ -1,4 +1,4 @@
-// copied from https://github.com/Microsoft/vscode-eslint/blob/ad394e3eabfa89c78c38904d71d9aebf64b7edfa/server/src/server.ts
+// Copied from https://github.com/Microsoft/vscode-eslint/blob/ad394e3eabfa89c78c38904d71d9aebf64b7edfa/server/src/server.ts
 
 import {
 	CancellationToken,
@@ -15,14 +15,14 @@ interface Request<P, R> {
 	method: string;
 	params: P;
 	documentVersion: number | undefined;
-	resolve: (value: R | Thenable<R>) => void | undefined;
-	reject: (error: any) => void | undefined;
+	resolve(value: R | Thenable<R>): void | undefined;
+	reject(error: any): void | undefined;
 	token: CancellationToken | undefined;
 }
 
 namespace Request {
 	export function is(value: any): value is Request<any, any> {
-		let candidate: Request<any, any> = value;
+		const candidate: Request<any, any> = value;
 		return candidate && !!candidate.token && !!candidate.resolve && !!candidate.reject;
 	}
 }
@@ -35,57 +35,54 @@ interface Notifcation<P> {
 
 type Message<P, R> = Notifcation<P> | Request<P, R>;
 
-interface VersionProvider<P> {
-	(params: P): number;
-}
+type VersionProvider<P> = (params: P) => number;
 
 namespace Thenable {
 	export function is<T>(value: any): value is Thenable<T> {
-		let candidate: Thenable<T> = value;
+		const candidate: Thenable<T> = value;
 		return candidate && typeof candidate.then === 'function';
 	}
 }
 
 export default class BufferedMessageQueue {
-
-		private queue: Message<any, any>[];
-		private requestHandlers: Map<string, {handler: RequestHandler<any, any, any>, versionProvider?: VersionProvider<any>}>;
-		private notificationHandlers: Map<string, {handler: NotificationHandler<any>, versionProvider?: VersionProvider<any>}>;
+		private readonly queue: Message<any, any>[];
+		private readonly requestHandlers: Map<string, {handler: RequestHandler<any, any, any>; versionProvider?: VersionProvider<any>}>;
+		private readonly notificationHandlers: Map<string, {handler: NotificationHandler<any>; versionProvider?: VersionProvider<any>}>;
 		private timer: NodeJS.Timer | undefined;
 
-		constructor(private connection: IConnection) {
+		constructor(private readonly connection: IConnection) {
 			this.queue = [];
 			this.requestHandlers = new Map();
 			this.notificationHandlers = new Map();
 		}
 
 		public registerRequest<P, R, E, RO>(type: RequestType<P, R, E, RO>, handler: RequestHandler<P, R, E>, versionProvider?: VersionProvider<P>): void {
-			this.connection.onRequest(type, (params, token) => {
+			this.connection.onRequest(type, async (params, token) => {
 				return new Promise<R>((resolve, reject) => {
 					this.queue.push({
 						method: type.method,
-						params: params,
+						params,
 						documentVersion: versionProvider ? versionProvider(params) : undefined,
-						resolve: resolve,
-						reject: reject,
-						token: token
+						resolve,
+						reject,
+						token
 					});
 					this.trigger();
 				});
 			});
-			this.requestHandlers.set(type.method, { handler, versionProvider });
+			this.requestHandlers.set(type.method, {handler, versionProvider});
 		}
 
 		public registerNotification<P, RO>(type: NotificationType<P, RO>, handler: NotificationHandler<P>, versionProvider?: (params: P) => number): void {
-			this.connection.onNotification(type, (params) => {
+			this.connection.onNotification(type, params => {
 				this.queue.push({
 					method: type.method,
-					params: params,
+					params,
 					documentVersion: versionProvider ? versionProvider(params) : undefined,
 				});
 				this.trigger();
 			});
-			this.notificationHandlers.set(type.method, { handler, versionProvider });
+			this.notificationHandlers.set(type.method, {handler, versionProvider});
 		}
 
 		public addNotificationMessage<P, RO>(type: NotificationType<P, RO>, params: P, version: number) {
@@ -98,7 +95,7 @@ export default class BufferedMessageQueue {
 		}
 
 		public onNotification<P, RO>(type: NotificationType<P, RO>, handler: NotificationHandler<P>, versionProvider?: (params: P) => number): void {
-			this.notificationHandlers.set(type.method, { handler, versionProvider });
+			this.notificationHandlers.set(type.method, {handler, versionProvider});
 		}
 
 		private trigger(): void {
@@ -112,34 +109,34 @@ export default class BufferedMessageQueue {
 		}
 
 		private processQueue(): void {
-			let message = this.queue.shift();
+			const message = this.queue.shift();
 			if (!message) {
 				return;
 			}
 			if (Request.is(message)) {
-				let requestMessage = message;
+				const requestMessage = message;
 				if (requestMessage.token.isCancellationRequested) {
 					requestMessage.reject(new ResponseError(ErrorCodes.RequestCancelled, 'Request got cancelled'));
 					return;
 				}
-				let elem = this.requestHandlers.get(requestMessage.method);
+				const elem = this.requestHandlers.get(requestMessage.method);
 				if (elem.versionProvider && requestMessage.documentVersion !== void 0 && requestMessage.documentVersion !== elem.versionProvider(requestMessage.params)) {
 					requestMessage.reject(new ResponseError(ErrorCodes.RequestCancelled, 'Request got cancelled'));
 					return;
 				}
-				let result = elem.handler(requestMessage.params, requestMessage.token);
+				const result = elem.handler(requestMessage.params, requestMessage.token);
 				if (Thenable.is(result)) {
-					result.then((value) => {
+					result.then(value => {
 						requestMessage.resolve(value);
-					}, (error) => {
+					}, error => {
 						requestMessage.reject(error);
 					});
 				} else {
 					requestMessage.resolve(result);
 				}
 			} else {
-				let notificationMessage = message;
-				let elem = this.notificationHandlers.get(notificationMessage.method);
+				const notificationMessage = message;
+				const elem = this.notificationHandlers.get(notificationMessage.method);
 				if (elem.versionProvider && notificationMessage.documentVersion !== void 0 && notificationMessage.documentVersion !== elem.versionProvider(notificationMessage.params)) {
 					return;
 				}

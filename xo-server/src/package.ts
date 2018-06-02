@@ -2,9 +2,8 @@ import * as path from 'path';
 import * as loadJsonFile from 'load-json-file';
 
 export class Package {
-
 	constructor(
-		private workspaceRoot: string
+		private readonly workspaceRoot: string
 	) { }
 
 	isDependency(name: string) {
@@ -16,7 +15,7 @@ export class Package {
 			return Boolean(deps[name] || devDeps[name]);
 		} catch (err) {
 			if (err.code === 'ENOENT') {
-				return false
+				return false;
 			}
 
 			throw err;

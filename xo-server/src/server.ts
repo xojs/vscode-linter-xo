@@ -7,11 +7,11 @@ import {
 	ErrorMessageTracker, IPCMessageReader, IPCMessageWriter,
 	NotificationType
 } from 'vscode-languageserver';
-import { makeDiagnostic, computeKey } from './utils';
-import { Fixes, AutoFix, ESLintProblem } from './fixes';
-import { Map } from './map';
-import { Settings } from './settings';
-import { Package } from './package';
+import {makeDiagnostic, computeKey} from './utils';
+import {Fixes, AutoFix, ESLintProblem} from './fixes';
+import {Map} from './map';
+import {Settings} from './settings';
+import {Package} from './package';
 import BufferedMessageQueue from './bufferedMessageQueue';
 
 interface AllFixesParams {
@@ -19,8 +19,8 @@ interface AllFixesParams {
 }
 
 interface AllFixesResult {
-	documentVersion: number,
-	edits: TextEdit[]
+	documentVersion: number;
+	edits: TextEdit[];
 }
 
 namespace AllFixesRequest {
@@ -28,20 +28,19 @@ namespace AllFixesRequest {
 }
 
 namespace ValidateNotification {
-	export const type: NotificationType<TextDocument, void> = new NotificationType<TextDocument, void>('xo/validate');
+	export const type = new NotificationType<TextDocument, void>('xo/validate');
 }
 
 class Linter {
-
-	private connection: IConnection;
-	private documents: TextDocuments;
+	private readonly connection: IConnection;
+	private readonly documents: TextDocuments;
 	private package: Package;
 
 	private workspaceRoot: string;
 	private lib: any;
 	private options: any;
-	private codeActions: Map<Map<AutoFix>> = Object.create(null);
-	private messageQueue: BufferedMessageQueue;
+	private readonly codeActions: Map<Map<AutoFix>> = Object.create(null);
+	private readonly messageQueue: BufferedMessageQueue;
 
 	constructor() {
 		this.connection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
@@ -49,10 +48,10 @@ class Linter {
 
 		this.messageQueue = new BufferedMessageQueue(this.connection);
 
-		this.messageQueue.onNotification(ValidateNotification.type, (document) => {
+		this.messageQueue.onNotification(ValidateNotification.type, document => {
 			this.validateSingle(document);
-		}, (document): number => {
-			return document.version
+		}, document => {
+			return document.version;
 		});
 
 		// Listen for text document create, change
@@ -74,7 +73,7 @@ class Linter {
 		this.connection.onInitialize(this.initialize.bind(this));
 
 		this.connection.onDidChangeConfiguration(params => {
-			const settings = <Settings>params.settings;
+			const settings = params.settings as Settings;
 
 			this.options = settings.xo ? settings.xo.options || {} : {};
 			this.validateMany(this.documents.all());
@@ -84,7 +83,7 @@ class Linter {
 			this.validateMany(this.documents.all());
 		});
 
-		this.connection.onRequest(AllFixesRequest.type, (params) => {
+		this.connection.onRequest(AllFixesRequest.type, params => {
 			let result: AllFixesResult = null;
 			const uri = params.textDocument.uri;
 			const textDocument = this.documents.get(uri);
@@ -100,7 +99,7 @@ class Linter {
 					result = {
 						documentVersion: fixes.getDocumentVersion(),
 						edits: fixes.getOverlapFree().map(createTextEdit)
-					}
+					};
 				}
 			}
 
@@ -140,12 +139,11 @@ class Linter {
 				this.lib = xo;
 
 				return result;
-			},
-			(err) => {
+			}, err => {
 				if (this.package.isDependency('xo')) {
 					throw new ResponseError<InitializeError>(99, 'Failed to load XO library. Make sure XO is installed in your workspace folder using \'npm install xo\' and then press Retry.', {retry: true});
 				}
-				throw err
+				throw err;
 			});
 	}
 
@@ -154,11 +152,13 @@ class Linter {
 
 		const promises = documents.map(document => {
 			return this.validate(document).then(
-				() => { },
+				() => {
+					// Do nothing
+				},
 				err => {
 					tracker.add(this.getMessage(err, document));
 				}
-			)
+			);
 		});
 
 		return Promise.all(promises)
@@ -170,7 +170,9 @@ class Linter {
 	private validateSingle(document: TextDocument): Thenable<void> {
 		return this.validate(document)
 			.then(
-				() => { },
+				() => {
+					// Do nothing
+				},
 				(err: Error) => {
 					this.connection.window.showErrorMessage(this.getMessage(err, document));
 				}
@@ -193,14 +195,14 @@ class Linter {
 					return;
 				}
 
-				const options:any = this.options;
+				const options = this.options;
 				options.cwd = this.workspaceRoot;
-				options.filename = fsPath
+				options.filename = fsPath;
 
 				const report = this.lib.lintText(contents, options);
 
 				// Clean previously computed code actions.
-				delete this.codeActions[uri];
+				this.codeActions[uri] = undefined;
 
 				const diagnostics: Diagnostic[] = report.results[0].messages.map((problem: any) => {
 					const diagnostic = makeDiagnostic(problem);
@@ -218,7 +220,7 @@ class Linter {
 		}
 
 		const uri = document.uri;
-		let edits: Map<AutoFix> = this.codeActions[uri];
+		let edits = this.codeActions[uri];
 		if (!edits) {
 			edits = Object.create(null);
 			this.codeActions[uri] = edits;
@@ -234,10 +236,10 @@ class Linter {
 
 	private getMessage(err: any, document: TextDocument): string {
 		if (typeof err.message === 'string' || err.message instanceof String) {
-			return <string>err.message;
-		} else {
-			return `An unknown error occurred while validating file: ${Files.uriToFilePath(document.uri)}`;
+			return err.message as string;
 		}
+
+		return `An unknown error occurred while validating file: ${Files.uriToFilePath(document.uri)}`;
 	}
 }
 

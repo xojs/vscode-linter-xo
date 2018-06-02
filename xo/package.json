@@ -61,13 +61,16 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "update-vscode": "node ./node_modules/vscode/bin/install",
-    "postinstall": "npm run update-vscode"
+    "postinstall": "npm run update-vscode",
+    "lint": "tslint -p . --format stylish"
   },
   "dependencies": {
     "vscode-languageclient": "^3.5.0"
   },
   "devDependencies": {
     "@types/node": "^6.0.52",
+    "tslint": "^5.10.0",
+    "tslint-xo": "^0.8.0",
     "typescript": "^2.0.10",
     "vscode": "^1.1.6"
   }

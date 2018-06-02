@@ -1,0 +1,6 @@
+{
+  "extends": "tslint-xo",
+  "rules": {
+    "no-namespace": false
+  }
+}

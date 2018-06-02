@@ -1,6 +1,6 @@
-import { Diagnostic } from 'vscode-languageserver';
-import { Map } from './map';
-import { computeKey } from './utils';
+import {Diagnostic} from 'vscode-languageserver';
+import {Map} from './map';
+import {computeKey} from './utils';
 
 interface ESLintAutoFixEdit {
 	range: [number, number];
@@ -27,9 +27,9 @@ export interface AutoFix {
  * Credits to vscode-eslint (https://github.com/Microsoft/vscode-eslint)
  */
 export class Fixes {
-	private keys: string[];
+	private readonly keys: string[];
 
-	constructor (private edits: Map<AutoFix>) {
+	constructor(private readonly edits: Map<AutoFix>) {
 		this.keys = Object.keys(edits);
 	}
 
@@ -46,10 +46,10 @@ export class Fixes {
 	}
 
 	public getScoped(diagnostics: Diagnostic[]): AutoFix[] {
-		let result: AutoFix[] = [];
-		for(let diagnostic of diagnostics) {
-			let key = computeKey(diagnostic);
-			let editInfo = this.edits[key];
+		const result: AutoFix[] = [];
+		for (const diagnostic of diagnostics) {
+			const key = computeKey(diagnostic);
+			const editInfo = this.edits[key];
 			if (editInfo) {
 				result.push(editInfo);
 			}
@@ -58,9 +58,9 @@ export class Fixes {
 	}
 
 	public getAllSorted(): AutoFix[] {
-		let result = this.keys.map(key => this.edits[key]);
+		const result = this.keys.map(key => this.edits[key]);
 		return result.sort((a, b) => {
-			let d = a.edit.range[0] - b.edit.range[0];
+			const d = a.edit.range[0] - b.edit.range[0];
 			if (d !== 0) {
 				return d;
 			}
@@ -75,15 +75,15 @@ export class Fixes {
 	}
 
 	public getOverlapFree(): AutoFix[] {
-		let sorted = this.getAllSorted();
+		const sorted = this.getAllSorted();
 		if (sorted.length <= 1) {
 			return sorted;
 		}
-		let result: AutoFix[] = [];
-		let last: AutoFix = sorted[0];
+		const result: AutoFix[] = [];
+		let last = sorted[0];
 		result.push(last);
 		for (let i = 1; i < sorted.length; i++) {
-			let current = sorted[i];
+			const current = sorted[i];
 			if (!Fixes.overlaps(last, current)) {
 				result.push(current);
 				last = current;

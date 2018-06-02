@@ -1,4 +1,4 @@
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
+import {Diagnostic, DiagnosticSeverity} from 'vscode-languageserver';
 
 function parseSeverity(severity: number): DiagnosticSeverity {
 	switch (severity) {
@@ -12,7 +12,7 @@ function parseSeverity(severity: number): DiagnosticSeverity {
 }
 
 export function makeDiagnostic(problem: any): Diagnostic {
-	const message = (problem.ruleId != null)
+	const message = (problem.ruleId !== null)
 		? `${problem.message} (${problem.ruleId})`
 		: `${problem.message}`;
 
