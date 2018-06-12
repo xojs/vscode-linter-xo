@@ -16,11 +16,11 @@ namespace AllFixesRequest {
 }
 
 export function activate(context: ExtensionContext) {
-	// We need to go one level up since an extension compile the js code into the output folder.
-	const serverModule = path.join(__dirname, '..', 'server', 'server.js');
-	const debugOptions = {execArgv: ['--nolazy', '--inspect=6004']};
+	const serverModule = context.asAbsolutePath(path.join('server', 'out', 'server.js'));
+	const debugOptions = {execArgv: ['--nolazy', '--inspect=6004'], cwd: process.cwd()};
+	console.log(process.cwd());
 	const serverOptions = {
-		run: {module: serverModule, transport: TransportKind.ipc},
+		run: {module: serverModule, transport: TransportKind.ipc, options: {cwd: process.cwd()}},
 		debug: {module: serverModule, transport: TransportKind.ipc, options: debugOptions}
 	};
 
