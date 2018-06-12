@@ -1,63 +1,63 @@
 {
 	"name": "linter-xo",
 	"displayName": "XO",
-  "version": "2.2.0",
-  "description": "Linter for XO",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/SamVerschueren/vscode-linter-xo"
-  },
-  "bugs": {
-    "url": "https://github.com/SamVerschueren/vscode-linter-xo/issues"
-  },
-  "author": {
-    "name": "Sam Verschueren",
-    "email": "sam.verschueren@gmail.com",
-    "url": "github.com/SamVerschueren"
-  },
-  "publisher": "samverschueren",
-  "icon": "icon.png",
-  "categories": [
-    "Linters"
-  ],
-  "engines": {
-    "vscode": "^1.22.0"
-  },
-  "activationEvents": [
-    "onLanguage:javascript",
-    "onLanguage:javascriptreact",
-    "onLanguage:typescript",
-    "onLanguage:typescriptreact",
-    "onCommand:xo.fix"
-  ],
-  "main": "./client/out/extension",
-  "contributes": {
-    "configuration": {
-      "type": "object",
-      "title": "XO configuration",
-      "properties": {
-        "xo.enable": {
-          "type": "boolean",
-          "default": false,
-          "description": "Control whether xo is enabled or not."
-        },
-        "xo.options": {
-          "type": "object",
-          "default": {},
-          "description": "The xo options object to provide args to the xo command."
-        }
-      }
-    },
-    "commands": [
-      {
-        "title": "Fix all auto-fixable problems",
-        "category": "XO",
-        "command": "xo.fix"
-      }
-    ]
-  },
-  "scripts": {
+	"version": "2.2.0",
+	"description": "Linter for XO",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/SamVerschueren/vscode-linter-xo"
+	},
+	"bugs": {
+		"url": "https://github.com/SamVerschueren/vscode-linter-xo/issues"
+	},
+	"author": {
+		"name": "Sam Verschueren",
+		"email": "sam.verschueren@gmail.com",
+		"url": "github.com/SamVerschueren"
+	},
+	"publisher": "samverschueren",
+	"icon": "icon.png",
+	"categories": [
+		"Linters"
+	],
+	"engines": {
+		"vscode": "^1.22.0"
+	},
+	"activationEvents": [
+		"onLanguage:javascript",
+		"onLanguage:javascriptreact",
+		"onLanguage:typescript",
+		"onLanguage:typescriptreact",
+		"onCommand:xo.fix"
+	],
+	"main": "./client/out/extension",
+	"contributes": {
+		"configuration": {
+			"type": "object",
+			"title": "XO configuration",
+			"properties": {
+				"xo.enable": {
+					"type": "boolean",
+					"default": false,
+					"description": "Control whether xo is enabled or not."
+				},
+				"xo.options": {
+					"type": "object",
+					"default": {},
+					"description": "The xo options object to provide args to the xo command."
+				}
+			}
+		},
+		"commands": [
+			{
+				"title": "Fix all auto-fixable problems",
+				"category": "XO",
+				"command": "xo.fix"
+			}
+		]
+	},
+	"scripts": {
 		"test": "npm run lint && npm run compile",
 		"lint": "npm run lint:server && npm run lint:client",
 		"compile": "npm run compile:client && npm run compile:server",
@@ -70,10 +70,10 @@
 		"lint:server": "tslint -p server --format stylish",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd .."
 	},
-  "devDependencies": {
-    "@types/node": "^8.10.18",
-    "tslint": "^5.10.0",
-    "tslint-xo": "^0.8.0",
-    "typescript": "^2.8.3"
-  }
+	"devDependencies": {
+		"@types/node": "^8.10.18",
+		"tslint": "^5.10.0",
+		"tslint-xo": "^0.8.0",
+		"typescript": "^2.8.3"
+	}
 }
