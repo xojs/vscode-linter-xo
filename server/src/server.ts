@@ -204,7 +204,13 @@ class Linter {
 				// Clean previously computed code actions.
 				this.codeActions[uri] = undefined;
 
-				const diagnostics: Diagnostic[] = report.results[0].messages.map((problem: any) => {
+				const results = report.results;
+
+				if (results.length === 0 || !results[0].messages) {
+					return;
+				}
+
+				const diagnostics: Diagnostic[] = results[0].messages.map((problem: any) => {
 					const diagnostic = makeDiagnostic(problem);
 					this.recordCodeAction(document, diagnostic, problem);
 					return diagnostic;
