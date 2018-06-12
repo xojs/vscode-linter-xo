@@ -58,14 +58,16 @@
     ]
   },
   "scripts": {
-		"test": "npm run lint",
-		"lint": "tslint -p . --format stylish",
+		"test": "npm run lint && npm run compile",
+		"lint": "npm run lint:server && npm run lint:client",
+		"compile": "npm run compile:client && npm run compile:server",
 		"vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
 		"compile:client": "tsc -p ./client/tsconfig.json",
 		"compile:server": "tsc -p ./server/tsconfig.json",
 		"watch:client": "tsc -w -p ./client/tsconfig.json",
 		"watch:server": "tsc -w -p ./server/tsconfig.json",
-		"compile": "npm run compile:client && npm run compile:server",
+		"lint:client": "tslint -p client --format stylish",
+		"lint:server": "tslint -p server --format stylish",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd .."
 	},
   "devDependencies": {
