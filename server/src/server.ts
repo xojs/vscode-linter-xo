@@ -5,7 +5,8 @@ import {
 	Diagnostic, Range, Files,
 	TextDocuments, TextDocument, TextEdit, TextDocumentIdentifier,
 	ErrorMessageTracker, IPCMessageReader, IPCMessageWriter,
-	NotificationType
+	NotificationType,
+	DocumentFormattingRequest
 } from 'vscode-languageserver';
 import {makeDiagnostic, computeKey} from './utils';
 import {Fixes, AutoFix, ESLintProblem} from './fixes';
@@ -62,6 +63,20 @@ class Linter {
 			this.messageQueue.addNotificationMessage(ValidateNotification.type, event.document, event.document.version);
 		});
 
+		this.messageQueue.registerRequest(DocumentFormattingRequest.type, params => {
+			const doc = this.documents.get(params.textDocument.uri);
+			if (!doc) {
+				return null;
+			}
+			return this.connection.workspace.getConfiguration('xo').then(config => {
+				if (!config || !config.enable || !config.format || !config.format.enable) {
+					return null;
+				}
+				const fixes = this.computeAllFixes(params.textDocument.uri);
+				return fixes && fixes.edits;
+			});
+		});
+
 		// Clear the diagnostics when document is closed
 		this.documents.onDidClose(event => {
 			this.connection.sendDiagnostics({
@@ -84,26 +99,7 @@ class Linter {
 		});
 
 		this.connection.onRequest(AllFixesRequest.type, params => {
-			let result: AllFixesResult = null;
-			const uri = params.textDocument.uri;
-			const textDocument = this.documents.get(uri);
-			const edits = this.codeActions[uri];
-
-			function createTextEdit(editInfo: AutoFix): TextEdit {
-				return TextEdit.replace(Range.create(textDocument.positionAt(editInfo.edit.range[0]), textDocument.positionAt(editInfo.edit.range[1])), editInfo.edit.text || '');
-			}
-
-			if (edits) {
-				const fixes = new Fixes(edits);
-				if (!fixes.isEmpty()) {
-					result = {
-						documentVersion: fixes.getDocumentVersion(),
-						edits: fixes.getOverlapFree().map(createTextEdit)
-					};
-				}
-			}
-
-			return result;
+			return this.computeAllFixes(params.textDocument.uri);
 		});
 	}
 
@@ -122,7 +118,8 @@ class Linter {
 	private resolveModule(): Thenable<InitializeResult | ResponseError<InitializeError>> {
 		const result: InitializeResult = {
 			capabilities: {
-				textDocumentSync: this.documents.syncKind
+				textDocumentSync: this.documents.syncKind,
+				documentFormattingProvider: true
 			}
 		};
 
@@ -246,6 +243,28 @@ class Linter {
 		}
 
 		return `An unknown error occurred while validating file: ${Files.uriToFilePath(document.uri)}`;
+	}
+
+	private computeAllFixes(uri: string): AllFixesResult | null {
+		let result: AllFixesResult = null;
+		const textDocument = this.documents.get(uri);
+		const edits = this.codeActions[uri];
+
+		function createTextEdit(editInfo: AutoFix): TextEdit {
+			return TextEdit.replace(Range.create(textDocument.positionAt(editInfo.edit.range[0]), textDocument.positionAt(editInfo.edit.range[1])), editInfo.edit.text || '');
+		}
+
+		if (edits) {
+			const fixes = new Fixes(edits);
+			if (!fixes.isEmpty()) {
+				result = {
+					documentVersion: fixes.getDocumentVersion(),
+					edits: fixes.getOverlapFree().map(createTextEdit)
+				};
+			}
+		}
+
+		return result;
 	}
 }
 
