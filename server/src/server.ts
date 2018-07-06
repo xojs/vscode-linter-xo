@@ -189,11 +189,12 @@ class Linter {
 			.then(() => {
 				const uri = document.uri;
 				const fsPath = Files.uriToFilePath(uri);
-				const contents = document.getText();
 
-				if (fsPath === null) {
+				if (!fsPath) {
 					return;
 				}
+
+				const contents = document.getText();
 
 				const options = this.options;
 				options.cwd = this.workspaceRoot;
