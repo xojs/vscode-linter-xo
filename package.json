@@ -80,6 +80,6 @@
 		"@types/node": "^8.10.18",
 		"tslint": "^5.10.0",
 		"tslint-xo": "^0.8.0",
-		"typescript": "^2.8.3"
+		"typescript": "^3.1.3"
 	}
 }
