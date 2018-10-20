@@ -46,6 +46,12 @@
 					"type": "object",
 					"default": {},
 					"description": "The xo options object to provide args to the xo command."
+				},
+				"xo.format.enable": {
+					"scope": "resource",
+					"type": "boolean",
+					"default": false,
+					"description": "Enable 'xo --fix' as formatter"
 				}
 			}
 		},
