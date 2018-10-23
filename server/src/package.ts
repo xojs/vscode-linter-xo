@@ -17,6 +17,7 @@ export class Package {
 
 	isDependency(name: string) {
 		try {
+			// tslint:disable-next-line no-unnecessary-type-assertion
 			const pkg = loadJsonFile.sync(path.join(this.workspaceRoot, 'package.json')) as PackageJSON;
 			const deps = pkg.dependencies || {};
 			const devDeps = pkg.devDependencies || {};

@@ -8,12 +8,13 @@ import {
 	NotificationType,
 	DocumentFormattingRequest
 } from 'vscode-languageserver';
+import Uri from 'vscode-uri';
 import {makeDiagnostic, computeKey} from './utils';
 import {Fixes, AutoFix, ESLintProblem} from './fixes';
 import {Map} from './map';
 import {Settings} from './settings';
 import {Package} from './package';
-import BufferedMessageQueue from './bufferedMessageQueue';
+import BufferedMessageQueue from './buffered-message-queue';
 
 interface AllFixesParams {
 	textDocument: TextDocumentIdentifier;
@@ -185,7 +186,7 @@ class Linter {
 		return this.resolveModule()
 			.then(() => {
 				const uri = document.uri;
-				const fsPath = Files.uriToFilePath(uri);
+				const fsPath = Uri.parse(document.uri).fsPath;
 
 				if (!fsPath) {
 					return;
@@ -243,7 +244,7 @@ class Linter {
 			return err.message as string;
 		}
 
-		return `An unknown error occurred while validating file: ${Files.uriToFilePath(document.uri)}`;
+		return `An unknown error occurred while validating file: ${Uri.parse(document.uri).fsPath}`;
 	}
 
 	private computeAllFixes(uri: string): AllFixesResult | null {
