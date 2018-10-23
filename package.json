@@ -1,7 +1,7 @@
 {
 	"name": "linter-xo",
 	"displayName": "XO",
-	"version": "2.3.0",
+	"version": "2.3.1",
 	"description": "Linter for XO",
 	"license": "MIT",
 	"repository": {
