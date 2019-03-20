@@ -24,7 +24,16 @@ export function activate(context: ExtensionContext) {
 	};
 
 	const clientOptions: LanguageClientOptions = {
-		documentSelector: ['javascript', 'javascriptreact', 'typescript', 'typescriptreact'],
+		documentSelector: [
+			{language: 'javascript', scheme: 'file'},
+			{language: 'javascript', scheme: 'untitled'},
+			{language: 'javascriptreact', scheme: 'file'},
+			{language: 'javascriptreact', scheme: 'untitled'},
+			{language: 'typescript', scheme: 'file'},
+			{language: 'typescript', scheme: 'untitled'},
+			{language: 'typescriptreact', scheme: 'file'},
+			{language: 'typescriptreact', scheme: 'untitled'},
+		],
 		synchronize: {
 			configurationSection: 'xo',
 			fileEvents: [
