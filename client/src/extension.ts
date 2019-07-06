@@ -32,7 +32,7 @@ export function activate(context: ExtensionContext) {
 			{language: 'typescript', scheme: 'file'},
 			{language: 'typescript', scheme: 'untitled'},
 			{language: 'typescriptreact', scheme: 'file'},
-			{language: 'typescriptreact', scheme: 'untitled'},
+			{language: 'typescriptreact', scheme: 'untitled'}
 		],
 		synchronize: {
 			configurationSection: 'xo',
