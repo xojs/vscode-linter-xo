@@ -198,7 +198,7 @@ class Linter {
 				options.cwd = this.workspaceRoot;
 				options.filename = fsPath;
 
-				const report = this.lib.lintText(contents, options);
+				const report = this.runLint(contents, options);
 
 				// Clean previously computed code actions.
 				this.codeActions[uri] = undefined;
@@ -217,6 +217,22 @@ class Linter {
 
 				this.connection.sendDiagnostics({uri, diagnostics});
 			});
+	}
+
+	private runLint(contents: string, options: any): any {
+		const cwd = process.cwd();
+		let report;
+
+		try {
+			process.chdir(options.cwd);
+			report = this.lib.lintText(contents, options);
+		} finally {
+			if (cwd !== process.cwd()) {
+				process.chdir(cwd);
+			}
+		}
+
+		return report;
 	}
 
 	private recordCodeAction(document: TextDocument, diagnostic: Diagnostic, problem: ESLintProblem): void {
