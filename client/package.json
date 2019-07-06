@@ -1,6 +1,6 @@
 {
   "engines": {
-    "vscode": "^1.26.0"
+    "vscode": "^1.30.0"
   },
   "scripts": {
     "update-vscode": "node ./node_modules/vscode/bin/install",
