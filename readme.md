@@ -15,7 +15,7 @@ $ npm install --save-dev xo
 
 In Visual Studio Code, press <kbd>F1</kbd> and narrow down the list of commands by typing `extension`. Pick `Extensions: Install Extension`.
 
-![](screenshot.png)
+![](https://raw.githubusercontent.com/SamVerschueren/vscode-linter-xo/master/screenshot.png)
 
 Simply search for the `linter-xo` extension from the list and install it.
 
@@ -24,7 +24,7 @@ Simply search for the `linter-xo` extension from the list and install it.
 
 Press `F1` and choose `XO: Fix all auto-fixable problems`
 
-![](media/fix.gif)
+![](https://raw.githubusercontent.com/SamVerschueren/vscode-linter-xo/master/media/fix.gif)
 
 > Tip: Bind a keyboard shortcut to `xo.fix`
 
