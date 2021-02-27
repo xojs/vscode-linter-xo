@@ -70,6 +70,17 @@ You can enable the formatter integration to use `xo --fix` as formatter. Require
 }
 ```
 
+To format files on save you can enable format on save and the default formatter.
+
+```json
+{
+	"xo.enable": true,
+	"xo.format.enable": true,
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "samverschueren.linter-xo",
+}
+```
+
 ## License
 
 MIT © [Sam Verschueren](http://github.com/SamVerschueren)
