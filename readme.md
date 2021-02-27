@@ -70,7 +70,7 @@ You can enable the formatter integration to use `xo --fix` as formatter. Require
 }
 ```
 
-To format files on save you can enable format on save and the default formatter.
+To format files on save you can enable format on save and set the default formatter to this plugin.
 
 ```json
 {
