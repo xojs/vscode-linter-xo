@@ -1,5 +1,4 @@
 import {Diagnostic} from 'vscode-languageserver';
-import {Map} from './map';
 import {computeKey} from './utils';
 
 interface ESLintAutoFixEdit {
@@ -29,12 +28,12 @@ export interface AutoFix {
 export class Fixes {
 	private readonly keys: string[];
 
-	constructor(private readonly edits: Map<AutoFix>) {
+	constructor(private readonly edits: Record<string, AutoFix>) {
 		this.keys = Object.keys(edits);
 	}
 
 	public static overlaps(lastEdit: AutoFix, newEdit: AutoFix): boolean {
-		return !!lastEdit && lastEdit.edit.range[1] > newEdit.edit.range[0];
+		return Boolean(lastEdit) && lastEdit.edit.range[1] > newEdit.edit.range[0];
 	}
 
 	public isEmpty(): boolean {
@@ -54,22 +53,27 @@ export class Fixes {
 				result.push(editInfo);
 			}
 		}
+
 		return result;
 	}
 
 	public getAllSorted(): AutoFix[] {
 		const result = this.keys.map(key => this.edits[key]);
+
 		return result.sort((a, b) => {
 			const d = a.edit.range[0] - b.edit.range[0];
 			if (d !== 0) {
 				return d;
 			}
+
 			if (a.edit.range[1] === 0) {
 				return -1;
 			}
+
 			if (b.edit.range[1] === 0) {
 				return 1;
 			}
+
 			return a.edit.range[1] - b.edit.range[1];
 		});
 	}
@@ -79,6 +83,7 @@ export class Fixes {
 		if (sorted.length <= 1) {
 			return sorted;
 		}
+
 		const result: AutoFix[] = [];
 		let last = sorted[0];
 		result.push(last);
@@ -89,6 +94,7 @@ export class Fixes {
 				last = current;
 			}
 		}
+
 		return result;
 	}
 }

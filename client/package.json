@@ -1,15 +1,21 @@
 {
-  "engines": {
-    "vscode": "^1.30.0"
-  },
-  "scripts": {
-    "update-vscode": "node ./node_modules/vscode/bin/install",
-    "postinstall": "npm run update-vscode"
-  },
-  "dependencies": {
-    "vscode-languageclient": "^5.1.1"
-  },
-  "devDependencies": {
-    "vscode": "^1.1.21"
-  }
+	"engines": {
+		"vscode": "^1.58.0"
+	},
+	"scripts": {
+		"lint": "node ../node_modules/xo/cli.js"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^7.0.0"
+	},
+	"xo": {
+		"ignores": [
+			"!out/**"
+		],
+		"rules": {
+			"@typescript-eslint/no-namespace": "warn",
+			"unicorn/prefer-node-protocol": "off",
+			"unicorn/prevent-abbreviations": "warn"
+		}
+	}
 }

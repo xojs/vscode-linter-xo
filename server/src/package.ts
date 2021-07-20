@@ -2,33 +2,28 @@ import * as path from 'path';
 import * as loadJsonFile from 'load-json-file';
 
 interface PackageJSON {
-	dependencies?: {
-		[key: string]: string;
-	};
-	devDependencies?: {
-		[key: string]: string;
-	};
+	dependencies?: Record<string, string>;
+	devDependencies?: Record<string, string>;
 }
 
 export class Package {
 	constructor(
-		private readonly workspaceRoot: string
-	) { }
+		private readonly workspaceRoot: string,
+	) {}
 
 	isDependency(name: string) {
 		try {
-			// tslint:disable-next-line no-unnecessary-type-assertion
-			const pkg = loadJsonFile.sync(path.join(this.workspaceRoot, 'package.json')) as PackageJSON;
+			const pkg = loadJsonFile.sync<PackageJSON>(path.join(this.workspaceRoot, 'package.json'));
 			const deps = pkg.dependencies || {};
 			const devDeps = pkg.devDependencies || {};
 
 			return Boolean(deps[name] || devDeps[name]);
-		} catch (err) {
-			if (err.code === 'ENOENT') {
+		} catch (error) {
+			if (error.code === 'ENOENT') {
 				return false;
 			}
 
-			throw err;
+			throw error;
 		}
 	}
 }

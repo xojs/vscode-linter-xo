@@ -1,13 +1,13 @@
 {
 	"extends": "../tsconfig.base.json",
 	"compilerOptions": {
-		"module": "commonjs",
-		"target": "es6",
+		"module": "CommonJS",
+		"target": "ES2019",
 		"moduleResolution": "node",
 		"outDir": "out",
 		"rootDir": "src",
 		"lib": [
-			"es6"
+			"ES2019"
 		]
 	},
 	"include": [

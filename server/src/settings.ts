@@ -1,7 +1,7 @@
 export interface Settings {
+	[key: string]: any;
 	xo: {
 		enable: boolean;
 		options: any;
 	};
-	[key: string]: any;
 }

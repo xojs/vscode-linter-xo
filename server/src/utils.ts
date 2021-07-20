@@ -1,4 +1,5 @@
 import {Diagnostic, DiagnosticSeverity} from 'vscode-languageserver';
+import type {Linter} from 'eslint';
 
 function parseSeverity(severity: number): DiagnosticSeverity {
 	switch (severity) {
@@ -11,10 +12,10 @@ function parseSeverity(severity: number): DiagnosticSeverity {
 	}
 }
 
-export function makeDiagnostic(problem: any): Diagnostic {
-	const message = (problem.ruleId !== null)
-		? `${problem.message} (${problem.ruleId})`
-		: `${problem.message}`;
+export function makeDiagnostic(problem: Linter.LintMessage): Diagnostic {
+	const message = (problem.ruleId === null)
+		? `${problem.message}`
+		: `${problem.message} (${problem.ruleId})`;
 
 	return {
 		message,
@@ -23,8 +24,8 @@ export function makeDiagnostic(problem: any): Diagnostic {
 		source: 'XO',
 		range: {
 			start: {line: problem.line - 1, character: problem.column - 1},
-			end: {line: problem.line - 1, character: problem.column - 1}
-		}
+			end: {line: problem.line - 1, character: problem.column - 1},
+		},
 	};
 }
 

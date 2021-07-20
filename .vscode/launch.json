@@ -24,5 +24,11 @@
 			"sourceMaps": true,
 			"outFiles": ["${workspaceFolder}/server/**/*.js"]
 		}
+	],
+	"compounds": [
+		{
+			"name": "Client + Server",
+			"configurations": ["Launch Extension", "Attach to Server"]
+		}
 	]
 }
