@@ -1,0 +1,119 @@
+const vscode = require('vscode');
+const node = require('vscode-languageclient/node');
+
+let client;
+
+const AllFixesRequest = {
+	type: new node.RequestType('textDocument/xo/allFixes')
+};
+
+function activate(context) {
+	// The server is implemented in node
+	const serverModule = context.asAbsolutePath('dist/server.js');
+
+	const debugOptions = {
+		execArgv: ['--nolazy', '--inspect=6004'],
+		cwd: process.cwd()
+	};
+
+	const serverOptions = {
+		run: {
+			module: serverModule,
+			transport: node.TransportKind.ipc,
+			options: {cwd: process.cwd()}
+		},
+		debug: {
+			module: serverModule,
+			transport: node.TransportKind.ipc,
+			options: debugOptions
+		}
+	};
+
+	const clientOptions = {
+		documentSelector: [
+			{language: 'javascript', scheme: 'file'},
+			{language: 'javascript', scheme: 'untitled'},
+			{language: 'javascriptreact', scheme: 'file'},
+			{language: 'javascriptreact', scheme: 'untitled'},
+			{language: 'typescript', scheme: 'file'},
+			{language: 'typescript', scheme: 'untitled'},
+			{language: 'typescriptreact', scheme: 'file'},
+			{language: 'typescriptreact', scheme: 'untitled'}
+		],
+		synchronize: {
+			configurationSection: 'xo',
+			fileEvents: [vscode.workspace.createFileSystemWatcher('**/package.json')]
+		}
+	};
+
+	client = new node.LanguageClient('XO Linter', serverOptions, clientOptions);
+
+	context.subscriptions.push(
+		new node.SettingMonitor(client, 'xo.enable').start(),
+		vscode.commands.registerCommand('xo.fix', fixAllProblems)
+	);
+}
+
+function fixAllProblems() {
+	const textEditor = vscode.window.activeTextEditor;
+	if (!textEditor) {
+		return;
+	}
+
+	const uri = textEditor.document.uri.toString();
+	// eslint-disable-next-line promise/prefer-await-to-then
+	client.sendRequest(AllFixesRequest.type, {textDocument: {uri}}).then(
+		(result) => {
+			if (result) {
+				applyTextEdits(uri, result.documentVersion, result.edits);
+			}
+		},
+		() => {
+			vscode.window.showErrorMessage(
+				'Failed to apply XO fixes to the document. Please consider opening an issue with steps to reproduce.'
+			);
+		}
+	);
+}
+
+function applyTextEdits(uri, documentVersion, edits) {
+	const textEditor = vscode.window.activeTextEditor;
+	if (textEditor && textEditor.document.uri.toString() === uri) {
+		if (textEditor.document.version !== documentVersion) {
+			vscode.window.showInformationMessage(
+				"XO fixes are outdated and can't be applied to the document."
+			);
+		}
+
+		textEditor
+			.edit((mutator) => {
+				for (const edit of edits) {
+					mutator.replace(
+						client.protocol2CodeConverter.asRange(edit.range),
+						edit.newText
+					);
+				}
+			})
+			// eslint-disable-next-line promise/prefer-await-to-then
+			.then((success) => {
+				if (!success) {
+					vscode.window.showErrorMessage(
+						'Failed to apply XO fixes to the document. Please consider opening an issue with steps to reproduce.'
+					);
+				}
+			});
+	}
+}
+
+function deactivate() {
+	if (!client) {
+		return undefined;
+	}
+
+	return client.stop();
+}
+
+module.exports = {
+	activate,
+	deactivate
+};
