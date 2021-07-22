@@ -67,6 +67,7 @@
 		"husky": "^7.0.1",
 		"lint-staged": "11.0.1",
 		"prettier": "^2.3.2",
+		"rimraf": "^3.0.2",
 		"xo": "^0.42.0"
 	},
 	"displayName": "XO",
@@ -96,7 +97,7 @@
 		"build": "yarn run clean && yarn run build:client && yarn run build:server",
 		"build:client": "esbuild ./client/extension.js --bundle --outfile=dist/client.js --external:vscode --format=cjs --platform=node --minify",
 		"build:server": "esbuild ./server/server.js --bundle --outfile=dist/server.js --external:vscode --format=cjs --platform=node --minify",
-		"clean": "rm -rf dist",
+		"clean": "rimraf dist",
 		"lint": "xo && yarn run lint:md",
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
 		"package": "yarn run build && vsce package && code --install-extension linter-xo-3.0.0.vsix",
