@@ -18,7 +18,8 @@
 		"url": "https://github.com/spence-s/vscode-linter-xo/issues"
 	},
 	"categories": [
-		"Linters"
+		"Linters",
+		"Formatters"
 	],
 	"contributes": {
 		"configuration": {
@@ -78,12 +79,10 @@
 	"homepage": "https://github.com/xojs/xo",
 	"icon": "icon.png",
 	"keywords": [
-		"code",
 		"code style",
 		"eslint",
-		"extension",
+		"formatter",
 		"linter",
-		"vscode",
 		"xo"
 	],
 	"license": "MIT",
@@ -94,15 +93,15 @@
 		"url": "https://github.com/spence-s/vscode-linter-xo"
 	},
 	"scripts": {
-		"build": "yarn run clean && yarn run build:client && yarn run build:server",
+		"build": "npm run clean && npm run build:client && npm run build:server",
 		"build:client": "esbuild ./client/extension.js --bundle --outfile=dist/client.js --external:vscode --format=cjs --platform=node --minify",
 		"build:server": "esbuild ./server/server.js --bundle --outfile=dist/server.js --external:vscode --format=cjs --platform=node --minify",
 		"clean": "rimraf dist",
-		"lint": "xo && yarn run lint:md",
+		"lint": "xo && npm run lint:md",
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
-		"package": "yarn run build && vsce package && code --install-extension linter-xo-3.0.0.vsix",
 		"prepare": "husky install",
-		"test": "yarn run lint && yarn run build"
+		"test": "npm run lint && npm run build",
+		"vscode:prepublish": "npm run build"
 	},
 	"xo": {
 		"prettier": true,
