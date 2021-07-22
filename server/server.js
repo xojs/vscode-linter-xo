@@ -1,3 +1,4 @@
+const {pathToFileURL} = require('url');
 const node = require('vscode-languageserver/node.js');
 const textDocument = require('vscode-languageserver-textdocument');
 const {URI} = require('vscode-uri');
@@ -126,11 +127,12 @@ class Linter {
 		if (typeof this?.lib?.lintText === 'function') return result;
 
 		try {
-			const xoPath = await node.Files.resolve(
+			const xoPathRaw = await node.Files.resolve(
 				'xo',
 				undefined,
 				this.workspaceRoot
 			);
+			const xoPath = pathToFileURL(xoPathRaw).toString();
 
 			// eslint-disable-next-line node/no-unsupported-features/es-syntax
 			const xo = await import(xoPath);
