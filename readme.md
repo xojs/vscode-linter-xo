@@ -4,8 +4,6 @@
 
 > Linter for [XO](https://github.com/sindresorhus/xo)
 
-This extension is an up to date fork of [vscode-linter-xo](https://github.com/SamVerschueren/vscode-linter-xo) by SamVerschueren and has been updated to work with all versions of XO as well as to provide better diagnostics logs and provide support for all OS and package managers. It draws heavy inspiration from the vscode eslint extension as well.
-
 ## Usage
 
 This extensions requires that [XO](https://github.com/sindresorhus/xo) is installed locally in your workspace folder. It will not load a globally installed XO version.
@@ -22,7 +20,7 @@ $ yarn add -D xo
 
 ## Notes
 
-- XO v40.0.0 and above we're released as pure ESM modules. Therefore, it is required that NodeJS versions 12+ be used to use this extension. If you are using an older version of Node.JS please install an earlier version of XO.
+- XO v0.40.0 and above were released as [pure ESM](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c). Therefore, it is required that Node.js versions 12+ be used to use this extension. If you are using an older version of Node.js please install an earlier version of XO.
 
 In Visual Studio Code, press <kbd>F1</kbd> and narrow down the list of commands by typing `extension`. Pick `Extensions: Install Extension`.
 
