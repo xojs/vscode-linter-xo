@@ -12,9 +12,6 @@ const Request = {
 	}
 };
 
-// 	Request.is = is;
-// })(Request || (Request = {}));
-
 const Thenable = {
 	is(value) {
 		const candidate = value;
@@ -26,10 +23,6 @@ const Thenable = {
 		);
 	}
 };
-// (function (Thenable) {
-
-// 	Thenable.is = is;
-// })(Thenable || (Thenable = {}));
 
 class BufferedMessageQueue {
 	constructor(connection) {
@@ -171,4 +164,3 @@ class BufferedMessageQueue {
 }
 
 module.exports = BufferedMessageQueue;
-// # sourceMappingURL=buffered-message-queue.js.map

@@ -71,4 +71,5 @@ class Fixes {
 		return result;
 	}
 }
+
 module.exports = Fixes;
