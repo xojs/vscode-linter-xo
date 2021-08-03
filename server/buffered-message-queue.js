@@ -88,21 +88,21 @@ class BufferedMessageQueue {
 		this.timer = setImmediate(() => {
 			this.timer = undefined;
 			this.processQueue();
+			this.trigger();
 		});
 	}
 
 	processQueue() {
 		const message = this.queue.shift();
-		if (!message) {
-			return;
-		}
+
+		if (!message) return;
 
 		if (Request.is(message)) {
 			const requestMessage = message;
 			if (requestMessage.token.isCancellationRequested) {
 				requestMessage.reject(
 					new node.ResponseError(
-						node.ErrorCodes.InvalidRequest,
+						node.LSPErrorCodes.RequestCancelled,
 						'Request got cancelled'
 					)
 				);
@@ -110,6 +110,7 @@ class BufferedMessageQueue {
 			}
 
 			const element = this.requestHandlers.get(requestMessage.method);
+
 			if (
 				element.versionProvider &&
 				(requestMessage === null || requestMessage === undefined
@@ -146,15 +147,19 @@ class BufferedMessageQueue {
 		} else {
 			const notificationMessage = message;
 			const element = this.notificationHandlers.get(notificationMessage.method);
+
+			if (element === undefined) {
+				throw new Error(`No handler registered`);
+			}
+
 			if (
 				element.versionProvider &&
 				(notificationMessage === null || notificationMessage === undefined
 					? undefined
 					: notificationMessage.documentVersion) !==
 					element.versionProvider(notificationMessage.params)
-			) {
+			)
 				return;
-			}
 
 			element.handler(notificationMessage.params);
 		}

@@ -42,7 +42,16 @@ function activate(context) {
 		],
 		synchronize: {
 			configurationSection: 'xo',
-			fileEvents: [vscode.workspace.createFileSystemWatcher('**/package.json')]
+			fileEvents: [
+				// we relint all open textDocuments whenever a config changes
+				// that may possibly affect the options xo should be using
+				vscode.workspace.createFileSystemWatcher('**/.eslintignore'),
+				vscode.workspace.createFileSystemWatcher(
+					'**/.xo-confi{g.cjs,g.json,g.js,g}'
+				),
+				vscode.workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g}'),
+				vscode.workspace.createFileSystemWatcher('**/package.json')
+			]
 		}
 	};
 
