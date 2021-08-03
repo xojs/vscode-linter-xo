@@ -15,7 +15,7 @@
 		"onCommand:xo.fix"
 	],
 	"bugs": {
-		"url": "https://github.com/spence-s/vscode-linter-xo/issues"
+		"url": "https://github.com/SamVerschueren/vscode-linter-xo/issues"
 	},
 	"categories": [
 		"Linters",
@@ -102,7 +102,7 @@
 	"publisher": "spence-s",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/spence-s/vscode-linter-xo"
+		"url": "https://github.com/SamVerschueren/vscode-linter-xo"
 	},
 	"scripts": {
 		"build": "npm run clean && npm run build:client && npm run build:server",
