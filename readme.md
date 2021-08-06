@@ -54,7 +54,7 @@ In either your workspace or user settings add the following. It's generally best
 
 ## Settings
 
-Enable the linter in the VS Code Settings.
+Enable the linter in the VS Code Settings, this is on by default.
 
 ```json
 {
@@ -66,7 +66,6 @@ You can also pass in extra options via vscode's settings. Note that these settin
 
 ```json
 {
-	"xo.enable": true,
 	"xo.options": {
 		"semicolon": false
 	}
@@ -85,7 +84,6 @@ You can override the severity of found issues, e.g. to make them stand out less 
 
 ```json
 {
-	"xo.enable": true,
 	"xo.overrideSeverity": "info"
 }
 ```

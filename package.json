@@ -44,6 +44,7 @@
 					"description": "Enable 'xo --fix' as formatter"
 				},
 				"xo.overrideSeverity": {
+					"scope": "resource",
 					"type": "string",
 					"default": "off",
 					"enum": [
