@@ -81,6 +81,15 @@ You can enable the formatter integration to use `xo --fix` as formatter. Require
 }
 ```
 
+You can override the severity of found issues, e.g. to make them stand out less than TypeScript errors.
+
+```json
+{
+	"xo.enable": true,
+	"xo.overrideSeverity": "info"
+}
+```
+
 ## License
 
 MIT © [Sam Verschueren](http://github.com/SamVerschueren)

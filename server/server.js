@@ -95,6 +95,9 @@ class Linter {
 		this.connection.onDidChangeConfiguration((params) => {
 			const {settings} = params;
 			this.options = settings.xo ? settings.xo.options || {} : {};
+			this.overrideSeverity = settings.xo
+				? settings.xo.overrideSeverity || undefined
+				: undefined;
 			this.validateMany(this.documents.all());
 		});
 
@@ -216,6 +219,16 @@ class Linter {
 
 		const diagnostics = results[0].messages.map((problem) => {
 			const diagnostic = utils.makeDiagnostic(problem);
+			if (this.overrideSeverity) {
+				const mapSeverity = {
+					off: diagnostic.severity,
+					info: node.DiagnosticSeverity.Information,
+					warn: node.DiagnosticSeverity.Warning,
+					error: node.DiagnosticSeverity.Error
+				};
+				diagnostic.severity = mapSeverity[this.overrideSeverity];
+			}
+
 			this.recordCodeAction(document, diagnostic, problem);
 			return diagnostic;
 		});

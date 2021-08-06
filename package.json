@@ -43,6 +43,17 @@
 					"default": false,
 					"description": "Enable 'xo --fix' as formatter"
 				},
+				"xo.overrideSeverity": {
+					"type": "string",
+					"default": "off",
+					"enum": [
+						"off",
+						"info",
+						"warn",
+						"error"
+					],
+					"description": "Override the severity of found issues."
+				},
 				"xo.trace.server": {
 					"scope": "window",
 					"type": "string",
