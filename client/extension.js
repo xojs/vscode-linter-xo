@@ -1,3 +1,4 @@
+const process = require('process');
 const vscode = require('vscode');
 const node = require('vscode-languageclient/node');
 
@@ -55,7 +56,7 @@ function activate(context) {
 		}
 	};
 
-	client = new node.LanguageClient('XO Linter', serverOptions, clientOptions);
+	client = new node.LanguageClient('xo', serverOptions, clientOptions);
 
 	context.subscriptions.push(
 		new node.SettingMonitor(client, 'xo.enable').start(),

@@ -1,4 +1,5 @@
 const {pathToFileURL} = require('url');
+const process = require('process');
 const node = require('vscode-languageserver/node.js');
 const textDocument = require('vscode-languageserver-textdocument');
 const {URI} = require('vscode-uri');
@@ -137,11 +138,6 @@ class Linter {
 			// eslint-disable-next-line node/no-unsupported-features/es-syntax
 			const xo = await import(xoPath);
 
-			// eslint-disable-next-line node/no-unsupported-features/es-syntax
-			const optionsManager = await import(
-				xoPath.replace('index.js', 'lib/options-manager.js')
-			);
-
 			if (!xo?.default?.lintText) {
 				return new node.ResponseError(
 					99,
@@ -155,8 +151,8 @@ class Linter {
 					'xo'
 				)} was successfully loaded from ${xoPath}`
 			);
+
 			this.lib = xo.default;
-			this.lib.optionsManager = optionsManager;
 
 			return result;
 		} catch {
@@ -211,12 +207,10 @@ class Linter {
 		options.filename = fsPath;
 		options.filePath = fsPath;
 
-		const report = await this.runLint(contents, options);
-
 		// Clean previously computed code actions.
 		this.codeActions[document.uri] = undefined;
 
-		const {results} = report;
+		const {results} = await this.runLint(contents, options);
 
 		if (results.length === 0 || !results[0].messages) return;
 
@@ -230,29 +224,17 @@ class Linter {
 	}
 
 	async runLint(contents, options) {
-		const cwd = process.cwd();
 		let report;
+		const cwd = process.cwd();
+
 		try {
 			process.chdir(options.cwd);
-
-			try {
-				const foundOptions = await this.lib.optionsManager.mergeWithFileConfig(
-					options
-				);
-
-				this.connection.console.info(
-					`Linting ${options.filePath} With Options ${JSON.stringify(
-						foundOptions
-					)}`
-				);
-
-				report = await this.lib.lintText(contents, foundOptions.options);
-			} catch (error) {
-				this.connection.console.error(error.toString());
-				this.connection.console.error(error.message);
-				this.connection.console.error(error.stack);
-				throw error;
-			}
+			report = await this.lib.lintText(contents, options);
+		} catch (error) {
+			this.connection.console.error(error.toString());
+			this.connection.console.error(error.message);
+			this.connection.console.error(error.stack);
+			throw error;
 		} finally {
 			if (cwd !== process.cwd()) {
 				process.chdir(cwd);

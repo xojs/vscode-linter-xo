@@ -75,13 +75,13 @@
 		"@commitlint/cli": "13.1.0",
 		"@commitlint/config-conventional": "13.1.0",
 		"@types/vscode": "^1.58.1",
-		"esbuild": "^0.12.17",
+		"esbuild": "^0.12.18",
 		"fixpack": "^4.0.0",
 		"husky": "^7.0.1",
 		"lint-staged": "11.1.1",
 		"prettier": "^2.3.2",
 		"rimraf": "^3.0.2",
-		"xo": "^0.42.0"
+		"xo": "^0.43.0"
 	},
 	"displayName": "XO",
 	"engines": {
