@@ -42,10 +42,10 @@ In either your workspace or user settings add the following. It's generally best
 {
 	"xo.format.enable": true,
 	"[javascript]": {
-		"editor.defaultFormatter": "spence-s.linter-xo"
+		"editor.defaultFormatter": "samverschueren.linter-xo"
 	},
 	"[typescript]": {
-		"editor.defaultFormatter": "spence-s.linter-xo"
+		"editor.defaultFormatter": "samverschueren.linter-xo"
 	}
 }
 ```
