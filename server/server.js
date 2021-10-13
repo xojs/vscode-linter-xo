@@ -245,7 +245,7 @@ class Linter {
 		 */
 		if (typeof xo?.lintText === 'function') return xo;
 
-		const folderPath = URI.parse(folderUri).path;
+		const folderPath = URI.parse(folderUri).fsPath;
 
 		const xoPath = URI.file(
 			await Files.resolve('xo', undefined, folderPath)
