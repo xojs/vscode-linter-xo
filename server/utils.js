@@ -34,16 +34,7 @@ function computeKey(diagnostic) {
 	return `[${range.start.line},${range.start.character},${range.end.line},${range.end.character}]-${diagnostic.code}`;
 }
 
-function pick(obj, arr) {
-	const picked = {};
-	arr.forEach((field) => {
-		picked[field] = obj[field];
-	});
-	return picked;
-}
-
 module.exports = {
 	computeKey,
-	makeDiagnostic,
-	pick
+	makeDiagnostic
 };

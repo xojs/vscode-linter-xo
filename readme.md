@@ -1,12 +1,12 @@
 # vscode-linter-xo
 
-[![Build Status](https://travis-ci.org/SamVerschueren/vscode-linter-xo.svg?branch=master)](https://travis-ci.org/SamVerschueren/vscode-linter-xo)
+[![Build Status](https://app.travis-ci.com/xojs/vscode-linter-xo.svg?branch=master)](https://app.travis-ci.com/xojs/vscode-linter-xo)
 
 > Linter for [XO](https://github.com/sindresorhus/xo)
 
 ## Usage
 
-Just set up [XO](https://github.com/sindresorhus/xo) like you normally would in your project. This extensions requires that [XO](https://github.com/sindresorhus/xo) is installed locally in your workspace folder and listed in your `package.json`. It will not load a globally installed XO version. The extension will pickup the configuration in your workspace just like running [XO](https://github.com/sindresorhus/xo) in your terminal would. You will be able to see your linter work as you type and easily format your code if you want it to!
+Just set up [XO](https://github.com/sindresorhus/xo) like you normally would in your project. This extensions requires that [XO](https://github.com/sindresorhus/xo) is installed locally in your workspace folder. It will not load a globally installed XO version. The extension will pickup the configuration in your workspace just like running [XO](https://github.com/sindresorhus/xo) in your terminal would. You will be able to see your linter work as you type and easily format your code if you want it to!
 
 ```shell
 $ npm install --save-dev xo
@@ -18,28 +18,17 @@ or
 $ yarn add -D xo
 ```
 
-## Usage Notes + Future Improvements
+## Auto Format JS/TS Files XO
 
-- If you upgrade XO while using the extension, you will need to reload vscode for extension to get the upgraded package from your node_modules. The fastest way is to use the command pallete and select `Developer: reload window`.
+You can enable XO as a formatter for TypeScript and JavaScript. We recommend setting it up as follows:
 
-- The linter XO extension will not currently load xo if it is not listed in your package.json and found in your local node_modules. However, we are planning on adding a global option in the near future, check back soon if this is a requirement.
-
-- The linter XO extension currently does not support multi-root workspaces (although we plan to soon). It will lint all TS and JS files in a single workspace with the instance of XO in the top folder, due to the way vscode works. Don't worry, we plan to support multiroot/multifolder workspaces fully soon. As a workaround - configure xo the way you want it for every folder in your workspace and put that folder at the top of the workspace.
-
-- XO v0.40.0 and above were released as [pure ESM](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c). Therefore, it is required that Node.js versions 12+ be used to use this extension. If you are using an older version of Node.js please install an earlier version of XO.
-
-## Auto Fix Issues With XO
-
-The XO extension ships with a fix command that accessible from the command pallete.
-
-Pull up the command pallete (usually `F1` or `Ctrl + Shift + P`) and choose `XO: Fix all auto-fixable problems`.
-
-You can also use enable XO as your default formatter for TypeScript and JavaScript and have vscode run `xo --fix` on save or on type. We reccomend setting it up as follows:
-
-In either your workspace or user settings add the following. It's generally best to make xo the default formatter for JavaScript and TypeScript files specifically as it will not be able to format any other document types, even if prettier is enabled.
+In either your workspace or user settings add the following. It's generally best to make xo the default formatter for JavaScript and TypeScript files specifically as it will not be able to format other document types.
 
 ```json
 {
+	// optionally turn on format on save
+	"editor.formatOnSave": true,
+	"xo.enable": true,
 	"xo.format.enable": true,
 	"[javascript]": {
 		"editor.defaultFormatter": "samverschueren.linter-xo"
@@ -49,6 +38,10 @@ In either your workspace or user settings add the following. It's generally best
 	}
 }
 ```
+
+The XO extension also ships with a fix command that is accessible from the command pallete. This command will apply xo fixes to your JS or TS file regardless of any configuration.
+
+To use: pull up the command pallete (usually `F1` or `Ctrl + Shift + P`) and choose `XO: Fix all auto-fixable problems`.
 
 ![](media/fix.gif)
 
@@ -87,6 +80,10 @@ You can override the severity of found issues, e.g. to make them stand out less 
 	"xo.overrideSeverity": "info"
 }
 ```
+
+## Usage Notes + Future Improvements
+
+- If you upgrade XO while using the extension, you will need to reload vscode for extension to get the upgraded package from your node_modules. The fastest way is to use the command pallete and select `Developer: reload window`.
 
 ## License
 

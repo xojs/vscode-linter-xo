@@ -7,10 +7,7 @@
 			"request": "launch",
 			"name": "Launch Extension",
 			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--disable-extensions",
-				"--extensionDevelopmentPath=${workspaceFolder}"
-			],
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
 			"stopOnEntry": false,
 			"sourceMaps": true,
 			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
@@ -24,7 +21,7 @@
 			"protocol": "inspector",
 			"port": 6004,
 			"sourceMaps": true,
-			"outFiles": ["${workspaceFolder}/server/**/*.js"]
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"]
 		}
 	]
 }
