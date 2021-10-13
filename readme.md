@@ -1,6 +1,6 @@
 # vscode-linter-xo
 
-[![Build Status](https://app.travis-ci.com/xojs/vscode-linter-xo.svg?branch=master)](https://app.travis-ci.com/xojs/vscode-linter-xo)
+![Travis (.com)](https://img.shields.io/travis/com/xojs/vscode-linter-xo)
 
 > Linter for [XO](https://github.com/sindresorhus/xo)
 

@@ -1,4 +1,4 @@
-### 4.0.0
+### 3.3.0
 
 - Support multi-root workspaces completely
 - Internal refactoring for a much cleaner and clearer linter class.
