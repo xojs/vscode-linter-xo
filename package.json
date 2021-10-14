@@ -33,6 +33,7 @@
 					"description": "Control whether xo is enabled or not."
 				},
 				"xo.options": {
+					"scope": "resource",
 					"type": "object",
 					"default": {},
 					"description": "The xo options object to provide args to the xo command."

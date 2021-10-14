@@ -8,20 +8,19 @@ const {
 	DocumentFormattingRequest,
 	TextDocumentSyncKind,
 	Files,
-	ErrorMessageTracker,
 	DiagnosticSeverity,
 	TextEdit,
 	Range
 } = require('vscode-languageserver/node');
 const {TextDocument} = require('vscode-languageserver-textdocument');
-const autoBind = require('auto-bind');
 const {URI} = require('vscode-uri');
+const autoBind = require('auto-bind');
 const debounce = require('lodash.debounce');
 const loadJsonFile = require('load-json-file');
 const utils = require('./utils');
 
 const Fixes = require('./fixes');
-const BufferedMessageQueue = require('./buffered-message-queue');
+const Queue = require('./queue');
 
 const sendDiagnosticsNotification = new NotificationType('xo/validate');
 
@@ -41,10 +40,10 @@ class Linter {
 		/**
 		 * codeActions to apply on format request
 		 */
-		this.codeActions = Object.create(null);
+		this.codeActions = new Map();
 
 		/**
-		 * Set up messageQueue which allows for
+		 * Set up queue which allows for
 		 * async cancellations and processing notifications
 		 * and requests in order
 		 */
@@ -61,9 +60,9 @@ class Linter {
 		 */
 		this.connection.onInitialize(this.handleInitialize);
 
-		// TODO: we need to properly re-initialize when these handlers
-		// 		 are called currently they will miss some edge cases with updating
-		// 		 xo and it would be good to get that handled
+		/**
+		 * handle workspace and xo configuration changes
+		 */
 		this.connection.onDidChangeConfiguration(this.handleDidChangeConfiguration);
 		this.connection.onDidChangeWatchedFiles(this.handleDidChangeWatchedFiles);
 		this.connection.onRequest(
@@ -74,9 +73,11 @@ class Linter {
 		/**
 		 * initialize core helper objects
 		 * - xoCache is a mapping of folderUris to the xo object from its node_modules
+		 * - configurationCache is mapping of folders to their configurations
 		 * - folders is an array of folderUris
 		 */
 		this.xoCache = new Map();
+		this.configurationCache = new Map();
 		this.foldersCache = [];
 
 		this.hasShownResolutionError = false;
@@ -92,18 +93,26 @@ class Linter {
 	}
 
 	/**
-	 * Set up messageQueue which allows for
+	 * check if document is open
+	 * @param {TextDocument} document
+	 */
+	isDocumentOpen(document) {
+		return document?.uri && this.documents.get(document.uri);
+	}
+
+	/**
+	 * Set up the queue which allows for
 	 * async cancellations and processing in order
 	 */
 	createQueue() {
-		this.messageQueue = new BufferedMessageQueue(this.connection);
+		this.queue = new Queue(this.connection);
 
 		/**
 		 * Notification handler for document changes
 		 */
-		this.messageQueue.onNotification(
+		this.queue.onNotification(
 			sendDiagnosticsNotification,
-			debounce((document) => this.lintDocument(document), 150, {maxWait: 350}),
+			debounce(this.lintDocument, 150, {maxWait: 350}),
 			(document) => document.version
 		);
 
@@ -111,26 +120,9 @@ class Linter {
 		 * define a request handler for a
 		 * document formatting request from vscode
 		 */
-		this.messageQueue.registerRequest(
+		this.queue.registerRequest(
 			DocumentFormattingRequest.type,
-			async (params) => {
-				// ensure document is open
-				if (
-					!params?.textDocument?.uri ||
-					!this.documents.get(params?.textDocument?.uri)
-				)
-					return null;
-				// ensure format is enabled by the user
-				if (!this.configurationCache)
-					this.configurationCache =
-						await this.connection.workspace.getConfiguration('xo');
-				if (!this.configurationCache?.format?.enable) return null;
-				// get fixes and send to client
-				const fixes = await this.getFileFormattingFixes(
-					params?.textDocument?.uri
-				);
-				return fixes?.edits;
-			}
+			this.handleDocumentFormattingRequst
 		);
 	}
 
@@ -182,9 +174,11 @@ class Linter {
 	/**
 	 * handle onDidChangeConfiguration
 	 */
-	handleDidChangeConfiguration(params) {
-		this.configurationCache = params?.settings?.xo;
-		this.overrideSeverity = this.configurationCache?.overrideSeverity;
+	async handleDidChangeConfiguration() {
+		this.configurationCache.clear();
+		await Promise.all(
+			this.foldersCache.map((folder) => this.getDocumentConfig(folder))
+		);
 		return this.lintDocuments(this.documents.all());
 	}
 
@@ -199,7 +193,19 @@ class Linter {
 	 * Handle custom all fixes request
 	 */
 	async handleAllFixesRequest(params) {
-		return this.getFileFormattingFixes(params.textDocument.uri);
+		return this.getDocumentFixes(params.textDocument.uri);
+	}
+
+	/**
+	 * Handle LSP document formatting request
+	 */
+	async handleDocumentFormattingRequst(params) {
+		if (!this.isDocumentOpen(params.textDocument)) return null;
+		const {config} = await this.getDocumentConfig(params.textDocument);
+		if (!config?.format?.enable) return null;
+		// get fixes and send to client
+		const fixes = await this.getDocumentFixes(params.textDocument.uri);
+		return fixes?.edits;
 	}
 
 	/**
@@ -215,9 +221,10 @@ class Linter {
 
 	/**
 	 * Handle documents.onDidChangeContent
+	 * queues document content linting
 	 */
 	handleDocumentsOnDidChangeContent(event) {
-		this.messageQueue.addNotificationMessage(
+		this.queue.addNotificationMessage(
 			sendDiagnosticsNotification,
 			event.document,
 			event.document.version
@@ -228,17 +235,10 @@ class Linter {
 	 * Get xo from cache if it is there.
 	 * Attempt to resolve from node_modules relative
 	 * to the current working directory if it is not
+	 * @param {TextDocument} document
 	 */
 	async resolveXO(document) {
-		const folderUri = await this.getWorkspaceFolderUri(document);
-
-		if (!folderUri) {
-			const err = new Error(
-				'Cannot lint: No folder found in workspace for this file.'
-			);
-			this.connection.console.error(err);
-			throw err;
-		}
+		const {uri: folderUri} = await this.getDocumentFolder(document);
 
 		let xo = this.xoCache.get(folderUri);
 
@@ -284,43 +284,22 @@ class Linter {
 	}
 
 	/**
-	 * lints and sends diagnostics for multiple files
+	 * helper to lint and sends diagnostics for multiple files
 	 */
 	async lintDocuments(documents) {
-		const tracker = new ErrorMessageTracker();
-		await Promise.all(
-			documents.map(async (document) => {
-				try {
-					const diagnostics = await this.getDocumentDiagnostics(document);
-					this.connection.sendDiagnostics({uri: document.uri, diagnostics});
-				} catch (error) {
-					const isResolutionErr = error?.message?.includes(
-						'Failed to resolve module'
-					);
-
-					if (error?.message) {
-						const {fsPath} = URI.parse(document.uri);
-						error.message = `${fsPath} ${error.message}`;
-					}
-
-					if (!this.hasShownResolutionError && isResolutionErr) {
-						error.message += '. Ensure that xo is installed.';
-						tracker.add(error?.message ? error.message : 'Unknown Error');
-						this.hasShownResolutionError = true;
-					}
-
-					if (!isResolutionErr)
-						tracker.add(error?.message ? error.message : 'Unknown Error');
-
-					this.connection.console.error(error?.stack);
-				}
-			})
-		);
-		return tracker.sendErrors(this.connection);
+		for (const document of documents) {
+			this.queue.addNotificationMessage(
+				sendDiagnosticsNotification,
+				document,
+				document.version,
+				true
+			);
+		}
 	}
 
 	/**
 	 * lints and sends diagnostics for a single file
+	 * @param {TextDocument} document
 	 */
 	async lintDocument(document) {
 		try {
@@ -350,49 +329,93 @@ class Linter {
 	}
 
 	/**
-	 * get the workspace folderUri from a document
+	 * get the workspace folder document from a document
 	 * caches workspace folders if needed
+	 * @param {TextDocument} document
+	 * @returns {TextDocument}
 	 */
-	async getWorkspaceFolderUri(document) {
+	async getDocumentFolder(document) {
 		// first check this.foldersCache hasn't been cleared or unset for some reason
 		if (!Array.isArray(this.foldersCache) || this.foldersCache.length === 0)
 			this.foldersCache =
 				(await this.connection.workspace.getWorkspaceFolders()) || [];
 
-		let folderUri;
+		let folder;
 
 		// attempt to find the folder in the cache
-		folderUri = this.foldersCache.find((workspaceFolder) =>
+		folder = this.foldersCache.find((workspaceFolder) =>
 			document.uri.includes(workspaceFolder.uri)
-		)?.uri;
+		);
 
 		// if we can't find the folder in the cache - try 1 more time to reset the folders
 		// and see if that helps if a new folder was added to the workspace.
 		// We try to avoid resetting the folders if we can as a small optimization
-		if (!folderUri) {
-			this.foldersCache = await this.connection.workspace.getWorkspaceFolders();
-			folderUri = this.foldersCache.find((workspaceFolder) =>
+		if (!folder?.uri) {
+			this.foldersCache =
+				(await this.connection.workspace.getWorkspaceFolders()) || [];
+			folder = this.foldersCache.find((workspaceFolder) =>
 				document.uri.includes(workspaceFolder.uri)
-			)?.uri;
+			);
 		}
 
-		return folderUri;
+		return folder;
+	}
+
+	/**
+	 * Gets document folder and settings
+	 * and caches them if needed
+	 * @param {TextDocument} document
+	 */
+	async getDocumentConfig(document) {
+		const folder = await this.getDocumentFolder(document);
+		if (!folder) return {};
+		if (this.configurationCache.has(folder.uri))
+			return {
+				folder,
+				config: this.configurationCache.get(folder.uri)
+			};
+		const config = await this.connection.workspace.getConfiguration({
+			scopeUri: folder.uri,
+			section: 'xo'
+		});
+		this.configurationCache.set(folder.uri, config);
+		return {
+			folder,
+			config
+		};
 	}
 
 	async getDocumentDiagnostics(document) {
+		// first we resolve all the configs we need
+		const {
+			folder: {uri: folderUri} = {},
+			config: {options, overrideSeverity} = {}
+		} = await this.getDocumentConfig(document);
+
+		// if we can't find a valid folder, then the user
+		// has likely opened a JS file from another location
+		// so we will just bail out of linting early
+		if (!folderUri) {
+			const error = new Error(
+				'No valid workspace folder could be found for this file. Skipping linting as it is an external JS file.'
+			);
+			this.connection.console.warn(error.stack);
+			return [];
+		}
+
 		const xo = await this.resolveXO(document);
 
+		const {fsPath: documentFsPath} = URI.parse(document.uri);
+		const {fsPath: folderFsPath} = URI.parse(folderUri);
 		const contents = document.getText();
-		const {options} = this.configurationCache;
-		const {fsPath} = URI.parse(document.uri);
-		const folderUri = await this.getWorkspaceFolderUri(document);
 
-		options.cwd = URI.parse(folderUri).fsPath;
-		options.filename = fsPath;
-		options.filePath = fsPath;
+		// set the options needed for internal xo config resolution
+		options.cwd = folderFsPath;
+		options.filename = documentFsPath;
+		options.filePath = documentFsPath;
 
 		// Clean previously computed code actions.
-		this.codeActions[document.uri] = undefined;
+		this.codeActions.delete(document.uri);
 
 		let report;
 		const cwd = process.cwd();
@@ -412,7 +435,7 @@ class Linter {
 
 		return results[0].messages.map((problem) => {
 			const diagnostic = utils.makeDiagnostic(problem);
-			if (this.configurationCache?.overrideSeverity) {
+			if (overrideSeverity) {
 				const mapSeverity = {
 					off: diagnostic.severity,
 					info: DiagnosticSeverity.Information,
@@ -420,8 +443,7 @@ class Linter {
 					error: DiagnosticSeverity.Error
 				};
 				diagnostic.severity =
-					mapSeverity[this.configurationCache.overrideSeverity] ||
-					diagnostic.severity;
+					mapSeverity[overrideSeverity] || diagnostic.severity;
 			}
 
 			/**
@@ -429,10 +451,10 @@ class Linter {
 			 */
 			if (problem.fix && problem.ruleId) {
 				const {uri} = document;
-				let edits = this.codeActions[uri];
+				let edits = this.codeActions.get(uri);
 				if (!edits) {
 					edits = Object.create(null);
-					this.codeActions[uri] = edits;
+					this.codeActions.set(uri, edits);
 				}
 
 				edits[utils.computeKey(diagnostic)] = {
@@ -447,10 +469,10 @@ class Linter {
 		});
 	}
 
-	async getFileFormattingFixes(uri) {
+	async getDocumentFixes(uri) {
 		let result = null;
 		const textDocument = this.documents.get(uri);
-		const edits = this.codeActions[uri];
+		const edits = this.codeActions.get(uri);
 		if (edits) {
 			const fixes = new Fixes(edits);
 			if (!fixes.isEmpty()) {
