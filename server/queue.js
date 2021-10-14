@@ -1,30 +1,6 @@
 const node = require('vscode-languageserver/node');
 
-const Request = {
-	is(value) {
-		const candidate = value;
-		return (
-			candidate &&
-			Boolean(candidate.token) &&
-			Boolean(candidate.resolve) &&
-			Boolean(candidate.reject)
-		);
-	}
-};
-
-const Thenable = {
-	is(value) {
-		const candidate = value;
-		return (
-			typeof (candidate === null || candidate === undefined
-				? undefined
-				: // eslint-disable-next-line promise/prefer-await-to-then
-				  candidate.then) === 'function'
-		);
-	}
-};
-
-class BufferedMessageQueue {
+class Queue {
 	constructor(connection) {
 		this.connection = connection;
 		this.queue = [];
@@ -67,11 +43,12 @@ class BufferedMessageQueue {
 		this.notificationHandlers.set(type.method, {handler, versionProvider});
 	}
 
-	addNotificationMessage(type, parameters, version) {
+	addNotificationMessage(type, parameters, version, flush) {
 		this.queue.push({
 			method: type.method,
 			params: parameters,
-			documentVersion: version
+			documentVersion: version,
+			flush
 		});
 		this.trigger();
 	}
@@ -97,7 +74,12 @@ class BufferedMessageQueue {
 
 		if (!message) return;
 
-		if (Request.is(message)) {
+		if (
+			message &&
+			Boolean(message.token) &&
+			Boolean(message.resolve) &&
+			Boolean(message.reject)
+		) {
 			const requestMessage = message;
 			if (requestMessage.token.isCancellationRequested) {
 				requestMessage.reject(
@@ -131,7 +113,8 @@ class BufferedMessageQueue {
 				requestMessage.params,
 				requestMessage.token
 			);
-			if (Thenable.is(result)) {
+			// eslint-disable-next-line promise/prefer-await-to-then
+			if (typeof result?.then === 'function') {
 				// eslint-disable-next-line promise/prefer-await-to-then
 				result.then(
 					(value) => {
@@ -146,26 +129,27 @@ class BufferedMessageQueue {
 			}
 		} else {
 			const notificationMessage = message;
-			const element = this.notificationHandlers.get(notificationMessage.method);
+			const handler = this.notificationHandlers.get(notificationMessage.method);
 
-			if (element === undefined) {
+			if (handler === undefined) {
 				throw new Error(`No handler registered`);
 			}
 
 			if (
-				element.versionProvider &&
+				handler.versionProvider &&
 				(notificationMessage === null || notificationMessage === undefined
 					? undefined
 					: notificationMessage.documentVersion) !==
-					element.versionProvider(notificationMessage.params)
+					handler.versionProvider(notificationMessage.params)
 			)
 				return;
 
-			element.handler(notificationMessage.params);
+			handler.handler(notificationMessage.params);
+			if (notificationMessage.flush) handler.handler.flush();
 		}
 
 		this.trigger();
 	}
 }
 
-module.exports = BufferedMessageQueue;
+module.exports = Queue;
