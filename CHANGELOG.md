@@ -1,3 +1,7 @@
+### 3.3.1
+
+- fix bug with windows path
+
 ### 3.3.0
 
 - Support multi-root workspaces completely
