@@ -145,7 +145,11 @@ class Queue {
 				return;
 
 			handler.handler(notificationMessage.params);
-			if (notificationMessage.flush) handler.handler.flush();
+			if (
+				notificationMessage.flush &&
+				typeof handler.handler.flush === 'function'
+			)
+				handler.handler.flush();
 		}
 
 		this.trigger();
