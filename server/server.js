@@ -23,6 +23,7 @@ const Fixes = require('./fixes');
 const Queue = require('./queue');
 
 const sendDiagnosticsNotification = new NotificationType('xo/validate');
+const DEFAULT_DEBOUNCE = 150;
 
 class Linter {
 	constructor() {
@@ -81,6 +82,7 @@ class Linter {
 		this.foldersCache = [];
 
 		this.hasShownResolutionError = false;
+		this.currentDebounce = DEFAULT_DEBOUNCE;
 	}
 
 	listen() {
@@ -109,6 +111,8 @@ class Linter {
 
 		/**
 		 * Notification handler for document changes
+		 * sets up here with default debounce since
+		 * configurations are not available yet
 		 */
 		this.queue.onNotification(
 			sendDiagnosticsNotification,
@@ -122,7 +126,7 @@ class Linter {
 		 */
 		this.queue.registerRequest(
 			DocumentFormattingRequest.type,
-			this.handleDocumentFormattingRequst
+			this.handleDocumentFormattingRequest
 		);
 	}
 
@@ -174,7 +178,20 @@ class Linter {
 	/**
 	 * handle onDidChangeConfiguration
 	 */
-	async handleDidChangeConfiguration() {
+	async handleDidChangeConfiguration(params) {
+		this.log('params', params);
+		if (
+			Number.isInteger(Number(params?.settings?.xo?.debounce)) &&
+			Number(params?.settings?.xo?.debounce) !== this.currentDebounce
+		) {
+			this.currentDebounce = params.settings.xo.debounce;
+			this.queue.onNotification(
+				sendDiagnosticsNotification,
+				debounce(this.lintDocument, params.settings.xo.debounce),
+				(document) => document.version
+			);
+		}
+
 		this.configurationCache.clear();
 		await Promise.all(
 			this.foldersCache.map((folder) => this.getDocumentConfig(folder))
@@ -199,7 +216,7 @@ class Linter {
 	/**
 	 * Handle LSP document formatting request
 	 */
-	async handleDocumentFormattingRequst(params) {
+	async handleDocumentFormattingRequest(params) {
 		if (!this.isDocumentOpen(params.textDocument)) return null;
 		const {config} = await this.getDocumentConfig(params.textDocument);
 		if (!config?.format?.enable) return null;
@@ -223,8 +240,8 @@ class Linter {
 	 * Handle documents.onDidChangeContent
 	 * queues document content linting
 	 */
-	handleDocumentsOnDidChangeContent(event) {
-		this.queue.addNotificationMessage(
+	async handleDocumentsOnDidChangeContent(event) {
+		await this.queue.addNotificationMessage(
 			sendDiagnosticsNotification,
 			event.document,
 			event.document.version
@@ -239,16 +256,11 @@ class Linter {
 	 */
 	async resolveXO(document) {
 		const {uri: folderUri} = await this.getDocumentFolder(document);
-
 		let xo = this.xoCache.get(folderUri);
 
-		/**
-		 * return early if we already have xo cached
-		 */
 		if (typeof xo?.lintText === 'function') return xo;
 
 		const folderPath = URI.parse(folderUri).fsPath;
-
 		const xoPath = URI.file(
 			await Files.resolve('xo', undefined, folderPath)
 		).toString();
@@ -265,7 +277,6 @@ class Linter {
 			const pkg = await loadJsonFile(
 				URI.parse(xoPath).path.replace('index.js', 'package.json')
 			);
-
 			xo.default.version = pkg.version;
 		} catch (error) {
 			this.connection.console.error(
