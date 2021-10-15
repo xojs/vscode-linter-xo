@@ -4,25 +4,24 @@ const {
 	ProposedFeatures,
 	TextDocuments,
 	RequestType,
-	NotificationType,
 	DocumentFormattingRequest,
 	TextDocumentSyncKind,
 	Files,
 	DiagnosticSeverity,
 	TextEdit,
-	Range
+	Range,
+	ResponseError,
+	LSPErrorCodes
 } = require('vscode-languageserver/node');
 const {TextDocument} = require('vscode-languageserver-textdocument');
 const {URI} = require('vscode-uri');
 const autoBind = require('auto-bind');
 const debounce = require('lodash.debounce');
 const loadJsonFile = require('load-json-file');
+const Queue = require('queue');
 const utils = require('./utils');
-
 const Fixes = require('./fixes');
-const Queue = require('./queue');
 
-const sendDiagnosticsNotification = new NotificationType('xo/validate');
 const DEFAULT_DEBOUNCE = 150;
 
 class Linter {
@@ -48,7 +47,7 @@ class Linter {
 		 * async cancellations and processing notifications
 		 * and requests in order
 		 */
-		this.createQueue();
+		this.queue = new Queue({concurrency: 1, autostart: true});
 
 		/**
 		 * setup documents listeners
@@ -66,10 +65,24 @@ class Linter {
 		 */
 		this.connection.onDidChangeConfiguration(this.handleDidChangeConfiguration);
 		this.connection.onDidChangeWatchedFiles(this.handleDidChangeWatchedFiles);
+
+		/**
+		 * handle document formatting requests
+		 * - the built in "allFixes" request does not depend on configuration
+		 * - the formatting request requires user to enable xo as formatter
+		 */
 		this.connection.onRequest(
 			new RequestType('textDocument/xo/allFixes'),
 			this.handleAllFixesRequest
 		);
+		this.connection.onRequest(
+			DocumentFormattingRequest.type,
+			this.handleDocumentFormattingRequest
+		);
+
+		this.lintDocumentDebounced = debounce(this.lintDocument, DEFAULT_DEBOUNCE, {
+			maxWait: 350
+		});
 
 		/**
 		 * initialize core helper objects
@@ -103,40 +116,13 @@ class Linter {
 	}
 
 	/**
-	 * Set up the queue which allows for
-	 * async cancellations and processing in order
-	 */
-	createQueue() {
-		this.queue = new Queue(this.connection);
-
-		/**
-		 * Notification handler for document changes
-		 * sets up here with default debounce since
-		 * configurations are not available yet
-		 */
-		this.queue.onNotification(
-			sendDiagnosticsNotification,
-			debounce(this.lintDocument, 150, {maxWait: 350}),
-			(document) => document.version
-		);
-
-		/**
-		 * define a request handler for a
-		 * document formatting request from vscode
-		 */
-		this.queue.registerRequest(
-			DocumentFormattingRequest.type,
-			this.handleDocumentFormattingRequest
-		);
-	}
-
-	/**
 	 * log a message to the client console
 	 * in a console.log type of way - primarily used
 	 * for development and debugging
 	 * @param  {...any} messages
 	 */
 	log(...messages) {
+		const ts = Date.now();
 		this.connection.console.log(
 			// eslint-disable-next-line unicorn/no-array-reduce
 			messages.reduce((acc, message) => {
@@ -146,7 +132,7 @@ class Linter {
 					message = JSON.stringify(message, null, 2);
 				// eslint-disable-next-line unicorn/prefer-spread
 				return acc.concat(message + ' ');
-			}, '')
+			}, `[${ts}] `)
 		);
 	}
 
@@ -179,16 +165,15 @@ class Linter {
 	 * handle onDidChangeConfiguration
 	 */
 	async handleDidChangeConfiguration(params) {
-		this.log('params', params);
 		if (
 			Number.isInteger(Number(params?.settings?.xo?.debounce)) &&
 			Number(params?.settings?.xo?.debounce) !== this.currentDebounce
 		) {
 			this.currentDebounce = params.settings.xo.debounce;
-			this.queue.onNotification(
-				sendDiagnosticsNotification,
-				debounce(this.lintDocument, params.settings.xo.debounce),
-				(document) => document.version
+			this.lintDocumentDebounced = debounce(
+				this.lintDocument,
+				params.settings.xo.debounce,
+				{maxWait: 350}
 			);
 		}
 
@@ -210,19 +195,59 @@ class Linter {
 	 * Handle custom all fixes request
 	 */
 	async handleAllFixesRequest(params) {
-		return this.getDocumentFixes(params.textDocument.uri);
+		return new Promise((resolve, reject) => {
+			this.queue.push(async () => {
+				try {
+					const fixes = await this.getDocumentFixes(params.textDocument.uri);
+					resolve(fixes);
+				} catch (error) {
+					reject(error);
+				}
+			});
+		});
 	}
 
 	/**
 	 * Handle LSP document formatting request
 	 */
-	async handleDocumentFormattingRequest(params) {
-		if (!this.isDocumentOpen(params.textDocument)) return null;
-		const {config} = await this.getDocumentConfig(params.textDocument);
-		if (!config?.format?.enable) return null;
-		// get fixes and send to client
-		const fixes = await this.getDocumentFixes(params.textDocument.uri);
-		return fixes?.edits;
+	async handleDocumentFormattingRequest(params, token) {
+		return new Promise((resolve, reject) => {
+			this.queue.push(async () => {
+				try {
+					if (!this.isDocumentOpen(params.textDocument)) return null;
+
+					if (token.isCancellationRequested) {
+						return reject(
+							new ResponseError(
+								LSPErrorCodes.RequestCancelled,
+								'Request got cancelled'
+							)
+						);
+					}
+
+					if (
+						params.textDocument.version &&
+						params.textDocument.version !==
+							this.documents.get(params.textDocument.uri).version
+					) {
+						return reject(
+							new ResponseError(
+								LSPErrorCodes.RequestCancelled,
+								'Request got cancelled'
+							)
+						);
+					}
+
+					const {config} = await this.getDocumentConfig(params.textDocument);
+					if (!config?.format?.enable) return resolve(null);
+					// get fixes and send to client
+					const fixes = await this.getDocumentFixes(params.textDocument.uri);
+					resolve(fixes?.edits);
+				} catch (error) {
+					reject(error);
+				}
+			});
+		});
 	}
 
 	/**
@@ -240,12 +265,20 @@ class Linter {
 	 * Handle documents.onDidChangeContent
 	 * queues document content linting
 	 */
-	async handleDocumentsOnDidChangeContent(event) {
-		await this.queue.addNotificationMessage(
-			sendDiagnosticsNotification,
-			event.document,
-			event.document.version
-		);
+	handleDocumentsOnDidChangeContent(event) {
+		this.queue.push(async () => {
+			try {
+				if (
+					event.document.version !==
+					this.documents.get(event.document.uri).version
+				)
+					return;
+
+				await this.lintDocumentDebounced(event.document);
+			} catch (error) {
+				this.connection.console.error(error?.message);
+			}
+		});
 	}
 
 	/**
@@ -299,12 +332,12 @@ class Linter {
 	 */
 	async lintDocuments(documents) {
 		for (const document of documents) {
-			this.queue.addNotificationMessage(
-				sendDiagnosticsNotification,
-				document,
-				document.version,
-				true
-			);
+			this.queue.push(async () => {
+				if (document.version !== this.documents.get(document.uri).version)
+					return;
+
+				await this.lintDocumentDebounced(document);
+			});
 		}
 	}
 
@@ -314,7 +347,13 @@ class Linter {
 	 */
 	async lintDocument(document) {
 		try {
-			if (!this.documents.get(document.uri)) return;
+			const currentDocument = this.documents.get(document.uri);
+			if (!currentDocument) return;
+
+			if (document.version !== currentDocument.version) {
+				return null;
+			}
+
 			const diagnostics = await this.getDocumentDiagnostics(document);
 			this.connection.sendDiagnostics({uri: document.uri, diagnostics});
 		} catch (error) {
