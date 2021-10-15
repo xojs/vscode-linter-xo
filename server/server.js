@@ -78,6 +78,8 @@ class Linter {
 		 */
 		this.xoCache = new Map();
 		this.foldersCache = [];
+
+		this.hasShownResolutionError = false;
 	}
 
 	listen() {
@@ -292,15 +294,25 @@ class Linter {
 					const diagnostics = await this.getDocumentDiagnostics(document);
 					this.connection.sendDiagnostics({uri: document.uri, diagnostics});
 				} catch (error) {
+					const isResolutionErr = error?.message?.includes(
+						'Failed to resolve module'
+					);
+
 					if (error?.message) {
 						const {fsPath} = URI.parse(document.uri);
 						error.message = `${fsPath} ${error.message}`;
 					}
 
-					if (error?.message?.includes('Failed to resolve module'))
+					if (!this.hasShownResolutionError && isResolutionErr) {
 						error.message += '. Ensure that xo is installed.';
+						tracker.add(error?.message ? error.message : 'Unknown Error');
+						this.hasShownResolutionError = true;
+					}
+
+					if (!isResolutionErr)
+						tracker.add(error?.message ? error.message : 'Unknown Error');
+
 					this.connection.console.error(error?.stack);
-					tracker.add(error?.message ? error.message : 'Unknown Error');
 				}
 			})
 		);
@@ -316,12 +328,24 @@ class Linter {
 			const diagnostics = await this.getDocumentDiagnostics(document);
 			this.connection.sendDiagnostics({uri: document.uri, diagnostics});
 		} catch (error) {
-			if (error?.message?.includes('Failed to resolve module'))
-				error.message += '. Ensure that xo is installed.';
-			this.connection.console.error(error?.stack);
-			this.connection.window.showErrorMessage(
-				error?.message ? error.message : 'Unknown Error'
+			const isResolutionErr = error?.message?.includes(
+				'Failed to resolve module'
 			);
+
+			if (!this.hasShownResolutionError && isResolutionErr) {
+				error.message += '. Ensure that xo is installed.';
+				this.connection.window.showErrorMessage(
+					error?.message ? error.message : 'Unknown Error'
+				);
+				this.hasShownResolutionError = true;
+			}
+
+			if (!isResolutionErr)
+				this.connection.window.showErrorMessage(
+					error?.message ? error.message : 'Unknown Error'
+				);
+
+			this.connection.console.error(error?.stack);
 		}
 	}
 
