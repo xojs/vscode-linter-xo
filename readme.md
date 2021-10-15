@@ -24,7 +24,7 @@ You can enable XO as a formatter for TypeScript and JavaScript. We recommend set
 
 In either your workspace or user settings add the following. It's generally best to make xo the default formatter for JavaScript and TypeScript files specifically as it will not be able to format other document types.
 
-```json
+```js
 {
 	// optionally turn on format on save
 	"editor.formatOnSave": true,
@@ -60,7 +60,9 @@ You can also pass in extra options via vscode's settings. Note that these settin
 ```json
 {
 	"xo.options": {
-		"semicolon": false
+		"rules": {
+			"semicolon": false
+		}
 	}
 }
 ```
@@ -78,6 +80,14 @@ You can override the severity of found issues, e.g. to make them stand out less 
 ```json
 {
 	"xo.overrideSeverity": "info"
+}
+```
+
+You can adjust and tune a debounce that batches linting and helps optimize performance. The default is 150ms. This is a good number for most uses and we don't reccomending adjusting. Reducing for small files with simple configuration (200 or less LOC) may slightly improve performance. For large files (1000+ loc) with complex configurations, increasing this number may slightly improve performance.
+
+```json
+{
+	"xo.debounce": 150
 }
 ```
 
