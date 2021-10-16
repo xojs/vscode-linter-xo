@@ -61,7 +61,7 @@
 					"type": "number",
 					"default": 0,
 					"minimum": 0,
-					"maximum": 500,
+					"maximum": 350,
 					"description": "A number between 0 and 350 to debounce lint requests for xo. A higher number can improve performance on large files but may make performance worse on small files."
 				},
 				"xo.trace.server": {

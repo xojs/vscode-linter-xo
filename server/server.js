@@ -580,7 +580,7 @@ class Linter {
 			const error = new Error(
 				'No valid workspace folder could be found for this file. Skipping linting as it is an external JS file.'
 			);
-			this.connection.console.warn(error.stack);
+			this.logError(error);
 			return [];
 		}
 
