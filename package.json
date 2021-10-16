@@ -59,7 +59,7 @@
 				"xo.debounce": {
 					"scope": "window",
 					"type": "number",
-					"default": 150,
+					"default": 0,
 					"minimum": 0,
 					"maximum": 500,
 					"description": "A number between 0 and 350 to debounce lint requests for xo. A higher number can improve performance on large files but may make performance worse on small files."
