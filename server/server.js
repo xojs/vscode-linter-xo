@@ -1,10 +1,10 @@
 const process = require('process');
+const path = require('path');
 const {
 	createConnection,
 	ProposedFeatures,
 	TextDocuments,
 	RequestType,
-	DocumentFormattingRequest,
 	TextDocumentSyncKind,
 	Files,
 	DiagnosticSeverity,
@@ -17,8 +17,8 @@ const {TextDocument} = require('vscode-languageserver-textdocument');
 const {URI} = require('vscode-uri');
 const autoBind = require('auto-bind');
 const debounce = require('lodash.debounce');
-const loadJsonFile = require('load-json-file');
 const Queue = require('queue');
+const loadJsonFile = require('load-json-file');
 const utils = require('./utils');
 const Fixes = require('./fixes');
 
@@ -75,10 +75,13 @@ class Linter {
 			new RequestType('textDocument/xo/allFixes'),
 			this.handleAllFixesRequest
 		);
-		this.connection.onRequest(
-			DocumentFormattingRequest.type,
-			this.handleDocumentFormattingRequest
-		);
+		this.connection.onDocumentFormatting(this.handleDocumentFormattingRequest);
+
+		/**
+		 * handle code action requests
+		 */
+		this.connection.onCodeAction();
+		this.connection.onCodeActionResolve();
 
 		this.lintDocumentDebounced = debounce(this.lintDocument, DEFAULT_DEBOUNCE, {
 			maxWait: 350
@@ -92,6 +95,7 @@ class Linter {
 		 */
 		this.xoCache = new Map();
 		this.configurationCache = new Map();
+		this.errorOptionsCache = new Map();
 		this.foldersCache = [];
 
 		this.hasShownResolutionError = false;
@@ -136,6 +140,12 @@ class Linter {
 		);
 	}
 
+	logError(error) {
+		this.connection.console.error(
+			error?.message ? error.message : 'Unknown Error'
+		);
+	}
+
 	/**
 	 * handle onInitialize
 	 */
@@ -177,6 +187,7 @@ class Linter {
 			);
 		}
 
+		// recache each folder config
 		this.configurationCache.clear();
 		await Promise.all(
 			this.foldersCache.map((folder) => this.getDocumentConfig(folder))
@@ -187,7 +198,20 @@ class Linter {
 	/**
 	 * handle onDidChangeWatchedFiles
 	 */
-	handleDidChangeWatchedFiles() {
+	async handleDidChangeWatchedFiles(params) {
+		for (const change of params.changes) {
+			try {
+				// eslint-disable-next-line no-await-in-loop
+				const folder = await this.getDocumentFolder(change);
+				if (this.errorOptionsCache.has(folder.uri))
+					this.errorOptionsCache.delete(folder.uri);
+				// eslint-disable-next-line no-await-in-loop
+				await this.getDocumentErrorOptions(change);
+			} catch (error) {
+				this.logError(error);
+			}
+		}
+
 		return this.lintDocuments(this.documents.all());
 	}
 
@@ -276,9 +300,53 @@ class Linter {
 
 				await this.lintDocumentDebounced(event.document);
 			} catch (error) {
-				this.connection.console.error(error?.message);
+				this.logError(error);
 			}
 		});
+	}
+
+	/**
+	 * get the folder error options
+	 * cache them if needed
+	 * @param {TextDocument} document
+	 */
+	async getDocumentErrorOptions(document, newOptions) {
+		try {
+			const {uri: folderUri} = await this.getDocumentFolder(document);
+			if (this.errorOptionsCache.has(folderUri)) {
+				const errorOptions = {
+					...this.errorOptionsCache.get(folderUri),
+					...(typeof newOptions === 'undefined' ? {} : newOptions)
+				};
+				this.errorOptionsCache.set(folderUri, errorOptions);
+				return errorOptions;
+			}
+
+			const folderPath = URI.parse(folderUri).fsPath;
+			const pkg = await loadJsonFile(path.join(folderPath, 'package.json'));
+
+			try {
+				if (pkg?.dependencies?.xo || pkg?.devDependencies?.xo) {
+					this.errorOptionsCache.set(folderUri, {
+						...(this.errorOptionsCache.has(folderUri)
+							? this.errorOptionsCache.get(folderUri)
+							: {}),
+						...(typeof newOptions === 'undefined' ? {} : newOptions),
+						showResolutionError: true
+					});
+				} else if (this.errorOptionsCache.has(folderUri))
+					this.errorOptionsCache.delete(folderUri);
+			} catch (error) {
+				if (this.errorOptionsCache.has(folderUri))
+					this.errorOptionsCache.delete(folderUri);
+
+				this.logError(error);
+			}
+
+			return this.errorOptionsCache.get(folderUri);
+		} catch (error) {
+			this.logError(error);
+		}
 	}
 
 	/**
@@ -294,6 +362,9 @@ class Linter {
 		if (typeof xo?.lintText === 'function') return xo;
 
 		const folderPath = URI.parse(folderUri).fsPath;
+
+		await this.getDocumentErrorOptions(document);
+
 		const xoPath = URI.file(
 			await Files.resolve('xo', undefined, folderPath)
 		).toString();
@@ -304,22 +375,8 @@ class Linter {
 		if (!xo?.default?.lintText)
 			throw new Error("The XO library doesn't export a lintText method.");
 
-		try {
-			// this is completely unnecessary but helps with debugging
-			// and messages will likely be removed in future versions
-			const pkg = await loadJsonFile(
-				URI.parse(xoPath).path.replace('index.js', 'package.json')
-			);
-			xo.default.version = pkg.version;
-		} catch (error) {
-			this.connection.console.error(
-				'There was a problem getting the xo version - this does not affect the use of this plugin.'
-			);
-			this.connection.console.error(error?.stack);
-		}
-
 		await this.connection.console.info(
-			`XO Library ${xo.default.version} was successfully resolved and cached.`
+			`XO Library was successfully resolved and cached from ${folderPath}.`
 		);
 
 		this.xoCache.set(folderUri, xo.default);
@@ -336,7 +393,7 @@ class Linter {
 				if (document.version !== this.documents.get(document.uri).version)
 					return;
 
-				await this.lintDocumentDebounced(document);
+				await this.lintDocument(document);
 			});
 		}
 	}
@@ -357,16 +414,29 @@ class Linter {
 			const diagnostics = await this.getDocumentDiagnostics(document);
 			this.connection.sendDiagnostics({uri: document.uri, diagnostics});
 		} catch (error) {
+			/**
+			 * only show resolution errors if package.json has xo listed
+			 * as a dependency. Only show the error 1 time per folder.
+			 */
 			const isResolutionErr = error?.message?.includes(
 				'Failed to resolve module'
 			);
 
-			if (!this.hasShownResolutionError && isResolutionErr) {
-				error.message += '. Ensure that xo is installed.';
-				this.connection.window.showErrorMessage(
-					error?.message ? error.message : 'Unknown Error'
-				);
-				this.hasShownResolutionError = true;
+			if (isResolutionErr) {
+				const errorOptions = await this.getDocumentErrorOptions(document);
+
+				if (
+					errorOptions?.showResolutionError &&
+					!errorOptions?.hasShownResolutionError
+				) {
+					error.message += '. Ensure that xo is installed.';
+					this.connection.window.showErrorMessage(
+						error?.message ? error.message : 'Unknown Error'
+					);
+					this.getDocumentErrorOptions(document, {
+						hasShownResolutionError: true
+					});
+				}
 			}
 
 			if (!isResolutionErr)
@@ -374,7 +444,7 @@ class Linter {
 					error?.message ? error.message : 'Unknown Error'
 				);
 
-			this.connection.console.error(error?.stack);
+			this.logError(error);
 		}
 	}
 
