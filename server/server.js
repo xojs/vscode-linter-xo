@@ -11,7 +11,8 @@ const {
 	TextEdit,
 	Range,
 	ResponseError,
-	LSPErrorCodes
+	LSPErrorCodes,
+	CodeActionKind
 } = require('vscode-languageserver/node');
 const {TextDocument} = require('vscode-languageserver-textdocument');
 const {URI} = require('vscode-uri');
@@ -22,7 +23,7 @@ const loadJsonFile = require('load-json-file');
 const utils = require('./utils');
 const Fixes = require('./fixes');
 
-const DEFAULT_DEBOUNCE = 150;
+const DEFAULT_DEBOUNCE = 0;
 
 class Linter {
 	constructor() {
@@ -76,13 +77,7 @@ class Linter {
 			this.handleAllFixesRequest
 		);
 		this.connection.onDocumentFormatting(this.handleDocumentFormattingRequest);
-
-		/**
-		 * handle code action requests
-		 */
-		this.connection.onCodeAction();
-		this.connection.onCodeActionResolve();
-
+		this.connection.onCodeAction(this.handleCodeActionRequest);
 		this.lintDocumentDebounced = debounce(this.lintDocument, DEFAULT_DEBOUNCE, {
 			maxWait: 350
 		});
@@ -160,13 +155,10 @@ class Linter {
 				},
 				textDocumentSync: {
 					openClose: true,
-					change: TextDocumentSyncKind.Incremental,
-					willSaveWaitUntil: false,
-					save: {
-						includeText: false
-					}
+					change: TextDocumentSyncKind.Incremental
 				},
-				documentFormattingProvider: true
+				documentFormattingProvider: true,
+				codeActionProvider: true
 			}
 		};
 	}
@@ -199,14 +191,14 @@ class Linter {
 	 * handle onDidChangeWatchedFiles
 	 */
 	async handleDidChangeWatchedFiles(params) {
-		for (const change of params.changes) {
+		for (const document of params.changes) {
 			try {
 				// eslint-disable-next-line no-await-in-loop
-				const folder = await this.getDocumentFolder(change);
+				const folder = await this.getDocumentFolder(document);
 				if (this.errorOptionsCache.has(folder.uri))
 					this.errorOptionsCache.delete(folder.uri);
 				// eslint-disable-next-line no-await-in-loop
-				await this.getDocumentErrorOptions(change);
+				await this.getDocumentErrorOptions(document);
 			} catch (error) {
 				this.logError(error);
 			}
@@ -268,6 +260,71 @@ class Linter {
 					const fixes = await this.getDocumentFixes(params.textDocument.uri);
 					resolve(fixes?.edits);
 				} catch (error) {
+					this.logError(error);
+					reject(error);
+				}
+			});
+		});
+	}
+
+	/**
+	 * Handle LSP code action request
+	 */
+	async handleCodeActionRequest(params, token) {
+		return new Promise((resolve, reject) => {
+			this.queue.push(async () => {
+				try {
+					if (!params.context?.diagnostics?.length) return resolve();
+					if (!params?.textDocument?.uri) return resolve();
+					if (token.isCancellationRequested) {
+						return reject(
+							new ResponseError(
+								LSPErrorCodes.RequestCancelled,
+								'Request got cancelled'
+							)
+						);
+					}
+
+					if (
+						params.textDocument.version &&
+						params.textDocument.version !==
+							this.documents.get(params.textDocument.uri).version
+					) {
+						return reject(
+							new ResponseError(
+								LSPErrorCodes.RequestCancelled,
+								'Request got cancelled'
+							)
+						);
+					}
+
+					const documentEdits = this.codeActions.get(params.textDocument.uri);
+					const key = utils.computeKey(params.context.diagnostics[0]);
+					const edit = documentEdits?.[key];
+					if (!documentEdits || !edit) return resolve();
+					const textDocument = this.documents.get(params.textDocument.uri);
+					return resolve([
+						{
+							title: 'Fix with XO',
+							kind: CodeActionKind.QuickFix,
+							diagnostic: params.context.diagnostics[0],
+							edit: {
+								changes: {
+									[textDocument.uri]: [
+										TextEdit.replace(
+											Range.create(
+												textDocument.positionAt(edit?.edit?.range?.[0]),
+												textDocument.positionAt(edit?.edit?.range?.[1])
+											),
+											edit.edit.text || ''
+										)
+									]
+								}
+							}
+						}
+					]);
+				} catch (error) {
+					this.logError(error);
 					reject(error);
 				}
 			});
@@ -376,7 +433,7 @@ class Linter {
 			throw new Error("The XO library doesn't export a lintText method.");
 
 		await this.connection.console.info(
-			`XO Library was successfully resolved and cached from ${folderPath}.`
+			`XO Library was successfully resolved and cached for ${folderPath}.`
 		);
 
 		this.xoCache.set(folderUri, xo.default);
@@ -412,7 +469,11 @@ class Linter {
 			}
 
 			const diagnostics = await this.getDocumentDiagnostics(document);
-			this.connection.sendDiagnostics({uri: document.uri, diagnostics});
+			this.connection.sendDiagnostics({
+				uri: document.uri,
+				version: document.version,
+				diagnostics
+			});
 		} catch (error) {
 			/**
 			 * only show resolution errors if package.json has xo listed

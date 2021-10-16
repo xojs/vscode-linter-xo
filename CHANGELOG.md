@@ -1,3 +1,14 @@
+### 3.4
+
+- Make debounce configurable and default to 0
+- Replace internal Queue
+- Handle resolution error with more sophistication
+- Initial support for quick fix code actions
+
+### 3.3.2
+
+- patch error message to only show once per session
+
 ### 3.3.1
 
 - fix bug with windows path

@@ -83,17 +83,21 @@ You can override the severity of found issues, e.g. to make them stand out less 
 }
 ```
 
-You can adjust and tune a debounce that batches linting and helps optimize performance. The default is 150ms. This is a good number for most uses and we don't reccomending adjusting. Reducing for small files with simple configuration (200 or less LOC) may slightly improve performance. For large files (1000+ loc) with complex configurations, increasing this number may slightly improve performance.
+Since linting occurs on any file change, large files with complex configurations can get laggy. You can adjust a debounce (in milliseconds) that helps optimize performance for large files. If you notice that lint results are jumping all over the place, or a long delay in fixing files, turn this up. The max is 350ms.
 
 ```json
 {
-	"xo.debounce": 150
+	"xo.debounce": 0
 }
 ```
 
 ## Usage Notes + Future Improvements
 
+- v3.4.0 added initial support for code action quick fixes so you can highlight your lint errors and fix them one at a time.
+
 - If you upgrade XO while using the extension, you will need to reload vscode for extension to get the upgraded package from your node_modules. The fastest way is to use the command pallete and select `Developer: reload window`.
+
+- Turning on the setting "files.trimTrailingWhitespace" to true can cause a race condition with xo that causes code to get erroneously trimmed. This typically only occurs when debounce is turned (above 0 ms). Avoid using both of these options at the same time.
 
 ## License
 
