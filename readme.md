@@ -24,9 +24,10 @@ You can enable XO as a formatter for TypeScript and JavaScript. We recommend set
 
 In either your workspace or user settings add the following. It's generally best to make xo the default formatter for JavaScript and TypeScript files specifically as it will not be able to format other document types.
 
-```js
+> optionally turn on "editor.formatOnSave"
+
+```json
 {
-	// optionally turn on format on save
 	"editor.formatOnSave": true,
 	"xo.enable": true,
 	"xo.format.enable": true,
@@ -91,13 +92,24 @@ Since linting occurs on any file change, large files with complex configurations
 }
 ```
 
-## Usage Notes + Future Improvements
+## Recent Updates
 
-- v3.4.0 added initial support for code action quick fixes so you can highlight your lint errors and fix them one at a time.
+- v3.4.0
 
-- If you upgrade XO while using the extension, you will need to reload vscode for extension to get the upgraded package from your node_modules. The fastest way is to use the command pallete and select `Developer: reload window`.
+  - Added initial support for code action quick fixes so you can fix errors one at a time.
+  - Checks for xo updates in the background to ensure version is always current.
+  - Added a debounce configuration to improve performance on large files.
 
-- Turning on the setting "files.trimTrailingWhitespace" to true can cause a race condition with xo that causes code to get erroneously trimmed. This typically only occurs when debounce is turned (above 0 ms). Avoid using both of these options at the same time.
+- v3.3.0
+
+  - Introduced full support for workspace folders and multi-root projects.
+
+- v3.0.0
+  - Supports resolving newer xo versions (40+) as well as prior versions
+
+## Known Issues
+
+- Turning on the setting "files.trimTrailingWhitespace" to true can cause a race condition with xo that causes code to get erroneously trimmed when formatting on save. This typically only occurs when debounce is turned (above 0 ms). Avoid using both "files.trimTrailingWhitespace" and "xo.debounce" options at the same time.
 
 ## License
 
