@@ -53,6 +53,7 @@ class Linter {
 		/**
 		 * setup documents listeners
 		 */
+		this.documents.onDidOpen(this.handleDocumentsOnDidOpen);
 		this.documents.onDidChangeContent(this.handleDocumentsOnDidChangeContent);
 		this.documents.onDidClose(this.handleDocumentsOnDidClose);
 
@@ -136,9 +137,7 @@ class Linter {
 	}
 
 	logError(error) {
-		this.connection.console.error(
-			error?.message ? error.message : 'Unknown Error'
-		);
+		this.connection.console.error(error?.stack ? error.stack : 'Unknown Error');
 	}
 
 	/**
@@ -146,6 +145,13 @@ class Linter {
 	 */
 	async handleInitialize(params) {
 		this.foldersCache = params.workspaceFolders;
+		// cache as early as possible
+		try {
+			await Promise.all(
+				this.foldersCache.map((folder) => this.resolveXO(folder))
+			);
+		} catch {}
+
 		return {
 			capabilities: {
 				workspace: {
@@ -332,14 +338,26 @@ class Linter {
 	}
 
 	/**
-	 * Handle documents.onDidClose
-	 * Clears the diagnostics when document is closed
+	 * Handle documents.onDidOpen
+	 * async checks if cached xo version is current
+	 * if not, delete the cache and force reloading
 	 */
-	handleDocumentsOnDidClose(event) {
-		this.connection.sendDiagnostics({
-			uri: event.document.uri,
-			diagnostics: []
-		});
+	async handleDocumentsOnDidOpen(event) {
+		try {
+			const folder = await this.getDocumentFolder(event.document);
+			if (!this.xoCache.has(folder.uri)) return;
+			const folderPath = URI.parse(folder.uri).fsPath;
+			const xo = this.xoCache.get(folder.uri);
+			const xoDirPath = path.dirname(
+				await Files.resolve('xo', undefined, folderPath)
+			);
+			const {version} = await loadJsonFile(
+				path.join(xoDirPath, 'package.json')
+			);
+			if (xo.version !== version) this.xoCache.delete(folder.uri);
+		} catch (error) {
+			this.logError(error);
+		}
 	}
 
 	/**
@@ -359,6 +377,17 @@ class Linter {
 			} catch (error) {
 				this.logError(error);
 			}
+		});
+	}
+
+	/**
+	 * Handle documents.onDidClose
+	 * Clears the diagnostics when document is closed
+	 */
+	handleDocumentsOnDidClose(event) {
+		this.connection.sendDiagnostics({
+			uri: event.document.uri,
+			diagnostics: []
 		});
 	}
 
@@ -418,22 +447,27 @@ class Linter {
 
 		if (typeof xo?.lintText === 'function') return xo;
 
-		const folderPath = URI.parse(folderUri).fsPath;
-
+		// determine whether we should show resolution errors first
 		await this.getDocumentErrorOptions(document);
+		const folderPath = URI.parse(folderUri).fsPath;
+		const xoFilePath = await Files.resolve('xo', undefined, folderPath);
+		const xoUri = URI.file(xoFilePath).toString();
 
-		const xoPath = URI.file(
-			await Files.resolve('xo', undefined, folderPath)
-		).toString();
+		let version;
 
-		// eslint-disable-next-line node/no-unsupported-features/es-syntax
-		xo = await import(xoPath);
+		[xo, {version}] = await Promise.all([
+			// eslint-disable-next-line node/no-unsupported-features/es-syntax
+			import(xoUri),
+			loadJsonFile(path.join(path.dirname(xoFilePath), 'package.json'))
+		]);
 
 		if (!xo?.default?.lintText)
 			throw new Error("The XO library doesn't export a lintText method.");
 
+		xo.default.version = version;
+
 		await this.connection.console.info(
-			`XO Library was successfully resolved and cached for ${folderPath}.`
+			`XO Library ${xo.default.version} was successfully resolved and cached for ${folderPath}.`
 		);
 
 		this.xoCache.set(folderUri, xo.default);

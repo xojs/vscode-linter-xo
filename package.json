@@ -8,10 +8,7 @@
 		"url": "https://spencersnyder.io"
 	},
 	"activationEvents": [
-		"onLanguage:javascript",
-		"onLanguage:javascriptreact",
-		"onLanguage:typescript",
-		"onLanguage:typescriptreact",
+		"onStartupFinished",
 		"onCommand:xo.fix"
 	],
 	"bugs": {
@@ -134,6 +131,7 @@
 	"scripts": {
 		"build": "npm run clean && npm run build:client && npm run build:server",
 		"build:client": "esbuild ./client/extension.js --bundle --outfile=dist/client.js --external:vscode --format=cjs --platform=node --minify",
+		"build:dev": "npm run build:client -- --sourcemap && npm run build:server -- --sourcemap",
 		"build:server": "esbuild ./server/server.js --bundle --outfile=dist/server.js --external:vscode --format=cjs --platform=node --minify",
 		"clean": "rimraf dist",
 		"lint": "xo && npm run lint:md",
