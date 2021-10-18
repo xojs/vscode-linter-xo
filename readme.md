@@ -98,11 +98,13 @@ Since linting occurs on any file change, large files with complex configurations
 
   - Added initial support for code action quick fixes so you can fix errors one at a time.
   - Checks for xo updates in the background to ensure version is always current.
-  - Added a debounce configuration to improve performance on large files.
+  - Added a debounce configuration to improve performance on large files (defaults to off).
+  - Added a status bar item and command to show extension output channel
 
 - v3.3.0
 
   - Introduced full support for workspace folders and multi-root projects.
+  - Debounces lint requests
 
 - v3.0.0
   - Supports resolving newer xo versions (40+) as well as prior versions

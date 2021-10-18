@@ -79,6 +79,11 @@
 				"title": "Fix all auto-fixable problems",
 				"category": "XO",
 				"command": "xo.fix"
+			},
+			{
+				"title": "Show Output Channel",
+				"category": "XO",
+				"command": "xo.showOutputChannel"
 			}
 		]
 	},

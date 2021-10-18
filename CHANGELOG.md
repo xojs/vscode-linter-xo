@@ -4,6 +4,8 @@
 - Replace internal Queue
 - Handle resolution error with more sophistication
 - Initial support for quick fix code actions
+- Added a status bar item and command to show the extension output
+- Handle options better for per folder configurations in multi-root workspaces
 
 ### 3.3.2
 
