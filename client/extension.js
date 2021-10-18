@@ -1,11 +1,16 @@
 const process = require('process');
 const vscode = require('vscode');
-const node = require('vscode-languageclient/node');
+const {
+	RequestType,
+	TransportKind,
+	LanguageClient,
+	SettingMonitor
+} = require('vscode-languageclient/node');
 
 let client;
 
 const AllFixesRequest = {
-	type: new node.RequestType('textDocument/xo/allFixes')
+	type: new RequestType('textDocument/xo/allFixes')
 };
 
 function activate(context) {
@@ -20,12 +25,12 @@ function activate(context) {
 	const serverOptions = {
 		run: {
 			module: serverModule,
-			transport: node.TransportKind.ipc,
+			transport: TransportKind.ipc,
 			options: {cwd: process.cwd()}
 		},
 		debug: {
 			module: serverModule,
-			transport: node.TransportKind.ipc,
+			transport: TransportKind.ipc,
 			options: debugOptions
 		}
 	};
@@ -56,12 +61,20 @@ function activate(context) {
 		}
 	};
 
-	client = new node.LanguageClient('xo', serverOptions, clientOptions);
+	client = new LanguageClient('xo', serverOptions, clientOptions);
 
 	context.subscriptions.push(
-		new node.SettingMonitor(client, 'xo.enable').start(),
-		vscode.commands.registerCommand('xo.fix', fixAllProblems)
+		new SettingMonitor(client, 'xo.enable').start(),
+		vscode.commands.registerCommand('xo.fix', fixAllProblems),
+		vscode.commands.registerCommand('xo.showOutputChannel', () => {
+			client.outputChannel.show();
+		})
 	);
+
+	const statusBar = vscode.window.createStatusBarItem('xoStatusBarItem', 2, 0);
+	statusBar.text = 'XO';
+	statusBar.command = 'xo.showOutputChannel';
+	statusBar.show();
 }
 
 function fixAllProblems() {

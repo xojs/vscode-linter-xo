@@ -137,7 +137,9 @@ class Linter {
 	}
 
 	logError(error) {
-		this.connection.console.error(error?.stack ? error.stack : 'Unknown Error');
+		this.connection.console.error(
+			error?.message ? error.message : 'Unknown Error'
+		);
 	}
 
 	/**
