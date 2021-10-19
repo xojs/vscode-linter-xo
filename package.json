@@ -71,6 +71,17 @@
 					],
 					"default": "off",
 					"description": "Traces the communication between VS Code and the XO server."
+				},
+				"xo.path": {
+					"scope": "resource",
+					"type": [
+						"string",
+						null
+					],
+					"default": null,
+					"pattern": "^file://.*(.js)$",
+					"format": "uri",
+					"description": "A file uri for the extension to load xo from."
 				}
 			}
 		},
@@ -89,6 +100,7 @@
 	},
 	"dependencies": {
 		"auto-bind": "4",
+		"is-string-and-not-blank": "^0.0.2",
 		"load-json-file": "6",
 		"lodash.debounce": "^4.0.8",
 		"queue": "^6.0.2",

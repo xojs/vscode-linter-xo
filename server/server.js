@@ -20,6 +20,7 @@ const autoBind = require('auto-bind');
 const debounce = require('lodash.debounce');
 const Queue = require('queue');
 const loadJsonFile = require('load-json-file');
+const isSANB = require('is-string-and-not-blank');
 const utils = require('./utils');
 const Fixes = require('./fixes');
 
@@ -346,7 +347,9 @@ class Linter {
 	 */
 	async handleDocumentsOnDidOpen(event) {
 		try {
-			const folder = await this.getDocumentFolder(event.document);
+			const {folder, config: {path: customUri} = {}} =
+				await this.getDocumentConfig(event.document);
+			if (isSANB(customUri)) return;
 			if (!this.xoCache.has(folder.uri)) return;
 			const folderPath = URI.parse(folder.uri).fsPath;
 			const xo = this.xoCache.get(folder.uri);
@@ -444,7 +447,9 @@ class Linter {
 	 * @param {TextDocument} document
 	 */
 	async resolveXO(document) {
-		const {uri: folderUri} = await this.getDocumentFolder(document);
+		const {folder: {uri: folderUri} = {}, config: {path: customUri} = {}} =
+			await this.getDocumentConfig(document);
+
 		let xo = this.xoCache.get(folderUri);
 
 		if (typeof xo?.lintText === 'function') return xo;
@@ -452,15 +457,24 @@ class Linter {
 		// determine whether we should show resolution errors first
 		await this.getDocumentErrorOptions(document);
 		const folderPath = URI.parse(folderUri).fsPath;
-		const xoFilePath = await Files.resolve('xo', undefined, folderPath);
-		const xoUri = URI.file(xoFilePath).toString();
+
+		let xoUri;
+		let xoFilePath;
+		if (isSANB(customUri)) {
+			xoUri = customUri;
+		} else {
+			xoFilePath = await Files.resolve('xo', undefined, folderPath);
+			xoUri = URI.file(xoFilePath).toString();
+		}
 
 		let version;
 
 		[xo, {version}] = await Promise.all([
 			// eslint-disable-next-line node/no-unsupported-features/es-syntax
 			import(xoUri),
-			loadJsonFile(path.join(path.dirname(xoFilePath), 'package.json'))
+			xoFilePath
+				? loadJsonFile(path.join(path.dirname(xoFilePath), 'package.json'))
+				: Promise.resolve({version: 'custom'})
 		]);
 
 		if (!xo?.default?.lintText)
