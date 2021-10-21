@@ -1,3 +1,7 @@
+### 3.5
+
+- Adds a configuration for a custom xo path for xo to resolve from.
+
 ### 3.4
 
 - Make debounce configurable and default to 0

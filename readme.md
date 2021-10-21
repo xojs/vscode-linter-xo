@@ -92,7 +92,19 @@ Since linting occurs on any file change, large files with complex configurations
 }
 ```
 
+If you want to resolve xo from a custom path - such as a global node_modules folder, supply an absolute file uri. Must start with file:// and end with .js and should have all of its dependencies available to work properly. Could use with Deno or to have the xo library lint itself.
+
+```json
+{
+	"xo.path": "file:///path/to/node_modules/xo/index.js"
+}
+```
+
 ## Recent Updates
+
+- v3.5.0
+
+  - Adds a configuration for a custom xo path for xo to resolve from.
 
 - v3.4.0
 

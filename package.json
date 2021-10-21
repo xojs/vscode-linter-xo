@@ -81,7 +81,7 @@
 					"default": null,
 					"pattern": "^file://.*(.js)$",
 					"format": "uri",
-					"description": "A file uri for the extension to load xo from."
+					"description": "An absolute file uri for the extension to load xo from."
 				}
 			}
 		},
