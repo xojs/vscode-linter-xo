@@ -1,3 +1,7 @@
+### 3.6
+
+- Adds a configuration for node runtime (closes #103)
+
 ### 3.5
 
 - Adds a configuration for a custom xo path for xo to resolve from.

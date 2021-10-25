@@ -6,6 +6,7 @@ const {
 	LanguageClient,
 	SettingMonitor
 } = require('vscode-languageclient/node');
+const isSANB = require('is-string-and-not-blank');
 
 let client;
 
@@ -22,14 +23,21 @@ function activate(context) {
 		cwd: process.cwd()
 	};
 
+	const xoOptions = vscode.workspace.getConfiguration('xo');
+
+	let runtime;
+	if (isSANB(xoOptions.get('runtime'))) runtime = xoOptions.get('runtime');
+
 	const serverOptions = {
 		run: {
 			module: serverModule,
+			runtime,
 			transport: TransportKind.ipc,
 			options: {cwd: process.cwd()}
 		},
 		debug: {
 			module: serverModule,
+			runtime,
 			transport: TransportKind.ipc,
 			options: debugOptions
 		}

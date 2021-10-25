@@ -82,6 +82,15 @@
 					"pattern": "^file://.*(.js)$",
 					"format": "uri",
 					"description": "An absolute file uri for the extension to load xo from."
+				},
+				"xo.runtime": {
+					"scope": "window",
+					"type": [
+						"string",
+						null
+					],
+					"default": null,
+					"description": "Absolute path to a node binary to run the xo server, defaults to VSCode's internally bundled node version."
 				}
 			}
 		},

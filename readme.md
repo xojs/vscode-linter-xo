@@ -100,6 +100,14 @@ If you want to resolve xo from a custom path - such as a global node_modules fol
 }
 ```
 
+By default, VSCode starts xo with its own bundled nodejs version. This may cause different results from the cli if you are using a different version of node. You can set a runtime path so that you are always using the same node version.
+
+```json
+{
+	"xo.runtime": "/usr/local/bin/node"
+}
+```
+
 ## Recent Updates
 
 - v3.5.0
