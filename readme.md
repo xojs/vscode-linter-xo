@@ -110,6 +110,10 @@ By default, VSCode starts xo with its own bundled nodejs version. This may cause
 
 ## Recent Updates
 
+- v3.6.0
+
+  - Adds a configuration for custom nodejs runtime for running the xo server.
+
 - v3.5.0
 
   - Adds a configuration for a custom xo path for xo to resolve from.
