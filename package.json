@@ -79,9 +79,9 @@
 						null
 					],
 					"default": null,
-					"pattern": "^file://.*(.js)$",
+					"pattern": "^(file://|[.]/).*(.js)$",
 					"format": "uri",
-					"description": "An absolute file uri for the extension to load xo from."
+					"description": "Location the extension loads xo from. An absolute file uri or a path relative to the workspace folder."
 				},
 				"xo.runtime": {
 					"scope": "window",
