@@ -79,8 +79,8 @@
 						null
 					],
 					"default": null,
-					"pattern": "^(file://|[.]/).*(.js)$",
-					"description": "Location the extension loads xo from. An absolute file uri or a path relative to the workspace folder."
+					"pattern": "^(.{0,2}/).*(.js)$",
+					"description": "An absolute or relative path to resolve xo from. Relative paths resolve with respect to the workspace folder."
 				},
 				"xo.runtime": {
 					"scope": "window",

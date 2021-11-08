@@ -1,3 +1,7 @@
+### 3.7
+
+- Changes "xo.path" setting from a file uri to a path or relative path.
+
 ### 3.6
 
 - Adds a configuration for node runtime (closes #103)

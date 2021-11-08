@@ -461,16 +461,22 @@ class Linter {
 
 		let xoUri;
 		let xoFilePath;
-		if (!isSANB(customPath)) {
+		const useCustomPath = isSANB(customPath);
+		if (!useCustomPath) {
 			xoFilePath = await Files.resolve('xo', undefined, folderPath);
 			xoUri = URI.file(xoFilePath).toString();
-		} else if (customPath.startsWith('file://')) {
+		} else if (useCustomPath && customPath.startsWith('file://')) {
 			xoUri = customPath;
-		} else if (customPath.startsWith('./')) {
+			this.connection.console.warn(
+				'Using a file uri for "xo.path" setting is deprecated and will be removed in the future, please provide an absolute or relative path to the file.'
+			);
+		} else if (useCustomPath && path.isAbsolute(customPath)) {
+			xoUri = URI.file(customPath).toString();
+		} else if (useCustomPath && !path.isAbsolute(customPath)) {
 			xoUri = URI.file(path.join(folderPath, customPath)).toString();
 		} else {
 			throw new Error(
-				`Unknown path format “${customPath}”: Needs to start with “file://” or “./”`
+				`Unknown path format “${customPath}”: Needs to start with “/”, “./”, or "../"`
 			);
 		}
 

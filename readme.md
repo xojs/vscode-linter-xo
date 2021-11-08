@@ -92,11 +92,14 @@ Since linting occurs on any file change, large files with complex configurations
 }
 ```
 
-If you want to resolve xo from a custom path - such as a global node_modules folder, supply an absolute file uri. Must start with file:// and end with .js and should have all of its dependencies available to work properly. Could use with Deno or to have the xo library lint itself.
+If you want to resolve xo from a custom path - such as a global node_modules folder, supply an absolute or relative path (with respect to the workspace folder directory). Could use with Deno, yarn pnp, or to have the xo library lint itself. By default xo is resolved from the workspace folders node_modules directory.
 
 ```json
 {
-	"xo.path": "file:///path/to/node_modules/xo/index.js"
+	"xo.path": "/path/to/node_modules/xo/index.js",
+}
+{
+	"xo.path": "./node_modules/xo/index.js"
 }
 ```
 
@@ -109,6 +112,10 @@ By default, VSCode starts xo with its own bundled nodejs version. This may cause
 ```
 
 ## Recent Updates
+
+- v3.7.0
+
+  - Configuration for a custom "xo.path" now accepts an absolute or relative path. File uris deprecated.
 
 - v3.6.0
 
