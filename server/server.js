@@ -464,12 +464,14 @@ class Linter {
 		if (!isSANB(customPath)) {
 			xoFilePath = await Files.resolve('xo', undefined, folderPath);
 			xoUri = URI.file(xoFilePath).toString();
-		} else if (customPath.startsWith('file://') {
-			xoUri = customUri;
+		} else if (customPath.startsWith('file://')) {
+			xoUri = customPath;
 		} else if (customPath.startsWith('./')) {
 			xoUri = URI.file(path.join(folderPath, customPath)).toString();
 		} else {
-			throw new Error(`Unknown path format “${customPath}”: Needs to start with “file://” or “./”`);
+			throw new Error(
+				`Unknown path format “${customPath}”: Needs to start with “file://” or “./”`
+			);
 		}
 
 		let version;
