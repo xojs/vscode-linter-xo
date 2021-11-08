@@ -353,6 +353,7 @@ class Linter {
 			if (!this.xoCache.has(folder.uri)) return;
 			const folderPath = URI.parse(folder.uri).fsPath;
 			const xo = this.xoCache.get(folder.uri);
+			// TODO: use same mechanism as in resolveXO
 			const xoDirPath = path.dirname(
 				await Files.resolve('xo', undefined, folderPath)
 			);
@@ -447,7 +448,7 @@ class Linter {
 	 * @param {TextDocument} document
 	 */
 	async resolveXO(document) {
-		const {folder: {uri: folderUri} = {}, config: {path: customUri} = {}} =
+		const {folder: {uri: folderUri} = {}, config: {path: customPath} = {}} =
 			await this.getDocumentConfig(document);
 
 		let xo = this.xoCache.get(folderUri);
@@ -460,11 +461,15 @@ class Linter {
 
 		let xoUri;
 		let xoFilePath;
-		if (isSANB(customUri)) {
-			xoUri = customUri;
-		} else {
+		if (!isSANB(customPath)) {
 			xoFilePath = await Files.resolve('xo', undefined, folderPath);
 			xoUri = URI.file(xoFilePath).toString();
+		} else if (customPath.startsWith('file://') {
+			xoUri = customUri;
+		} else if (customPath.startsWith('./')) {
+			xoUri = URI.file(path.join(folderPath, customPath)).toString();
+		} else {
+			throw new Error(`Unknown path format “${customPath}”: Needs to start with “file://” or “./”`);
 		}
 
 		let version;
