@@ -1,3 +1,7 @@
+### 3.8
+
+- If a file is opened without a workspace folder, linter-xo will attempt to resolve the project root and lint appropriately.
+
 ### 3.7
 
 - Changes "xo.path" setting from a file uri to a path or relative path.

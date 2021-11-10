@@ -6,7 +6,7 @@
 
 ## Usage
 
-Just set up [XO](https://github.com/sindresorhus/xo) like you normally would in your project. This extensions requires that [XO](https://github.com/sindresorhus/xo) is installed locally in your workspace folder. It will not load a globally installed XO version. The extension will pickup the configuration in your workspace just like running [XO](https://github.com/sindresorhus/xo) in your terminal would. You will be able to see your linter work as you type and easily format your code if you want it to!
+Just set up [XO](https://github.com/sindresorhus/xo) like you normally would in your project. The extension will pickup the configuration in your workspace just like running [XO](https://github.com/sindresorhus/xo) in your terminal would. You will be able to see your linter work as you type and easily format your code if you want it to!
 
 ```shell
 $ npm install --save-dev xo
@@ -113,6 +113,10 @@ By default, VSCode starts xo with its own bundled nodejs version. This may cause
 
 ## Recent Updates
 
+- v3.8.0
+
+  - If a file is opened without a workspace folder, linter-xo will attempt to resolve the project root and lint appropriately.
+
 - v3.7.0
 
   - Configuration for a custom "xo.path" now accepts an absolute or relative path. File uris deprecated.
@@ -122,23 +126,7 @@ By default, VSCode starts xo with its own bundled nodejs version. This may cause
   - Adds a configuration for custom nodejs runtime for running the xo server.
 
 - v3.5.0
-
   - Adds a configuration for a custom xo path for xo to resolve from.
-
-- v3.4.0
-
-  - Added initial support for code action quick fixes so you can fix errors one at a time.
-  - Checks for xo updates in the background to ensure version is always current.
-  - Added a debounce configuration to improve performance on large files (defaults to off).
-  - Added a status bar item and command to show extension output channel
-
-- v3.3.0
-
-  - Introduced full support for workspace folders and multi-root projects.
-  - Debounces lint requests
-
-- v3.0.0
-  - Supports resolving newer xo versions (40+) as well as prior versions
 
 ## Known Issues
 
