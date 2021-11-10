@@ -92,7 +92,6 @@ function fixAllProblems() {
 	}
 
 	const uri = textEditor.document.uri.toString();
-	// eslint-disable-next-line promise/prefer-await-to-then
 	client.sendRequest(AllFixesRequest.type, {textDocument: {uri}}).then(
 		(result) => {
 			if (result) {
@@ -125,7 +124,6 @@ function applyTextEdits(uri, documentVersion, edits) {
 					);
 				}
 			})
-			// eslint-disable-next-line promise/prefer-await-to-then
 			.then((success) => {
 				if (!success) {
 					vscode.window.showErrorMessage(
