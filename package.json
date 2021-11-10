@@ -1,7 +1,7 @@
 {
 	"name": "linter-xo",
 	"description": "Linter for XO",
-	"version": "3.7.0",
+	"version": "3.8.0",
 	"author": {
 		"name": "Spencer Snyder",
 		"email": "sasnyde2@gmail.com",
