@@ -111,6 +111,7 @@
 		"is-string-and-not-blank": "^0.0.2",
 		"load-json-file": "6",
 		"lodash.debounce": "^4.0.8",
+		"pkg-dir": "5",
 		"queue": "^6.0.2",
 		"vscode-languageclient": "^7.0.0",
 		"vscode-languageserver": "^7.0.0",
@@ -118,16 +119,16 @@
 		"vscode-uri": "^3.0.2"
 	},
 	"devDependencies": {
-		"@commitlint/cli": "13.2.1",
-		"@commitlint/config-conventional": "13.2.0",
+		"@commitlint/cli": "14.1.0",
+		"@commitlint/config-conventional": "14.1.0",
 		"@types/vscode": "^1.61.0",
-		"esbuild": "^0.13.6",
+		"esbuild": "^0.13.13",
 		"fixpack": "^4.0.0",
-		"husky": "^7.0.2",
-		"lint-staged": "11.2.3",
+		"husky": "^7.0.4",
+		"lint-staged": "11.2.6",
 		"prettier": "^2.4.1",
 		"rimraf": "^3.0.2",
-		"xo": "^0.45.0"
+		"xo": "^0.46.4"
 	},
 	"displayName": "XO",
 	"engines": {

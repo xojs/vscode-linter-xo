@@ -21,6 +21,7 @@ const debounce = require('lodash.debounce');
 const Queue = require('queue');
 const loadJsonFile = require('load-json-file');
 const isSANB = require('is-string-and-not-blank');
+const pkgDir = require('pkg-dir');
 const utils = require('./utils');
 const Fixes = require('./fixes');
 
@@ -147,7 +148,7 @@ class Linter {
 	 * handle onInitialize
 	 */
 	async handleInitialize(params) {
-		this.foldersCache = params.workspaceFolders;
+		this.foldersCache = params.workspaceFolders || [];
 		// cache as early as possible
 		try {
 			await Promise.all(
@@ -350,6 +351,7 @@ class Linter {
 			const {folder, config: {path: customUri} = {}} =
 				await this.getDocumentConfig(event.document);
 			if (isSANB(customUri)) return;
+			if (!folder?.uri) return;
 			if (!this.xoCache.has(folder.uri)) return;
 			const folderPath = URI.parse(folder.uri).fsPath;
 			const xo = this.xoCache.get(folder.uri);
@@ -600,6 +602,18 @@ class Linter {
 			folder = this.foldersCache.find((workspaceFolder) =>
 				document.uri.includes(workspaceFolder.uri)
 			);
+		}
+
+		// if still no folder is found then we
+		// attempt to find the nearest package.json and set that
+		// as the dir
+		if (!folder?.uri) {
+			const documentPath = URI.parse(document.uri).fsPath;
+			const documentDir = path.dirname(documentPath);
+			const packageDir = await pkgDir(documentDir);
+			if (!packageDir) return undefined;
+			folder = {uri: URI.file(packageDir).toString()};
+			this.foldersCache.push(folder);
 		}
 
 		return folder;
