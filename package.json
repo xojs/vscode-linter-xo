@@ -115,20 +115,20 @@
 		"queue": "^6.0.2",
 		"vscode-languageclient": "^7.0.0",
 		"vscode-languageserver": "^7.0.0",
-		"vscode-languageserver-textdocument": "^1.0.2",
+		"vscode-languageserver-textdocument": "^1.0.3",
 		"vscode-uri": "^3.0.2"
 	},
 	"devDependencies": {
-		"@commitlint/cli": "14.1.0",
-		"@commitlint/config-conventional": "14.1.0",
-		"@types/vscode": "^1.61.0",
-		"esbuild": "^0.13.13",
+		"@commitlint/cli": "15.0.0",
+		"@commitlint/config-conventional": "15.0.0",
+		"@types/vscode": "^1.62.0",
+		"esbuild": "^0.14.1",
 		"fixpack": "^4.0.0",
 		"husky": "^7.0.4",
-		"lint-staged": "11.2.6",
-		"prettier": "^2.4.1",
+		"lint-staged": "12.1.2",
+		"prettier": "^2.5.0",
 		"rimraf": "^3.0.2",
-		"xo": "^0.46.4"
+		"xo": "^0.47.0"
 	},
 	"displayName": "XO",
 	"engines": {
