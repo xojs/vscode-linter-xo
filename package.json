@@ -132,7 +132,7 @@
 	},
 	"displayName": "XO",
 	"engines": {
-		"vscode": "^1.61.0",
+		"vscode": "^1.62.0",
 		"node": ">12"
 	},
 	"homepage": "https://github.com/xojs/xo",

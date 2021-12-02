@@ -113,6 +113,10 @@ By default, VSCode starts xo with its own bundled nodejs version. This may cause
 
 ## Recent Updates
 
+- v3.8.1
+
+  - Diagnostics now underline the entire diagnostic, rather than only the first character (closes #87)
+
 - v3.8.0
 
   - If a file is opened without a workspace folder, linter-xo will attempt to resolve the project root and lint appropriately.

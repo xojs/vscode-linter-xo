@@ -1,3 +1,7 @@
+### v3.8.1
+
+- Diagnostics now underline the entire diagnostic, rather than only the first character (closes #87)
+
 ### 3.8
 
 - If a file is opened without a workspace folder, linter-xo will attempt to resolve the project root and lint appropriately.
