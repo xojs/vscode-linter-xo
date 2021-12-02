@@ -24,7 +24,16 @@ function makeDiagnostic(problem) {
 		source: 'XO',
 		range: {
 			start: {line: problem.line - 1, character: problem.column - 1},
-			end: {line: problem.line - 1, character: problem.column - 1}
+			end: {
+				line:
+					typeof problem.endLine === 'number'
+						? problem.endLine - 1
+						: problem.line - 1,
+				character:
+					typeof problem.endColumn === 'number'
+						? problem.endColumn - 1
+						: problem.column - 1
+			}
 		}
 	};
 }
