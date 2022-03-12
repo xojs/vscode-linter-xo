@@ -22,6 +22,7 @@ const Queue = require('queue');
 const loadJsonFile = require('load-json-file');
 const isSANB = require('is-string-and-not-blank');
 const pkgDir = require('pkg-dir');
+const getRuleUrl = require('eslint-rule-docs');
 const utils = require('./utils');
 const Fixes = require('./fixes');
 
@@ -703,6 +704,12 @@ class Linter {
 				diagnostic.severity =
 					mapSeverity[overrideSeverity] || diagnostic.severity;
 			}
+
+			try {
+				diagnostic.codeDescription = {
+					href: getRuleUrl(diagnostic.code)?.url
+				};
+			} catch {}
 
 			/**
 			 * record a code action for applying fixes
