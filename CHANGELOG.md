@@ -1,3 +1,7 @@
+### v3.9.0
+
+- Adds links to rule documents
+
 ### v3.8.1
 
 - Diagnostics now underline the entire diagnostic, rather than only the first character (closes #87)
