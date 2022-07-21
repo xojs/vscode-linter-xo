@@ -1,3 +1,10 @@
+### v3.10.0
+
+- Adds ignore rule Code Actions for both single line or file.
+- Adds logic to use metaResults from xo .51+ and fallback to eslint-rule-docs for older versions
+- Internal improves fixing logic for overlapping rules
+- Move from objects to Maps for rule caching
+
 ### v3.9.0
 
 - Adds links to rule documents
