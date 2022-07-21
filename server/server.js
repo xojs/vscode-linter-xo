@@ -10,6 +10,7 @@ const {
 	DiagnosticSeverity,
 	TextEdit,
 	Range,
+	Position,
 	ResponseError,
 	LSPErrorCodes,
 	CodeActionKind
@@ -280,6 +281,7 @@ class Linter {
 
 	/**
 	 * Handle LSP code action request
+	 * these happen at the time of an error/warning hover
 	 */
 	async handleCodeActionRequest(params, token) {
 		return new Promise((resolve, reject) => {
@@ -309,31 +311,150 @@ class Linter {
 						);
 					}
 
+					const [diagnostic] = params.context.diagnostics;
 					const documentEdits = this.codeActions.get(params.textDocument.uri);
-					const key = utils.computeKey(params.context.diagnostics[0]);
-					const edit = documentEdits?.[key];
-					if (!documentEdits || !edit) return resolve();
+					const key = utils.computeKey(diagnostic);
+					const {code} = diagnostic || {};
+					const edit = documentEdits?.get(key);
 					const textDocument = this.documents.get(params.textDocument.uri);
-					return resolve([
-						{
-							title: 'Fix with XO',
-							kind: CodeActionKind.QuickFix,
-							diagnostic: params.context.diagnostics[0],
-							edit: {
-								changes: {
-									[textDocument.uri]: [
-										TextEdit.replace(
-											Range.create(
-												textDocument.positionAt(edit?.edit?.range?.[0]),
-												textDocument.positionAt(edit?.edit?.range?.[1])
-											),
-											edit.edit.text || ''
-										)
-									]
-								}
+
+					const codeActions = [];
+
+					const ignoreRange = {
+						line: diagnostic.range.start.line,
+						character: 0
+					};
+
+					let changes = [];
+
+					const lineText = textDocument.getText({
+						start: {
+							line: diagnostic.range.start.line,
+							character: 0
+						},
+						end: {
+							line: diagnostic.range.start.line,
+							character: Number.MAX_SAFE_INTEGER
+						}
+					});
+
+					const lineAboveText = textDocument.getText({
+						start: {
+							line: diagnostic.range.start.line - 1,
+							character: 0
+						},
+						end: {
+							line: diagnostic.range.start.line - 1,
+							character: Number.MAX_SAFE_INTEGER
+						}
+					});
+
+					const matchedForIgnoreComment =
+						lineAboveText &&
+						lineAboveText.match(
+							// eslint-disable-next-line prefer-regex-literals
+							new RegExp(`// eslint-disable-next-line`)
+						);
+
+					if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
+						const textEdit = TextEdit.insert(
+							Position.create(
+								diagnostic.range.start.line - 1,
+								Number.MAX_SAFE_INTEGER
+							),
+							`, ${code}`
+						);
+
+						changes.push(textEdit);
+					}
+
+					if (changes.length === 0) {
+						const matches = /^([ |\t]*)/.exec(lineText);
+
+						const indentation =
+							Array.isArray(matches) && matches.length > 0 ? matches[0] : '';
+
+						const newedit = {
+							range: {
+								start: ignoreRange,
+								end: ignoreRange
+							},
+							newText: `${indentation}// eslint-disable-next-line ${code}\n`
+						};
+
+						changes = [newedit];
+					}
+
+					const ignoreAction = {
+						title: `Ignore Rule ${code}`,
+						kind: CodeActionKind.QuickFix,
+						diagnostic,
+						edit: {
+							changes: {
+								[textDocument.uri]: changes
 							}
 						}
-					]);
+					};
+
+					codeActions.push(ignoreAction);
+
+					const shebang = textDocument.getText(
+						Range.create(Position.create(0, 0), Position.create(0, 2))
+					);
+
+					const line = shebang === '#!' ? 1 : 0;
+
+					// const ingoreInFileLineText = textDocument.getText({
+					// 	start: {
+					// 		line,
+					// 		character: 0
+					// 	},
+					// 	end: {
+					// 		line,
+					// 		character: Number.MAX_SAFE_INTEGER
+					// 	}
+					// });
+
+					const ignoreFileAction = {
+						title: `Ignore Rule ${code} for entire file`,
+						kind: CodeActionKind.QuickFix,
+						diagnostic,
+						edit: {
+							changes: {
+								[textDocument.uri]: [
+									TextEdit.insert(
+										Position.create(line, 0),
+										`/* eslint-disable ${code} */\n`
+									)
+								]
+							}
+						}
+					};
+
+					codeActions.push(ignoreFileAction);
+
+					if (!documentEdits || !edit) return resolve(codeActions);
+
+					codeActions.push({
+						title: 'Fix with XO',
+						kind: CodeActionKind.Refactor,
+						diagnostic,
+						edit: {
+							changes: {
+								[textDocument.uri]: [
+									TextEdit.replace(
+										Range.create(
+											textDocument.positionAt(edit?.edit?.range?.[0]),
+											textDocument.positionAt(edit?.edit?.range?.[1])
+										),
+										edit.edit.text || ''
+									)
+								]
+							}
+						}
+					});
+
+					return resolve(codeActions);
 				} catch (error) {
 					this.logError(error);
 					reject(error);
@@ -486,7 +607,6 @@ class Linter {
 		let version;
 
 		[xo, {version}] = await Promise.all([
-			// eslint-disable-next-line node/no-unsupported-features/es-syntax
 			import(xoUri),
 			xoFilePath
 				? loadJsonFile(path.join(path.dirname(xoFilePath), 'package.json'))
@@ -644,12 +764,10 @@ class Linter {
 		};
 	}
 
-	async getDocumentDiagnostics(document) {
+	async getLintResults(document, {contents} = {}) {
 		// first we resolve all the configs we need
-		const {
-			folder: {uri: folderUri} = {},
-			config: {options, overrideSeverity} = {}
-		} = await this.getDocumentConfig(document);
+		const {folder: {uri: folderUri} = {}, config: {options} = {}} =
+			await this.getDocumentConfig(document);
 
 		// if we can't find a valid folder, then the user
 		// has likely opened a JS file from another location
@@ -666,15 +784,12 @@ class Linter {
 
 		const {fsPath: documentFsPath} = URI.parse(document.uri);
 		const {fsPath: folderFsPath} = URI.parse(folderUri);
-		const contents = document.getText();
+		contents = isSANB(contents) ? contents : document.getText();
 
 		// set the options needed for internal xo config resolution
 		options.cwd = folderFsPath;
 		options.filename = documentFsPath;
 		options.filePath = documentFsPath;
-
-		// Clean previously computed code actions.
-		this.codeActions.delete(document.uri);
 
 		let report;
 		const cwd = process.cwd();
@@ -688,11 +803,22 @@ class Linter {
 			}
 		}
 
-		const {results} = report;
+		return report;
+	}
+
+	async getDocumentDiagnostics(document) {
+		const {config: {overrideSeverity} = {}} = await this.getDocumentConfig(
+			document
+		);
+
+		const {results, rulesMeta} = await this.getLintResults(document);
+
+		// Clean previously computed code actions.
+		this.codeActions.delete(document.uri);
 
 		if (results.length === 0 || !results[0].messages) return;
 
-		return results[0].messages.map((problem) => {
+		const diagnostics = results[0].messages.map((problem) => {
 			const diagnostic = utils.makeDiagnostic(problem);
 			if (overrideSeverity) {
 				const mapSeverity = {
@@ -705,40 +831,57 @@ class Linter {
 					mapSeverity[overrideSeverity] || diagnostic.severity;
 			}
 
-			try {
+			if (
+				rulesMeta !== undefined &&
+				rulesMeta !== null &&
+				typeof rulesMeta === 'object' &&
+				rulesMeta[diagnostic.code] !== undefined &&
+				rulesMeta[diagnostic.code] !== null &&
+				typeof rulesMeta[diagnostic.code] === 'object'
+			) {
 				diagnostic.codeDescription = {
-					href: getRuleUrl(diagnostic.code)?.url
+					href: rulesMeta[diagnostic.code].docs.url
 				};
-			} catch {}
+			} else {
+				try {
+					diagnostic.codeDescription = {
+						href: getRuleUrl(diagnostic.code)?.url
+					};
+				} catch {}
+			}
 
 			/**
 			 * record a code action for applying fixes
 			 */
 			if (problem.fix && problem.ruleId) {
 				const {uri} = document;
+
 				let edits = this.codeActions.get(uri);
+
 				if (!edits) {
-					edits = Object.create(null);
+					edits = new Map();
 					this.codeActions.set(uri, edits);
 				}
 
-				edits[utils.computeKey(diagnostic)] = {
+				edits.set(utils.computeKey(diagnostic), {
 					label: `Fix this ${problem.ruleId} problem`,
 					documentVersion: document.version,
 					ruleId: problem.ruleId,
 					edit: problem.fix
-				};
+				});
 			}
 
 			return diagnostic;
 		});
+
+		return diagnostics;
 	}
 
 	async getDocumentFixes(uri) {
 		let result = null;
 		const textDocument = this.documents.get(uri);
 		const edits = this.codeActions.get(uri);
-		if (edits) {
+		if (edits && edits.size > 0) {
 			const fixes = new Fixes(edits);
 			if (!fixes.isEmpty()) {
 				result = {

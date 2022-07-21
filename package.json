@@ -108,33 +108,33 @@
 	},
 	"dependencies": {
 		"auto-bind": "4",
-		"eslint-rule-docs": "^1.1.231",
+		"eslint-rule-docs": "^1.1.235",
 		"is-string-and-not-blank": "^0.0.2",
 		"load-json-file": "6",
 		"lodash.debounce": "^4.0.8",
 		"pkg-dir": "5",
 		"queue": "^6.0.2",
-		"vscode-languageclient": "^7.0.0",
-		"vscode-languageserver": "^7.0.0",
-		"vscode-languageserver-textdocument": "^1.0.4",
+		"vscode-languageclient": "^8.0.2",
+		"vscode-languageserver": "^8.0.2",
+		"vscode-languageserver-textdocument": "^1.0.5",
 		"vscode-uri": "^3.0.3"
 	},
 	"devDependencies": {
-		"@commitlint/cli": "16.2.1",
-		"@commitlint/config-conventional": "16.2.1",
-		"@types/vscode": "^1.65.0",
-		"esbuild": "^0.14.25",
+		"@commitlint/cli": "17.0.3",
+		"@commitlint/config-conventional": "17.0.3",
+		"@types/vscode": "^1.69.0",
+		"esbuild": "^0.14.49",
 		"fixpack": "^4.0.0",
-		"husky": "^7.0.4",
-		"lint-staged": "12.3.5",
-		"prettier": "^2.5.1",
+		"husky": "^8.0.1",
+		"lint-staged": "13.0.3",
+		"prettier": "^2.7.1",
 		"rimraf": "^3.0.2",
-		"xo": "^0.48.0"
+		"xo": "^0.51.0"
 	},
 	"displayName": "XO",
 	"engines": {
 		"vscode": "^1.65.0",
-		"node": ">12"
+		"node": ">=14"
 	},
 	"homepage": "https://github.com/xojs/xo",
 	"icon": "icon.png",
