@@ -46,6 +46,22 @@ To use: pull up the command pallete (usually `F1` or `Ctrl + Shift + P`) and cho
 
 ![](media/fix.gif)
 
+## Additional Languages
+
+By default, the XO extension is configured to activate for Javascript, Javascript + React, Typescript, and Typescript + React. You may add more languages in the VS Code Settings. For example, to add Vue, you could do the following:
+
+```json
+{
+	"xo.validate": [
+		"javascript",
+		"javascriptreact",
+		"typescript",
+		"typescriptreact",
+		"vue"
+	]
+}
+```
+
 ## Settings
 
 Enable the linter in the VS Code Settings, this is on by default.

@@ -9,6 +9,7 @@ const {
 const isSANB = require('is-string-and-not-blank');
 
 let client;
+let validate;
 
 const AllFixesRequest = {
 	type: new RequestType('textDocument/xo/allFixes')
@@ -43,17 +44,17 @@ function activate(context) {
 		}
 	};
 
+	validate = JSON.stringify(xoOptions.get('validate'));
+	const documentSelector = [];
+	for (const language of xoOptions.get('validate')) {
+		documentSelector.push(
+			{language, scheme: 'file'},
+			{language, scheme: 'untitled'}
+		);
+	}
+
 	const clientOptions = {
-		documentSelector: [
-			{language: 'javascript', scheme: 'file'},
-			{language: 'javascript', scheme: 'untitled'},
-			{language: 'javascriptreact', scheme: 'file'},
-			{language: 'javascriptreact', scheme: 'untitled'},
-			{language: 'typescript', scheme: 'file'},
-			{language: 'typescript', scheme: 'untitled'},
-			{language: 'typescriptreact', scheme: 'file'},
-			{language: 'typescriptreact', scheme: 'untitled'}
-		],
+		documentSelector,
 		synchronize: {
 			configurationSection: 'xo',
 			fileEvents: [
@@ -78,6 +79,13 @@ function activate(context) {
 			client.outputChannel.show();
 		})
 	);
+
+	vscode.workspace.onDidChangeConfiguration(() => {
+		const xoOptions = vscode.workspace.getConfiguration('xo');
+		if (validate !== JSON.stringify(xoOptions.get('validate'))) {
+			vscode.commands.executeCommand('workbench.action.reloadWindow');
+		}
+	});
 
 	const statusBar = vscode.window.createStatusBarItem('xoStatusBarItem', 2, 0);
 	statusBar.text = 'XO';
