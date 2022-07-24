@@ -8,8 +8,7 @@
 		"url": "https://spencersnyder.io"
 	},
 	"activationEvents": [
-		"onStartupFinished",
-		"onCommand:xo.fix"
+		"onStartupFinished"
 	],
 	"bugs": {
 		"url": "https://github.com/xojs/vscode-linter-xo/issues"

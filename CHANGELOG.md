@@ -1,3 +1,7 @@
+### v3.11.0
+
+- Adds validate option to allow formatting more file types
+
 ### v3.10.0
 
 - Adds ignore rule Code Actions for both single line or file.

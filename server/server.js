@@ -10,10 +10,8 @@ const {
 	DiagnosticSeverity,
 	TextEdit,
 	Range,
-	Position,
 	ResponseError,
-	LSPErrorCodes,
-	CodeActionKind
+	LSPErrorCodes
 } = require('vscode-languageserver/node');
 const {TextDocument} = require('vscode-languageserver-textdocument');
 const {URI} = require('vscode-uri');
@@ -26,6 +24,7 @@ const pkgDir = require('pkg-dir');
 const getRuleUrl = require('eslint-rule-docs');
 const utils = require('./utils');
 const Fixes = require('./fixes');
+const CodeActionsBuilder = require('./code-actions');
 
 const DEFAULT_DEBOUNCE = 0;
 
@@ -313,148 +312,16 @@ class Linter {
 
 					const [diagnostic] = params.context.diagnostics;
 					const documentEdits = this.codeActions.get(params.textDocument.uri);
-					const key = utils.computeKey(diagnostic);
-					const {code} = diagnostic || {};
-					const edit = documentEdits?.get(key);
 					const textDocument = this.documents.get(params.textDocument.uri);
+					const edit = documentEdits?.get(utils.computeKey(diagnostic));
 
-					const codeActions = [];
-
-					const ignoreRange = {
-						line: diagnostic.range.start.line,
-						character: 0
-					};
-
-					let changes = [];
-
-					const lineText = textDocument.getText({
-						start: {
-							line: diagnostic.range.start.line,
-							character: 0
-						},
-						end: {
-							line: diagnostic.range.start.line,
-							character: Number.MAX_SAFE_INTEGER
-						}
+					const codeActionBuilder = new CodeActionsBuilder({
+						diagnostic,
+						edit,
+						textDocument
 					});
 
-					const lineAboveText = textDocument.getText({
-						start: {
-							line: diagnostic.range.start.line - 1,
-							character: 0
-						},
-						end: {
-							line: diagnostic.range.start.line - 1,
-							character: Number.MAX_SAFE_INTEGER
-						}
-					});
-
-					const matchedForIgnoreComment =
-						lineAboveText &&
-						lineAboveText.match(
-							// eslint-disable-next-line prefer-regex-literals
-							new RegExp(`// eslint-disable-next-line`)
-						);
-
-					if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
-						const textEdit = TextEdit.insert(
-							Position.create(
-								diagnostic.range.start.line - 1,
-								Number.MAX_SAFE_INTEGER
-							),
-							`, ${code}`
-						);
-
-						changes.push(textEdit);
-					}
-
-					if (changes.length === 0) {
-						const matches = /^([ |\t]*)/.exec(lineText);
-
-						const indentation =
-							Array.isArray(matches) && matches.length > 0 ? matches[0] : '';
-
-						const newedit = {
-							range: {
-								start: ignoreRange,
-								end: ignoreRange
-							},
-							newText: `${indentation}// eslint-disable-next-line ${code}\n`
-						};
-
-						changes = [newedit];
-					}
-
-					const ignoreAction = {
-						title: `Ignore Rule ${code}`,
-						kind: CodeActionKind.QuickFix,
-						diagnostic,
-						edit: {
-							changes: {
-								[textDocument.uri]: changes
-							}
-						}
-					};
-
-					codeActions.push(ignoreAction);
-
-					const shebang = textDocument.getText(
-						Range.create(Position.create(0, 0), Position.create(0, 2))
-					);
-
-					const line = shebang === '#!' ? 1 : 0;
-
-					// const ingoreInFileLineText = textDocument.getText({
-					// 	start: {
-					// 		line,
-					// 		character: 0
-					// 	},
-					// 	end: {
-					// 		line,
-					// 		character: Number.MAX_SAFE_INTEGER
-					// 	}
-					// });
-
-					const ignoreFileAction = {
-						title: `Ignore Rule ${code} for entire file`,
-						kind: CodeActionKind.QuickFix,
-						diagnostic,
-						edit: {
-							changes: {
-								[textDocument.uri]: [
-									TextEdit.insert(
-										Position.create(line, 0),
-										`/* eslint-disable ${code} */\n`
-									)
-								]
-							}
-						}
-					};
-
-					codeActions.push(ignoreFileAction);
-
-					if (!documentEdits || !edit) return resolve(codeActions);
-
-					codeActions.push({
-						title: 'Fix with XO',
-						kind: CodeActionKind.Refactor,
-						diagnostic,
-						edit: {
-							changes: {
-								[textDocument.uri]: [
-									TextEdit.replace(
-										Range.create(
-											textDocument.positionAt(edit?.edit?.range?.[0]),
-											textDocument.positionAt(edit?.edit?.range?.[1])
-										),
-										edit.edit.text || ''
-									)
-								]
-							}
-						}
-					});
-
-					return resolve(codeActions);
+					resolve(codeActionBuilder.build());
 				} catch (error) {
 					this.logError(error);
 					reject(error);
