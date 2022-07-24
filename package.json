@@ -90,6 +90,20 @@
 					],
 					"default": null,
 					"description": "Absolute path to a node binary to run the xo server, defaults to VSCode's internally bundled node version."
+				},
+				"xo.validate": {
+					"scope": "resource",
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [
+						"javascript",
+						"javascriptreact",
+						"typescript",
+						"typescriptreact"
+					],
+					"description": "An array of languages with which to activate the plugin. Defaults: [ \"javascript\", \"javascriptreact\", \"typescript\", \"typescriptreact\" ]"
 				}
 			}
 		},
