@@ -1,9 +1,4 @@
-const {
-	TextEdit,
-	Range,
-	Position,
-	CodeActionKind
-} = require('vscode-languageserver/node');
+const {TextEdit, Range, Position, CodeActionKind} = require('vscode-languageserver/node');
 
 class CodeActionsBuilder {
 	constructor({diagnostic, textDocument, edit}) {
@@ -59,10 +54,7 @@ class CodeActionsBuilder {
 
 		if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
 			const textEdit = TextEdit.insert(
-				Position.create(
-					this.diagnostic.range.start.line - 1,
-					Number.MAX_SAFE_INTEGER
-				),
+				Position.create(this.diagnostic.range.start.line - 1, Number.MAX_SAFE_INTEGER),
 				`, ${this.code}`
 			);
 
@@ -72,8 +64,7 @@ class CodeActionsBuilder {
 		if (changes.length === 0) {
 			const matches = /^([ |\t]*)/.exec(this.lineText);
 
-			const indentation =
-				Array.isArray(matches) && matches.length > 0 ? matches[0] : '';
+			const indentation = Array.isArray(matches) && matches.length > 0 ? matches[0] : '';
 
 			const newedit = {
 				range: {
@@ -114,10 +105,7 @@ class CodeActionsBuilder {
 			edit: {
 				changes: {
 					[this.textDocument.uri]: [
-						TextEdit.insert(
-							Position.create(line, 0),
-							`/* eslint-disable ${this.code} */\n`
-						)
+						TextEdit.insert(Position.create(line, 0), `/* eslint-disable ${this.code} */\n`)
 					]
 				}
 			}

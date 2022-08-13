@@ -1,23 +1,15 @@
 const process = require('process');
 const vscode = require('vscode');
-const {
-	RequestType,
-	TransportKind,
-	LanguageClient,
-	SettingMonitor
-} = require('vscode-languageclient/node');
+const {TransportKind, LanguageClient, SettingMonitor} = require('vscode-languageclient/node');
 const isSANB = require('is-string-and-not-blank');
+const fixAllProblems = require('./fix-all-problems');
+const statusBar = require('./status-bar');
 
 let client;
-let validate;
-
-const AllFixesRequest = {
-	type: new RequestType('textDocument/xo/allFixes')
-};
 
 function activate(context) {
 	// The server is implemented in node
-	const serverModule = context.asAbsolutePath('dist/server.js');
+	const serverModule = context.asAbsolutePath('server/server.js');
 
 	const debugOptions = {
 		execArgv: ['--nolazy', '--inspect=6004'],
@@ -44,13 +36,10 @@ function activate(context) {
 		}
 	};
 
-	validate = JSON.stringify(xoOptions.get('validate'));
+	let validate = JSON.stringify(xoOptions.get('validate'));
 	const documentSelector = [];
 	for (const language of xoOptions.get('validate')) {
-		documentSelector.push(
-			{language, scheme: 'file'},
-			{language, scheme: 'untitled'}
-		);
+		documentSelector.push({language, scheme: 'file'}, {language, scheme: 'untitled'});
 	}
 
 	const clientOptions = {
@@ -61,9 +50,7 @@ function activate(context) {
 				// we relint all open textDocuments whenever a config changes
 				// that may possibly affect the options xo should be using
 				vscode.workspace.createFileSystemWatcher('**/.eslintignore'),
-				vscode.workspace.createFileSystemWatcher(
-					'**/.xo-confi{g.cjs,g.json,g.js,g}'
-				),
+				vscode.workspace.createFileSystemWatcher('**/.xo-confi{g.cjs,g.json,g.js,g}'),
 				vscode.workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g}'),
 				vscode.workspace.createFileSystemWatcher('**/package.json')
 			]
@@ -74,72 +61,25 @@ function activate(context) {
 
 	context.subscriptions.push(
 		new SettingMonitor(client, 'xo.enable').start(),
-		vscode.commands.registerCommand('xo.fix', fixAllProblems),
+		vscode.commands.registerCommand('xo.fix', () => fixAllProblems(client)),
 		vscode.commands.registerCommand('xo.showOutputChannel', () => {
 			client.outputChannel.show();
+		}),
+		vscode.commands.registerCommand('xo.restart', () => {
+			client.restart().catch((error) => client.error(`Restarting client failed`, error, 'force'));
 		})
 	);
 
 	vscode.workspace.onDidChangeConfiguration(() => {
-		const xoOptions = vscode.workspace.getConfiguration('xo');
 		if (validate !== JSON.stringify(xoOptions.get('validate'))) {
+			validate = JSON.stringify(xoOptions.get('validate'));
 			vscode.commands.executeCommand('workbench.action.reloadWindow');
 		}
+
+		statusBar();
 	});
 
-	const statusBar = vscode.window.createStatusBarItem('xoStatusBarItem', 2, 0);
-	statusBar.text = 'XO';
-	statusBar.command = 'xo.showOutputChannel';
-	statusBar.show();
-}
-
-function fixAllProblems() {
-	const textEditor = vscode.window.activeTextEditor;
-	if (!textEditor) {
-		return;
-	}
-
-	const uri = textEditor.document.uri.toString();
-	client.sendRequest(AllFixesRequest.type, {textDocument: {uri}}).then(
-		(result) => {
-			if (result) {
-				applyTextEdits(uri, result.documentVersion, result.edits);
-			}
-		},
-		() => {
-			vscode.window.showErrorMessage(
-				'Failed to apply XO fixes to the document. Please consider opening an issue with steps to reproduce.'
-			);
-		}
-	);
-}
-
-function applyTextEdits(uri, documentVersion, edits) {
-	const textEditor = vscode.window.activeTextEditor;
-	if (textEditor && textEditor.document.uri.toString() === uri) {
-		if (textEditor.document.version !== documentVersion) {
-			vscode.window.showInformationMessage(
-				"XO fixes are outdated and can't be applied to the document."
-			);
-		}
-
-		textEditor
-			.edit((mutator) => {
-				for (const edit of edits) {
-					mutator.replace(
-						client.protocol2CodeConverter.asRange(edit.range),
-						edit.newText
-					);
-				}
-			})
-			.then((success) => {
-				if (!success) {
-					vscode.window.showErrorMessage(
-						'Failed to apply XO fixes to the document. Please consider opening an issue with steps to reproduce.'
-					);
-				}
-			});
-	}
+	context.subscriptions.push(statusBar());
 }
 
 function deactivate() {

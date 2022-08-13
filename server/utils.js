@@ -14,9 +14,7 @@ function parseSeverity(severity) {
 function makeDiagnostic(problem) {
 	const message =
 		// eslint-disable-next-line no-negated-condition
-		problem.ruleId !== null
-			? `${problem.message} (${problem.ruleId})`
-			: `${problem.message}`;
+		problem.ruleId !== null ? `${problem.message} (${problem.ruleId})` : `${problem.message}`;
 	return {
 		message,
 		severity: parseSeverity(problem.severity),
@@ -25,14 +23,9 @@ function makeDiagnostic(problem) {
 		range: {
 			start: {line: problem.line - 1, character: problem.column - 1},
 			end: {
-				line:
-					typeof problem.endLine === 'number'
-						? problem.endLine - 1
-						: problem.line - 1,
+				line: typeof problem.endLine === 'number' ? problem.endLine - 1 : problem.line - 1,
 				character:
-					typeof problem.endColumn === 'number'
-						? problem.endColumn - 1
-						: problem.column - 1
+					typeof problem.endColumn === 'number' ? problem.endColumn - 1 : problem.column - 1
 			}
 		}
 	};

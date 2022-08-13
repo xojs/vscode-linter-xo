@@ -20,7 +20,7 @@
 	"contributes": {
 		"configuration": {
 			"type": "object",
-			"title": "XO",
+			"title": "xo",
 			"properties": {
 				"xo.enable": {
 					"scope": "window",
@@ -69,7 +69,7 @@
 						"verbose"
 					],
 					"default": "off",
-					"description": "Traces the communication between VS Code and the XO server."
+					"description": "Traces the communication between VS Code and the xo server."
 				},
 				"xo.path": {
 					"scope": "resource",
@@ -103,30 +103,41 @@
 						"typescriptreact"
 					],
 					"description": "An array of languages with which to activate the plugin. Defaults: [ \"javascript\", \"javascriptreact\", \"typescript\", \"typescriptreact\" ]"
+				},
+				"xo.showStatusBar": {
+					"scope": "resource",
+					"type": "boolean",
+					"default": true,
+					"description": "Show Status Bar"
 				}
 			}
 		},
 		"commands": [
 			{
 				"title": "Fix all auto-fixable problems",
-				"category": "XO",
+				"category": "xo",
 				"command": "xo.fix"
 			},
 			{
 				"title": "Show Output Channel",
-				"category": "XO",
+				"category": "xo",
 				"command": "xo.showOutputChannel"
+			},
+			{
+				"title": "Restart XO linter",
+				"category": "xo",
+				"command": "xo.restart"
 			}
 		]
 	},
 	"dependencies": {
 		"auto-bind": "4",
 		"eslint-rule-docs": "^1.1.235",
+		"find-up": "^6.3.0",
 		"is-string-and-not-blank": "^0.0.2",
-		"load-json-file": "6",
 		"lodash.debounce": "^4.0.8",
-		"pkg-dir": "5",
 		"queue": "^6.0.2",
+		"read-pkg-up": "^7.0.1",
 		"vscode-languageclient": "^8.0.2",
 		"vscode-languageserver": "^8.0.2",
 		"vscode-languageserver-textdocument": "^1.0.5",
@@ -135,8 +146,8 @@
 	"devDependencies": {
 		"@commitlint/cli": "17.0.3",
 		"@commitlint/config-conventional": "17.0.3",
-		"@types/vscode": "^1.69.0",
-		"esbuild": "^0.14.49",
+		"@types/vscode": "^1.70.0",
+		"esbuild": "^0.15.2",
 		"fixpack": "^4.0.0",
 		"husky": "^8.0.1",
 		"lint-staged": "13.0.3",
@@ -144,7 +155,7 @@
 		"rimraf": "^3.0.2",
 		"xo": "^0.51.0"
 	},
-	"displayName": "XO",
+	"displayName": "xo",
 	"engines": {
 		"vscode": "^1.69.0",
 		"node": ">=14"
@@ -161,7 +172,8 @@
 	"license": "MIT",
 	"main": "./dist/client.js",
 	"prettier": {
-		"trailingComma": "none"
+		"trailingComma": "none",
+		"printWidth": 100
 	},
 	"publisher": "samverschueren",
 	"repository": {

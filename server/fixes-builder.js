@@ -10,9 +10,7 @@ class Fixes {
 	}
 
 	static sameRange(a, b) {
-		return (
-			a.edit.range[0] === b.edit.range[0] && a.edit.range[1] === b.edit.range[1]
-		);
+		return a.edit.range[0] === b.edit.range[0] && a.edit.range[1] === b.edit.range[1];
 	}
 
 	isEmpty() {
@@ -44,8 +42,7 @@ class Fixes {
 	getAllSorted() {
 		const result = [];
 
-		for (const edit of this.edits.values())
-			if (edit.edit !== undefined) result.push(edit);
+		for (const edit of this.edits.values()) if (edit.edit !== undefined) result.push(edit);
 
 		return result.sort((a, b) => {
 			const d = a.edit.range[0] - b.edit.range[0];
