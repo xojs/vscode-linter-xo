@@ -1,8 +1,9 @@
 const path = require('path');
 const {Files} = require('vscode-languageserver/node');
 const {URI} = require('vscode-uri');
-const loadJsonFile = require('load-json-file');
 const isSANB = require('is-string-and-not-blank');
+const loadJsonFile = require('load-json-file');
+const {uriToPath, pathToUri} = require('./utils');
 
 /**
  * Get xo from cache if it is there.
@@ -22,7 +23,7 @@ async function resolveXO(document) {
 
 	// determine whether we should show resolution errors first
 	await this.getDocumentErrorOptions(document);
-	const folderPath = URI.parse(folderUri).fsPath;
+	const folderPath = uriToPath(folderUri);
 
 	let xoUri;
 	let xoFilePath;
@@ -37,9 +38,9 @@ async function resolveXO(document) {
 			'Using a file uri for "xo.path" setting is deprecated and will be removed in the future, please provide an absolute or relative path to the file.'
 		);
 	} else if (useCustomPath && path.isAbsolute(customPath)) {
-		xoUri = URI.file(customPath).toString();
+		xoUri = pathToUri(customPath);
 	} else if (useCustomPath && !path.isAbsolute(customPath)) {
-		xoUri = URI.file(path.join(folderPath, customPath)).toString();
+		xoUri = pathToUri(path.join(folderPath, customPath));
 	} else {
 		throw new Error(`Unknown path format “${customPath}”: Needs to start with “/”, “./”, or "../"`);
 	}
@@ -58,7 +59,7 @@ async function resolveXO(document) {
 	xo.default.version = version;
 
 	await this.connection.console.info(
-		`XO Library ${xo.default.version} was successfully resolved and cached for ${xoFolder}.`
+		`XO Library ${xo.default.version} was successfully resolved and cached for ${folderPath}.`
 	);
 
 	this.xoCache.set(xoFolder, xo.default);

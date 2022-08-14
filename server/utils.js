@@ -1,4 +1,7 @@
+const path = require('node:path');
+const {URI} = require('vscode-uri');
 const node = require('vscode-languageserver/node');
+const loadJsonFile = require('load-json-file');
 
 function parseSeverity(severity) {
 	switch (severity) {
@@ -36,7 +39,50 @@ function computeKey(diagnostic) {
 	return `[${range.start.line},${range.start.character},${range.end.line},${range.end.character}]-${diagnostic.code}`;
 }
 
+function uriToPath(uri) {
+	return URI.parse(uri).fsPath;
+}
+
+function pathToUri(path) {
+	return URI.file(path).toString();
+}
+
+/**
+ * recursively searches up the directory tree to
+ * find the nearest directory with a package json with an xo
+ * dependency. Returns an empty object if none can be found.
+ *
+ * @param {string} cwd - A path to start at
+ * @param {string} stopAt - A path to not look past
+ */
+async function findXoRoot(cwd, stopAt) {
+	const {findUp} = await import('find-up');
+	const pkgPath = await findUp('package.json', {cwd, stopAt});
+
+	if (!pkgPath) return {};
+
+	const pkgJson = await loadJsonFile(pkgPath);
+
+	const deps = {
+		...pkgJson.dependencies,
+		...pkgJson.devDependencies
+	};
+
+	if (deps.xo) {
+		return {
+			xo: deps.xo,
+			pkgPath,
+			pkgJson
+		};
+	}
+
+	return findXoRoot(path.join('..', path.dirname(pkgPath)), stopAt);
+}
+
 module.exports = {
 	computeKey,
-	makeDiagnostic
+	makeDiagnostic,
+	uriToPath,
+	pathToUri,
+	findXoRoot
 };

@@ -25,6 +25,7 @@ const getDocumentErrorOptions = require('./get-document-error-options');
 const getDocumentFixes = require('./get-document-fixes');
 const getDocumentFolder = require('./get-document-folder');
 const getLintResults = require('./get-lint-results');
+const getWorkspaceFolder = require('./get-workspace-folder');
 const {lintDocument, lintDocuments} = require('./lint-document');
 const {log, logError} = require('./logger');
 const resolveXO = require('./resolve-xo');
@@ -33,10 +34,8 @@ const DEFAULT_DEBOUNCE = 0;
 
 class Linter {
 	constructor() {
-		autoBind(this);
-
 		/**
-		 * bind all imported methods
+		 * Bind all imported methods
 		 */
 		this.getDocumentConfig = getDocumentConfig.bind(this);
 		this.getDocumentDiagnostics = getDocumentDiagnostics.bind(this);
@@ -44,6 +43,7 @@ class Linter {
 		this.getDocumentFixes = getDocumentFixes.bind(this);
 		this.getDocumentFolder = getDocumentFolder.bind(this);
 		this.getLintResults = getLintResults.bind(this);
+		this.getWorkspaceFolder = getWorkspaceFolder.bind(this);
 		this.lintDocument = lintDocument.bind(this);
 		this.lintDocuments = lintDocuments.bind(this);
 		this.lintDocumentDebounced = debounce(this.lintDocument, DEFAULT_DEBOUNCE, {
@@ -52,7 +52,10 @@ class Linter {
 		this.resolveXO = resolveXO.bind(this);
 		this.log = log.bind(this);
 		this.logError = logError.bind(this);
-
+		/**
+		 * Bind all methods
+		 */
+		autoBind(this);
 		/**
 		 * Connection
 		 */
@@ -114,7 +117,7 @@ class Linter {
 		this.xoCache = new Map();
 		this.configurationCache = new Map();
 		this.errorOptionsCache = new Map();
-		this.foldersCache = new Set();
+		this.foldersCache = new Map();
 
 		this.hasShownResolutionError = false;
 		this.currentDebounce = DEFAULT_DEBOUNCE;

@@ -131,13 +131,13 @@
 		]
 	},
 	"dependencies": {
-		"auto-bind": "4",
+		"auto-bind": "^4.0.0",
 		"eslint-rule-docs": "^1.1.235",
 		"find-up": "^6.3.0",
 		"is-string-and-not-blank": "^0.0.2",
+		"load-json-file": "^6.2.0",
 		"lodash.debounce": "^4.0.8",
 		"queue": "^6.0.2",
-		"read-pkg-up": "^7.0.1",
 		"vscode-languageclient": "^8.0.2",
 		"vscode-languageserver": "^8.0.2",
 		"vscode-languageserver-textdocument": "^1.0.5",

@@ -15,7 +15,7 @@ async function getDocumentDiagnostics(document) {
 	// Clean previously computed code actions.
 	this.codeActions.delete(document.uri);
 
-	if (results.length === 0 || !results[0].messages) return;
+	if (results?.length === 0 || !results?.[0]?.messages) return;
 
 	const diagnostics = results[0].messages.map((problem) => {
 		const diagnostic = utils.makeDiagnostic(problem);

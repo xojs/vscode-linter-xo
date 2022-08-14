@@ -5,7 +5,8 @@
  * @param  {...any} messages
  */
 function log(...messages) {
-	const ts = Date.now();
+	const d = new Date();
+	const ts = `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}:${d.getMilliseconds()}`;
 	this.connection.console.log(
 		// eslint-disable-next-line unicorn/no-array-reduce
 		messages.reduce((acc, message) => {
@@ -19,7 +20,8 @@ function log(...messages) {
 }
 
 function logError(error) {
-	this.connection.console.error(error?.message ? error.message : 'Unknown Error');
+	this.log(error?.message ? error.message : 'Unknown Error');
+	this.log(error?.stack);
 }
 
 module.exports = {

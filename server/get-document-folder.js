@@ -1,6 +1,5 @@
 const path = require('path');
-const {URI} = require('vscode-uri');
-const pkgDir = require('pkg-dir');
+const {findXoRoot, pathToUri, uriToPath} = require('./utils');
 
 /**
  * get the root folder document from a document
@@ -10,24 +9,25 @@ const pkgDir = require('pkg-dir');
  * @returns {TextDocument}
  */
 async function getDocumentFolder(document) {
+	const documentDirUri = path.dirname(document.uri);
 	// check for cached folder
-	if ([...this.foldersCache].some((folder) => document.uri.includes(folder))) {
-		return {uri: [...this.foldersCache].find((folder) => document.uri.includes(folder))};
+	if (this.foldersCache.has(documentDirUri)) {
+		return this.foldersCache.get(documentDirUri);
 	}
 
-	// we need the workspace folders to determine the root
-
-	const documentPath = URI.parse(document.uri).fsPath;
+	const workspaceFolder = await this.getWorkspaceFolder(document);
+	const documentPath = uriToPath(document.uri);
 	const documentDir = path.dirname(documentPath);
-	const packageDir = await pkgDir(documentDir);
+	const {pkgPath} = await findXoRoot(documentDir, uriToPath(workspaceFolder.uri));
 
-	const packageDirUri = URI.file(packageDir).toString();
+	if (pkgPath) {
+		const packageDirUri = pathToUri(path.dirname(pkgPath));
+		this.foldersCache.set(documentDirUri, {uri: packageDirUri});
+	} else {
+		this.foldersCache.set(documentDirUri, {});
+	}
 
-	const folder = {uri: packageDirUri};
-
-	this.foldersCache.add(folder.uri);
-
-	return folder;
+	return this.foldersCache.get(documentDirUri);
 }
 
 module.exports = getDocumentFolder;
