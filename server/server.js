@@ -20,7 +20,6 @@ const isSANB = require('is-string-and-not-blank');
 const utils = require('./utils');
 const CodeActionsBuilder = require('./code-actions-builder');
 const getDocumentConfig = require('./get-document-config');
-const getDocumentErrorOptions = require('./get-document-error-options');
 const getDocumentFixes = require('./get-document-fixes');
 const getDocumentFolder = require('./get-document-folder');
 const getLintResults = require('./get-lint-results');
@@ -36,7 +35,6 @@ class Linter {
 		 * Bind all imported methods
 		 */
 		this.getDocumentConfig = getDocumentConfig.bind(this);
-		this.getDocumentErrorOptions = getDocumentErrorOptions.bind(this);
 		this.getDocumentFixes = getDocumentFixes.bind(this);
 		this.getDocumentFolder = getDocumentFolder.bind(this);
 		this.getLintResults = getLintResults.bind(this);
@@ -61,11 +59,6 @@ class Linter {
 		 * Documents
 		 */
 		this.documents = new TextDocuments(TextDocument);
-
-		/**
-		 * codeActions to apply on format request
-		 */
-		this.codeActions = new Map();
 
 		/**
 		 * Set up queue which allows for
@@ -112,8 +105,8 @@ class Linter {
 		 */
 		this.xoCache = new Map();
 		this.configurationCache = new Map();
-		this.errorOptionsCache = new Map();
 		this.foldersCache = new Map();
+		this.codeActions = new Map();
 
 		this.hasShownResolutionError = false;
 		this.currentDebounce = DEFAULT_DEBOUNCE;
@@ -177,19 +170,7 @@ class Linter {
 	/**
 	 * handle connection.onDidChangeWatchedFiles
 	 */
-	async handleDidChangeWatchedFiles(params) {
-		for (const document of params.changes) {
-			try {
-				// eslint-disable-next-line no-await-in-loop
-				const folder = await this.getDocumentFolder(document);
-				if (this.errorOptionsCache.has(folder.uri)) this.errorOptionsCache.delete(folder.uri);
-
-				// await this.getDocumentErrorOptions(document);
-			} catch (error) {
-				this.logError(error);
-			}
-		}
-
+	async handleDidChangeWatchedFiles() {
 		return this.lintDocuments(this.documents.all());
 	}
 

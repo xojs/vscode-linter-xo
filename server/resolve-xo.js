@@ -23,7 +23,6 @@ async function resolveXO(document) {
 	if (typeof xo?.lintText === 'function') return xo;
 
 	// determine whether we should show resolution errors first
-	await this.getDocumentErrorOptions(document);
 	const folderPath = uriToPath(folderUri);
 
 	let xoUri;

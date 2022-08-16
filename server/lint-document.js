@@ -87,27 +87,7 @@ async function lintDocument(document) {
 			diagnostics
 		});
 	} catch (error) {
-		/**
-		 * only show resolution errors if package.json has xo listed
-		 * as a dependency. Only show the error 1 time per folder.
-		 */
-		const isResolutionErr = error?.message?.includes('Failed to resolve module');
-
-		if (isResolutionErr) {
-			const errorOptions = await this.getDocumentErrorOptions(document);
-
-			if (errorOptions?.showResolutionError && !errorOptions?.hasShownResolutionError) {
-				error.message += '. Ensure that xo is installed.';
-				this.connection.window.showErrorMessage(error?.message ? error.message : 'Unknown Error');
-				this.getDocumentErrorOptions(document, {
-					hasShownResolutionError: true
-				});
-			}
-		}
-
-		if (!isResolutionErr)
-			this.connection.window.showErrorMessage(error?.message ? error.message : 'Unknown Error');
-
+		this.connection.window.showErrorMessage(error?.message ? error.message : 'Unknown Error');
 		this.logError(error);
 	}
 }
