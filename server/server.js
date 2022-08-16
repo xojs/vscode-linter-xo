@@ -106,7 +106,7 @@ class Linter {
 		this.xoCache = new Map();
 		this.configurationCache = new Map();
 		this.foldersCache = new Map();
-		this.codeActions = new Map();
+		this.documentEdits = new Map();
 
 		this.hasShownResolutionError = false;
 		this.currentDebounce = DEFAULT_DEBOUNCE;
@@ -253,7 +253,7 @@ class Linter {
 					}
 
 					const [diagnostic] = params.context.diagnostics;
-					const documentEdits = this.codeActions.get(params.textDocument.uri);
+					const documentEdits = this.documentEdits.get(params.textDocument.uri);
 					const textDocument = this.documents.get(params.textDocument.uri);
 					const edit = documentEdits?.get(utils.computeKey(diagnostic));
 

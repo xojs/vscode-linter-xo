@@ -4,7 +4,7 @@ const FixesBuilder = require('./fixes-builder');
 async function getDocumentFixes(uri) {
 	let result = null;
 	const textDocument = this.documents.get(uri);
-	const edits = this.codeActions.get(uri);
+	const edits = this.documentEdits.get(uri);
 	if (edits && edits.size > 0) {
 		const fixes = new FixesBuilder(edits);
 		if (!fixes.isEmpty()) {

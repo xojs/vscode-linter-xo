@@ -22,7 +22,7 @@ async function lintDocument(document) {
 		const {results, rulesMeta} = await this.getLintResults(document);
 
 		// Clean previously computed code actions.
-		this.codeActions.delete(document.uri);
+		this.documentEdits.delete(document.uri);
 
 		if (results?.length === 0 || !results?.[0]?.messages) return;
 
@@ -63,11 +63,11 @@ async function lintDocument(document) {
 			if (problem.fix && problem.ruleId) {
 				const {uri} = document;
 
-				let edits = this.codeActions.get(uri);
+				let edits = this.documentEdits.get(uri);
 
 				if (!edits) {
 					edits = new Map();
-					this.codeActions.set(uri, edits);
+					this.documentEdits.set(uri, edits);
 				}
 
 				edits.set(utils.computeKey(diagnostic), {
@@ -87,6 +87,8 @@ async function lintDocument(document) {
 			diagnostics
 		});
 	} catch (error) {
+		const isResolutionErr = error?.message?.includes('Failed to resolve module');
+		if (isResolutionErr) error.message += '. Ensure that xo has been installed.';
 		this.connection.window.showErrorMessage(error?.message ? error.message : 'Unknown Error');
 		this.logError(error);
 	}
