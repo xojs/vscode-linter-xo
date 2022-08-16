@@ -55,9 +55,9 @@ function pathToUri(path) {
  * @param {string} cwd - A path to start at
  * @param {string} stopAt - A path to not look past
  */
-async function findXoRoot(cwd, stopAt) {
+async function findXoRoot(cwd) {
 	const {findUp} = await import('find-up');
-	const pkgPath = await findUp('package.json', {cwd, stopAt});
+	const pkgPath = await findUp('package.json', {cwd});
 
 	if (!pkgPath) return {};
 
@@ -76,7 +76,7 @@ async function findXoRoot(cwd, stopAt) {
 		};
 	}
 
-	return findXoRoot(path.join('..', path.dirname(pkgPath)), stopAt);
+	return findXoRoot(path.resolve(path.dirname(pkgPath), '..'));
 }
 
 module.exports = {

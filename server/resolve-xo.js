@@ -1,6 +1,7 @@
-const path = require('path');
+const path = require('node:path');
 const {Files} = require('vscode-languageserver/node');
 const {URI} = require('vscode-uri');
+const endent = require('endent').default;
 const isSANB = require('is-string-and-not-blank');
 const loadJsonFile = require('load-json-file');
 const {uriToPath, pathToUri} = require('./utils');
@@ -15,9 +16,9 @@ async function resolveXO(document) {
 	const {folder: {uri: folderUri} = {}, config: {path: customPath} = {}} =
 		await this.getDocumentConfig(document);
 
-	const xoFolder = path.dirname(document.uri);
+	const xoCacheKey = path.dirname(document.uri);
 
-	let xo = this.xoCache.get(xoFolder);
+	let xo = this.xoCache.get(xoCacheKey);
 
 	if (typeof xo?.lintText === 'function') return xo;
 
@@ -30,7 +31,6 @@ async function resolveXO(document) {
 	const useCustomPath = isSANB(customPath);
 	if (!useCustomPath) {
 		xoFilePath = await Files.resolve('xo', undefined, folderPath);
-		this.log('xoFilePath', xoFilePath);
 		xoUri = URI.file(xoFilePath).toString();
 	} else if (useCustomPath && customPath.startsWith('file://')) {
 		xoUri = customPath;
@@ -59,10 +59,14 @@ async function resolveXO(document) {
 	xo.default.version = version;
 
 	await this.connection.console.info(
-		`XO Library ${xo.default.version} was successfully resolved and cached for ${folderPath}.`
+		endent`
+			XO Library ${version}
+				Resolved in Workspace ${folderPath}
+				Cached for Folder ${uriToPath(xoCacheKey)}
+		`
 	);
 
-	this.xoCache.set(xoFolder, xo.default);
+	this.xoCache.set(xoCacheKey, xo.default);
 
 	return xo.default;
 }

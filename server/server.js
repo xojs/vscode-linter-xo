@@ -20,12 +20,10 @@ const isSANB = require('is-string-and-not-blank');
 const utils = require('./utils');
 const CodeActionsBuilder = require('./code-actions-builder');
 const getDocumentConfig = require('./get-document-config');
-const getDocumentDiagnostics = require('./get-document-diagnostics');
 const getDocumentErrorOptions = require('./get-document-error-options');
 const getDocumentFixes = require('./get-document-fixes');
 const getDocumentFolder = require('./get-document-folder');
 const getLintResults = require('./get-lint-results');
-const getWorkspaceFolder = require('./get-workspace-folder');
 const {lintDocument, lintDocuments} = require('./lint-document');
 const {log, logError} = require('./logger');
 const resolveXO = require('./resolve-xo');
@@ -38,12 +36,10 @@ class Linter {
 		 * Bind all imported methods
 		 */
 		this.getDocumentConfig = getDocumentConfig.bind(this);
-		this.getDocumentDiagnostics = getDocumentDiagnostics.bind(this);
 		this.getDocumentErrorOptions = getDocumentErrorOptions.bind(this);
 		this.getDocumentFixes = getDocumentFixes.bind(this);
 		this.getDocumentFolder = getDocumentFolder.bind(this);
 		this.getLintResults = getLintResults.bind(this);
-		this.getWorkspaceFolder = getWorkspaceFolder.bind(this);
 		this.lintDocument = lintDocument.bind(this);
 		this.lintDocuments = lintDocuments.bind(this);
 		this.lintDocumentDebounced = debounce(this.lintDocument, DEFAULT_DEBOUNCE, {
@@ -139,7 +135,7 @@ class Linter {
 	}
 
 	/**
-	 * handle onInitialize
+	 * handle connection.onInitialize
 	 */
 	async handleInitialize() {
 		return {
@@ -160,7 +156,7 @@ class Linter {
 	}
 
 	/**
-	 * handle onDidChangeConfiguration
+	 * handle connection.onDidChangeConfiguration
 	 */
 	async handleDidChangeConfiguration(params) {
 		if (
@@ -175,12 +171,11 @@ class Linter {
 
 		// recache each folder config
 		this.configurationCache.clear();
-		await Promise.all([...this.foldersCache].map((folder) => this.getDocumentConfig(folder)));
 		return this.lintDocuments(this.documents.all());
 	}
 
 	/**
-	 * handle onDidChangeWatchedFiles
+	 * handle connection.onDidChangeWatchedFiles
 	 */
 	async handleDidChangeWatchedFiles(params) {
 		for (const document of params.changes) {
@@ -188,8 +183,8 @@ class Linter {
 				// eslint-disable-next-line no-await-in-loop
 				const folder = await this.getDocumentFolder(document);
 				if (this.errorOptionsCache.has(folder.uri)) this.errorOptionsCache.delete(folder.uri);
-				// eslint-disable-next-line no-await-in-loop
-				await this.getDocumentErrorOptions(document);
+
+				// await this.getDocumentErrorOptions(document);
 			} catch (error) {
 				this.logError(error);
 			}
@@ -336,9 +331,22 @@ class Linter {
 
 	/**
 	 * Handle documents.onDidClose
-	 * Clears the diagnostics when document is closed
+	 * Clears the diagnostics when document is closed and
+	 * cleans up cached folders that no longer have open documents
 	 */
 	handleDocumentsOnDidClose(event) {
+		const folders = new Set(
+			new Set([...this.documents.all()].map((document) => path.dirname(document.uri)))
+		);
+
+		for (const folder of this.foldersCache.keys()) {
+			if (!folders.has(folder)) {
+				this.foldersCache.delete(folder);
+				this.xoCache.delete(folder);
+				this.configurationCache.delete(folder);
+			}
+		}
+
 		this.connection.sendDiagnostics({
 			uri: event.document.uri,
 			diagnostics: []

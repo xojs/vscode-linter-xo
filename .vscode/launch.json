@@ -7,8 +7,7 @@
 			"request": "launch",
 			"name": "Launch Extension",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
-			"stopOnEntry": false,
+			"args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}"],
 			"sourceMaps": true,
 			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
 			"preLaunchTask": "npm: build:dev"
@@ -18,7 +17,6 @@
 			"request": "attach",
 			"name": "Attach to Server",
 			"address": "localhost",
-			"protocol": "inspector",
 			"port": 6004,
 			"sourceMaps": true,
 			"outFiles": ["${workspaceFolder}/dist/**/*.js"]

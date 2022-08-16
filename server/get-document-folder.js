@@ -15,10 +15,9 @@ async function getDocumentFolder(document) {
 		return this.foldersCache.get(documentDirUri);
 	}
 
-	const workspaceFolder = await this.getWorkspaceFolder(document);
 	const documentPath = uriToPath(document.uri);
 	const documentDir = path.dirname(documentPath);
-	const {pkgPath} = await findXoRoot(documentDir, uriToPath(workspaceFolder.uri));
+	const {pkgPath} = await findXoRoot(documentDir);
 
 	if (pkgPath) {
 		const packageDirUri = pathToUri(path.dirname(pkgPath));
