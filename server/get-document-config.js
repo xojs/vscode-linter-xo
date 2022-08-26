@@ -1,25 +1,22 @@
+const path = require('node:path');
 /**
  * Gets document folder and settings
  * and caches them if needed
  * @param {TextDocument} document
  */
 async function getDocumentConfig(document) {
-	const folder = await this.getDocumentFolder(document);
-	if (!folder) return {};
-	if (this.configurationCache.has(folder.uri))
-		return {
-			folder,
-			config: this.configurationCache.get(folder.uri)
-		};
+	const folderUri = path.dirname(document.uri);
+
+	if (this.configurationCache.has(folderUri)) return this.configurationCache.get(folderUri);
+
 	const config = await this.connection.workspace.getConfiguration({
-		scopeUri: folder.uri,
+		scopeUri: folderUri,
 		section: 'xo'
 	});
-	this.configurationCache.set(folder.uri, config);
-	return {
-		folder,
-		config
-	};
+
+	this.configurationCache.set(folderUri, config);
+
+	return config;
 }
 
 module.exports = getDocumentConfig;

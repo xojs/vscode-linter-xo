@@ -6,17 +6,13 @@ const {
 	TextDocuments,
 	RequestType,
 	TextDocumentSyncKind,
-	Files,
 	ResponseError,
 	LSPErrorCodes
 } = require('vscode-languageserver/node');
 const {TextDocument} = require('vscode-languageserver-textdocument');
-const {URI} = require('vscode-uri');
 const autoBind = require('auto-bind');
 const debounce = require('lodash.debounce');
 const Queue = require('queue');
-const loadJsonFile = require('load-json-file');
-const isSANB = require('is-string-and-not-blank');
 const utils = require('./utils');
 const CodeActionsBuilder = require('./code-actions-builder');
 const getDocumentConfig = require('./get-document-config');
@@ -70,7 +66,6 @@ class Linter {
 		/**
 		 * setup documents listeners
 		 */
-		this.documents.onDidOpen(this.handleDocumentsOnDidOpen);
 		this.documents.onDidChangeContent(this.handleDocumentsOnDidChangeContent);
 		this.documents.onDidClose(this.handleDocumentsOnDidClose);
 
@@ -214,7 +209,7 @@ class Linter {
 						);
 					}
 
-					const {config} = await this.getDocumentConfig(params.textDocument);
+					const config = await this.getDocumentConfig(params.textDocument);
 					if (!config?.format?.enable) return resolve(null);
 					// get fixes and send to client
 					const fixes = await this.getDocumentFixes(params.textDocument.uri);
@@ -273,28 +268,6 @@ class Linter {
 	}
 
 	/**
-	 * Handle documents.onDidOpen
-	 * async checks if cached xo version is current
-	 * if not, delete the cache and force reloading
-	 */
-	async handleDocumentsOnDidOpen(event) {
-		try {
-			const {folder, config: {path: customUri} = {}} = await this.getDocumentConfig(event.document);
-			if (isSANB(customUri)) return;
-			if (!folder?.uri) return;
-			if (!this.xoCache.has(folder.uri)) return;
-			const folderPath = URI.parse(folder.uri).fsPath;
-			const xo = this.xoCache.get(folder.uri);
-			// TODO: use same mechanism as in resolveXO
-			const xoDirPath = path.dirname(await Files.resolve('xo', undefined, folderPath));
-			const {version} = await loadJsonFile(path.join(xoDirPath, 'package.json'));
-			if (xo.version !== version) this.xoCache.delete(folder.uri);
-		} catch (error) {
-			this.logError(error);
-		}
-	}
-
-	/**
 	 * Handle documents.onDidChangeContent
 	 * queues document content linting
 	 */
@@ -317,7 +290,7 @@ class Linter {
 	 */
 	handleDocumentsOnDidClose(event) {
 		const folders = new Set(
-			new Set([...this.documents.all()].map((document) => path.dirname(document.uri)))
+			[...this.documents.all()].map((document) => path.dirname(document.uri))
 		);
 
 		for (const folder of this.foldersCache.keys()) {

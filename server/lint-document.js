@@ -17,7 +17,7 @@ async function lintDocument(document) {
 			return null;
 		}
 
-		const {config: {overrideSeverity} = {}} = await this.getDocumentConfig(document);
+		const {overrideSeverity} = await this.getDocumentConfig(document);
 
 		const {results, rulesMeta} = await this.getLintResults(document);
 
@@ -47,7 +47,7 @@ async function lintDocument(document) {
 				typeof rulesMeta[diagnostic.code] === 'object'
 			) {
 				diagnostic.codeDescription = {
-					href: rulesMeta[diagnostic.code].docs.url
+					href: rulesMeta?.[diagnostic.code]?.docs?.url
 				};
 			} else {
 				try {

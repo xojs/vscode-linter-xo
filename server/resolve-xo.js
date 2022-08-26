@@ -13,8 +13,10 @@ const {uriToPath, pathToUri} = require('./utils');
  * @param {TextDocument} document
  */
 async function resolveXO(document) {
-	const {folder: {uri: folderUri} = {}, config: {path: customPath} = {}} =
-		await this.getDocumentConfig(document);
+	const [{uri: folderUri} = {}, {path: customPath} = {}] = await Promise.all([
+		this.getDocumentFolder(document),
+		this.getDocumentConfig(document)
+	]);
 
 	const xoCacheKey = path.dirname(document.uri);
 

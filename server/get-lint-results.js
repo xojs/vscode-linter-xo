@@ -4,17 +4,16 @@ const {URI} = require('vscode-uri');
 
 async function getLintResults(document, {contents} = {}) {
 	// first we resolve all the configs we need
-	const {folder: {uri: folderUri} = {}, config: {options} = {}} = await this.getDocumentConfig(
-		document
-	);
+	const [{uri: folderUri} = {}, {options} = {}] = await Promise.all([
+		this.getDocumentFolder(document),
+		this.getDocumentConfig(document)
+	]);
 
 	// if we can't find a valid folder, then the user
 	// has likely opened a JS file from another location
 	// so we will just bail out of linting early
 	if (!folderUri) {
-		const error = new Error(
-			'No valid workspace folder could be found for this file. Skipping linting as it is an external JS file.'
-		);
+		const error = new Error('No valid xo folder could be found for this file. Skipping linting.');
 		this.logError(error);
 		return [];
 	}
