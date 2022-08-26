@@ -707,7 +707,7 @@ class Linter {
 				typeof rulesMeta[diagnostic.code] === 'object'
 			) {
 				diagnostic.codeDescription = {
-					href: rulesMeta[diagnostic.code].docs.url
+					href: rulesMeta[diagnostic.code].docs?.url
 				};
 			} else {
 				try {
