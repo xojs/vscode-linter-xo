@@ -9,7 +9,7 @@ let client;
 
 function activate(context) {
 	// The server is implemented in node
-	const serverModule = context.asAbsolutePath('server/server.js');
+	const serverModule = context.asAbsolutePath('dist/server.js');
 
 	const debugOptions = {
 		execArgv: ['--nolazy', '--inspect=6004'],
