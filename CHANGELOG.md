@@ -1,3 +1,11 @@
+### v3.12.0
+
+- Refactor and architectural changes to support better logic around xo resolution
+  - Previously required xo to be in the root folder of the vscode workspace
+  - Now only requires that xo is a dependency in any parent directory. The extension now looks up from the file it is linting for a package.json with xo as a dependency.
+  - Caching now happens on a per folder basis and is cleaned up as files are closed and recached when they open. This helps simplify logic and able to remove a lot of supporting code and alleviates problems from stale cache.
+- fixes a bug where eslint-plugins/configs without docs would throw an error
+
 ### v3.11.0
 
 - Adds validate option to allow formatting more file types

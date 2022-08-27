@@ -6,7 +6,7 @@
 
 ## Usage
 
-Just set up [XO](https://github.com/sindresorhus/xo) like you normally would in your project. The extension will pickup the configuration in your workspace just like running [XO](https://github.com/sindresorhus/xo) in your terminal would. You will be able to see your linter work as you type and easily format your code if you want it to!
+Install [XO](https://github.com/sindresorhus/xo) like you normally would in your project. The extension will pickup the configuration in your workspace just like running [XO](https://github.com/sindresorhus/xo) in your terminal would. You will be able to see your linter work as you type and easily format your code.
 
 ```shell
 $ npm install --save-dev xo
@@ -18,11 +18,15 @@ or
 $ yarn add -D xo
 ```
 
+## How it works
+
+The xo extension searches up when you open a file for a package.json with `xo` listed as a dependency.
+
 ## Auto Format JS/TS Files XO
 
-You can enable XO as a formatter for TypeScript and JavaScript. We recommend setting it up as follows:
+You can enable XO as a formatter for TypeScript and JavaScript.
 
-In either your workspace or user settings add the following. It's generally best to make xo the default formatter for JavaScript and TypeScript files specifically as it will not be able to format other document types.
+In either your workspace or user settings add the following settings.
 
 > optionally turn on "editor.formatOnSave"
 
@@ -40,94 +44,42 @@ In either your workspace or user settings add the following. It's generally best
 }
 ```
 
-The XO extension also ships with a fix command that is accessible from the command pallete. This command will apply xo fixes to your JS or TS file regardless of any configuration.
+## Commands
 
-To use: pull up the command pallete (usually `F1` or `Ctrl + Shift + P`) and choose `XO: Fix all auto-fixable problems`.
+To use: pull up the command pallete (usually `F1` or `Ctrl + Shift + P`) and start typing `xo`.
 
 ![](media/fix.gif)
 
-## Additional Languages
+#### Fix all fixable problems
 
-By default, the XO extension is configured to activate for Javascript, Javascript + React, Typescript, and Typescript + React. You may add more languages in the VS Code Settings. For example, to add Vue, you could do the following:
+Fixes all fixable problems in the open document, regardless of configuration.
 
-```json
-{
-	"xo.validate": [
-		"javascript",
-		"javascriptreact",
-		"typescript",
-		"typescriptreact",
-		"vue"
-	]
-}
-```
+#### Restart Server
+
+Reloads XO server.
 
 ## Settings
 
-Enable the linter in the VS Code Settings, this is on by default.
-
-```json
-{
-	"xo.enable": true
-}
-```
-
-You can also pass in extra options via vscode's settings. Note that these settings will override any configurations that xo finds in your local workspace.
-
-```json
-{
-	"xo.options": {
-		"rules": {
-			"semicolon": false
-		}
-	}
-}
-```
-
-You can enable the formatter integration to use `xo --fix` as formatter. Requires `xo.enable` to be true.
-
-```json
-{
-	"xo.format.enable": true
-}
-```
-
-You can override the severity of found issues, e.g. to make them stand out less than TypeScript errors.
-
-```json
-{
-	"xo.overrideSeverity": "info"
-}
-```
-
-Since linting occurs on any file change, large files with complex configurations can get laggy. You can adjust a debounce (in milliseconds) that helps optimize performance for large files. If you notice that lint results are jumping all over the place, or a long delay in fixing files, turn this up. The max is 350ms.
-
-```json
-{
-	"xo.debounce": 0
-}
-```
-
-If you want to resolve xo from a custom path - such as a global node_modules folder, supply an absolute or relative path (with respect to the workspace folder directory). Could use with Deno, yarn pnp, or to have the xo library lint itself. By default xo is resolved from the workspace folders node_modules directory.
-
-```json
-{
-	"xo.path": "/path/to/node_modules/xo/index.js",
-}
-{
-	"xo.path": "./node_modules/xo/index.js"
-}
-```
-
-By default, VSCode starts xo with its own bundled nodejs version. This may cause different results from the cli if you are using a different version of node. You can set a runtime path so that you are always using the same node version.
-
-```json
-{
-	"xo.runtime": "/usr/local/bin/node"
-}
-```
+| Setting               | Type                           | Default                                                                     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------- | ------------------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `xo.enable`           | `boolean`                      | `true`                                                                      | Turn the `xo` extension on and off in your workspace                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `xo.format.enable`    | `boolean`                      | `false`                                                                     | Enable the `xo` extension to format documents. Requires `xo.enable` to be turned on.                                                                                                                                                                                                                                                                                                                                                                   |
+| `xo.validate`         | `string[]`                     | `["javascript", "javascriptreact", "typescript", "typescriptreact", "vue"]` | By default, the XO extension is configured to activate for Javascript, Javascript + React, Typescript, and Typescript + React. You may add more languages in the VS Code Settings. For example, to add Vue, you could do the following:                                                                                                                                                                                                                |
+| `xo.options`          | `object`                       | `undefined`                                                                 | Supply any [xo option](https://github.com/xojs/xo#config). The options set here will override any configurations found by `xo` in your local workspace                                                                                                                                                                                                                                                                                                 |
+| `xo.overrideSeverity` | `string<info\|warning\|error>` | `undefined`                                                                 | XO extension will report all diagnostics in VSCode as the desired severity type. By default `xo` reports the severity type based on the linting rules set up in the local workspace                                                                                                                                                                                                                                                                    |
+| `xo.debounce`         | `number`                       | 0                                                                           | You can adjust a debounce (in milliseconds) that helps optimize performance for large files. If you notice that lint results are jumping all over the place, or a long delay in fixing files, turn this up. The max is 350ms.                                                                                                                                                                                                                          |
+| `xo.path`             | `string`                       | `undefined`                                                                 | If you want to resolve xo from a custom path - such as a global node_modules folder, supply an absolute or relative path (with respect to the workspace folder directory). Could use with Deno, yarn pnp, or to have the xo library lint itself. By default xo is resolved from the workspace folders node_modules directory. <br/><br/>examples:<br/>`"xo.path": "/path/to/node_modules/xo/index.js"` <br/> `"xo.path": "./node_modules/xo/index.js"` |
+| `xo.runtime`          | `string`                       | `undefined`                                                                 | By default, VSCode starts xo with its own bundled nodejs version. This may cause different results from the cli if you are using a different version of node. You can set a runtime path so that you are always using the same node version. <br/><br/>example:<br/>`"xo.runtime": "/usr/local/bin/node"`                                                                                                                                              |
 
 ## Recent Updates
+
+- v3.12.0
+
+  - Refactor and architectural changes to support better logic around xo resolution
+    - Previously required xo to be in the root folder of the vscode workspace
+    - Now only requires that xo is a dependency in any parent directory. The extension now looks up from the file it is linting for a package.json with xo as a dependency.
+    - Caching now happens on a per folder basis and is cleaned up as files are closed and recached when they open. This helps simplify logic and able to remove a lot of supporting code and alleviates problems from stale cache.
+  - fixes a bug where eslint-plugins/configs without docs would throw an error
 
 - v3.11.0
 
@@ -143,25 +95,6 @@ By default, VSCode starts xo with its own bundled nodejs version. This may cause
 - v3.9.0
 
   - Adds links to rule documents
-
-- v3.8.1
-
-  - Diagnostics now underline the entire diagnostic, rather than only the first character (closes #87)
-
-- v3.8.0
-
-  - If a file is opened without a workspace folder, linter-xo will attempt to resolve the project root and lint appropriately.
-
-- v3.7.0
-
-  - Configuration for a custom "xo.path" now accepts an absolute or relative path. File uris deprecated.
-
-- v3.6.0
-
-  - Adds a configuration for custom nodejs runtime for running the xo server.
-
-- v3.5.0
-  - Adds a configuration for a custom xo path for xo to resolve from.
 
 ## Known Issues
 
