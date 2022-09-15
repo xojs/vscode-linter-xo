@@ -76,10 +76,13 @@ function activate(context) {
 			vscode.commands.executeCommand('workbench.action.reloadWindow');
 		}
 
-		statusBar();
+		statusBar(client);
 	});
 
-	context.subscriptions.push(statusBar());
+	vscode.workspace.onDidOpenTextDocument(() => statusBar(client));
+	vscode.workspace.onDidCloseTextDocument(() => statusBar(client));
+
+	context.subscriptions.push(statusBar(client));
 }
 
 function deactivate() {

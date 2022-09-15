@@ -113,11 +113,16 @@
 					],
 					"description": "An array of languages with which to activate the plugin. Defaults: [ \"javascript\", \"javascriptreact\", \"typescript\", \"typescriptreact\" ]"
 				},
-				"xo.showStatusBar": {
+				"xo.statusBar": {
 					"scope": "resource",
-					"type": "boolean",
-					"default": true,
-					"description": "Show Status Bar"
+					"type": "string",
+					"enum": [
+						"Relevant",
+						"Always",
+						"Never"
+					],
+					"default": "Relevant",
+					"description": "When to show status bar item"
 				}
 			}
 		},
