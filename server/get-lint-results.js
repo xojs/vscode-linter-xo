@@ -26,6 +26,7 @@ async function getLintResults(document, {contents} = {}) {
 
 	// set the options needed for internal xo config resolution
 	options.cwd = folderFsPath;
+	options.filename = documentFsPath;
 	options.filePath = documentFsPath;
 
 	let report;
