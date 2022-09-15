@@ -18,6 +18,15 @@
 		"Formatters"
 	],
 	"contributes": {
+		"icons": {
+			"xo-logo": {
+				"description": "xo logo",
+				"default": {
+					"fontPath": "./scripts/xo.woff",
+					"fontCharacter": "\\EA01"
+				}
+			}
+		},
 		"configuration": {
 			"type": "object",
 			"title": "xo",
@@ -154,6 +163,7 @@
 		"lint-staged": "13.0.3",
 		"prettier": "^2.7.1",
 		"rimraf": "^3.0.2",
+		"webfont": "^11.2.26",
 		"xo": "^0.51.0"
 	},
 	"displayName": "xo",

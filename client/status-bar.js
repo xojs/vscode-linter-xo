@@ -7,7 +7,7 @@ function updateStatusBar() {
 
 	statusBar = statusBar ? statusBar : vscode.window.createStatusBarItem('xoStatusBarItem', 2, 0);
 
-	statusBar.text = 'XO';
+	statusBar.text = '$(xo-logo)';
 
 	statusBar.command = 'xo.showOutputChannel';
 
