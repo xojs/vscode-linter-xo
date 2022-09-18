@@ -2,11 +2,17 @@ const path = require('path');
 const {findXoRoot, pathToUri, uriToPath} = require('./utils');
 
 /**
+ * @typedef {import('vscode-languageserver-textdocument').TextDocument} TextDocument
+ * @typedef {import('./server.js').LintServer} LintServer
+ */
+
+/**
  * get the root folder document from a document
  * caches workspace folders if needed
  *
+ * @this {LintServer}
  * @param {TextDocument} document
- * @returns {TextDocument}
+ * @returns {Promise<TextDocument>}
  */
 async function getDocumentFolder(document) {
 	const documentDirUri = path.dirname(document.uri);

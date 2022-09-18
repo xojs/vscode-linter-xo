@@ -25,41 +25,65 @@ const resolveXO = require('./resolve-xo');
 
 const DEFAULT_DEBOUNCE = 0;
 
-class Linter {
+class LintServer {
 	constructor() {
 		/**
 		 * Bind all imported methods
 		 */
+		/** @type {import('./get-document-config')} */
 		this.getDocumentConfig = getDocumentConfig.bind(this);
+
+		/** @type {import('./get-document-fixes')} */
 		this.getDocumentFixes = getDocumentFixes.bind(this);
+
+		/** @type {import('./get-document-folder')} */
 		this.getDocumentFolder = getDocumentFolder.bind(this);
+
+		/** @type {import('./get-lint-results')} */
 		this.getLintResults = getLintResults.bind(this);
+
+		/** @type {import('./lint-document').lintDocument} */
 		this.lintDocument = lintDocument.bind(this);
+
+		/** @type {import('./lint-document').lintDocuments} */
 		this.lintDocuments = lintDocuments.bind(this);
+
+		/** @type {import('./lint-document').lintDocuments} */
 		this.lintDocumentDebounced = debounce(this.lintDocument, DEFAULT_DEBOUNCE, {
 			maxWait: 350
 		});
+
+		/** @type {import('./resolve-xo')} */
 		this.resolveXO = resolveXO.bind(this);
+
+		/** @type {import('./logger').log} */
 		this.log = log.bind(this);
+
+		/** @type {import('./logger').logError} */
 		this.logError = logError.bind(this);
+
 		/**
 		 * Bind all methods
 		 */
 		autoBind(this);
+
 		/**
 		 * Connection
+		 * @type {import('vscode-languageserver/node').Connection}
 		 */
 		this.connection = createConnection(ProposedFeatures.all);
 
 		/**
 		 * Documents
+		 * @type {TextDocuments}
 		 */
 		this.documents = new TextDocuments(TextDocument);
 
 		/**
-		 * Set up queue which allows for
-		 * async cancellations and processing notifications
-		 * and requests in order
+		 * A message queue which allows for async cancellations and
+		 * processing notifications and requests in order
+		 *
+		 * @type {Queue}
 		 */
 		this.queue = new Queue({concurrency: 1, autostart: true});
 
@@ -93,14 +117,27 @@ class Linter {
 		this.connection.onCodeAction(this.handleCodeActionRequest);
 
 		/**
-		 * initialize core helper objects
-		 * - xoCache is a mapping of folderUris to the xo object from its node_modules
-		 * - configurationCache is mapping of folders to their configurations
-		 * - folders is an array of folderUris
+		 * A mapping of folderPaths to the resolved XO module
+		 * @type {Map<string, XO>}
 		 */
 		this.xoCache = new Map();
+
+		/**
+		 * A mapping of folderPaths to configuration options
+		 * @type {Map<string, any>}
+		 */
 		this.configurationCache = new Map();
+
+		/**
+		 * A mapping of folders to the location of their package.json
+		 * @type {Map<string, string>}
+		 */
 		this.foldersCache = new Map();
+
+		/**
+		 * A mapping of document uri strings to their last calculated fixes
+		 * @type {Map<string, TextEdit[]>}
+		 */
 		this.documentEdits = new Map();
 
 		this.hasShownResolutionError = false;
@@ -116,7 +153,9 @@ class Linter {
 
 	/**
 	 * check if document is open
+	 *
 	 * @param {TextDocument} document
+	 * @returns {boolean} is `true` if document is currently open in the editor, `false` otherwise
 	 */
 	isDocumentOpen(document) {
 		return document?.uri && this.documents.get(document.uri);
@@ -124,6 +163,8 @@ class Linter {
 
 	/**
 	 * handle connection.onInitialize
+	 *
+	 * @returns {import('vscode-languageserver/node').InitializeParams}
 	 */
 	async handleInitialize() {
 		return {
@@ -144,7 +185,10 @@ class Linter {
 	}
 
 	/**
-	 * handle connection.onDidChangeConfiguration
+	 * Handle connection.onDidChangeConfiguration
+	 *
+	 * @type {import('vscode-languageserver/node').NotificationHandler}
+	 * @param {import('vscode-languageserver/node').DidChangeConfigurationParams} params
 	 */
 	async handleDidChangeConfiguration(params) {
 		if (
@@ -164,6 +208,9 @@ class Linter {
 
 	/**
 	 * handle connection.onDidChangeWatchedFiles
+	 *
+	 * @type {import('vscode-languageserver/node').NotificationHandler}
+	 * @returns {Promise<void>}
 	 */
 	async handleDidChangeWatchedFiles() {
 		return this.lintDocuments(this.documents.all());
@@ -171,6 +218,8 @@ class Linter {
 
 	/**
 	 * Handle custom all fixes request
+	 *
+	 * @type {import('vscode-languageserver/node').ServerRequestHandler}
 	 */
 	async handleAllFixesRequest(params) {
 		return new Promise((resolve, reject) => {
@@ -187,6 +236,10 @@ class Linter {
 
 	/**
 	 * Handle LSP document formatting request
+	 *
+	 * @type {import('vscode-languageserver/node').ServerRequestHandler}
+	 * @param {import('vscode-languageserver/node').DocumentFormattingParams} params
+	 * @param {import('vscode-languageserver/node').CancellationToken} token
 	 */
 	async handleDocumentFormattingRequest(params, token) {
 		return new Promise((resolve, reject) => {
@@ -225,6 +278,10 @@ class Linter {
 	/**
 	 * Handle LSP code action request
 	 * these happen at the time of an error/warning hover
+	 *
+	 * @type {import('vscode-languageserver/node').ServerRequestHandler}
+	 * @param {import('vscode-languageserver/node').CodeActionParams} params
+	 * @param {import('vscode-languageserver/node').CancellationToken} token
 	 */
 	async handleCodeActionRequest(params, token) {
 		return new Promise((resolve, reject) => {
@@ -270,6 +327,7 @@ class Linter {
 	/**
 	 * Handle documents.onDidChangeContent
 	 * queues document content linting
+	 * @param {import('vscode-languageserver/node').TextDocumentChangeEvent} event
 	 */
 	handleDocumentsOnDidChangeContent(event) {
 		this.queue.push(async () => {
@@ -287,6 +345,8 @@ class Linter {
 	 * Handle documents.onDidClose
 	 * Clears the diagnostics when document is closed and
 	 * cleans up cached folders that no longer have open documents
+	 *
+	 * @param {import('vscode-languageserver/node').TextDocumentChangeEvent} event
 	 */
 	handleDocumentsOnDidClose(event) {
 		const folders = new Set(
@@ -308,4 +368,6 @@ class Linter {
 	}
 }
 
-new Linter().listen();
+new LintServer().listen();
+
+module.exports = {LintServer};

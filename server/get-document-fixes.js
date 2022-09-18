@@ -1,6 +1,13 @@
 const {TextEdit, Range} = require('vscode-languageserver/node');
 const FixesBuilder = require('./fixes-builder');
 
+/**
+ * Computes the TextEdits for a text document uri
+ *
+ * @this {import('./server.js').LintServer}
+ * @param {import('vscode-languageserver-textdocument').TextDocument} uri
+ * @returns {import('vscode-languageserver-textdocument').TextDocument[]}
+ */
 async function getDocumentFixes(uri) {
 	let result = null;
 	const textDocument = this.documents.get(uri);

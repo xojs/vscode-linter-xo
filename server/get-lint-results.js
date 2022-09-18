@@ -1,8 +1,17 @@
 const process = require('node:process');
-const isSANB = require('is-string-and-not-blank');
 const {URI} = require('vscode-uri');
 
-async function getLintResults(document, {contents} = {}) {
+/**
+ * @typedef {import('vscode-languageserver-textdocument').TextDocument} TextDocument
+ * @typedef {import('./server.js').LintServer} LintServer
+ */
+
+/**
+ * @this {LintServer}
+ * @param {TextDocument} document
+ * @returns {import('xo').ResultReport} lintResults
+ */
+async function getLintResults(document) {
 	// first we resolve all the configs we need
 	const [{uri: folderUri} = {}, {options} = {}] = await Promise.all([
 		this.getDocumentFolder(document),
@@ -22,7 +31,7 @@ async function getLintResults(document, {contents} = {}) {
 
 	const {fsPath: documentFsPath} = URI.parse(document.uri);
 	const {fsPath: folderFsPath} = URI.parse(folderUri);
-	contents = isSANB(contents) ? contents : document.getText();
+	const contents = document.getText();
 
 	// set the options needed for internal xo config resolution
 	options.cwd = folderFsPath;

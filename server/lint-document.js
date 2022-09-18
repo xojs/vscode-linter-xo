@@ -3,8 +3,14 @@ const getRuleUrl = require('eslint-rule-docs');
 const utils = require('./utils');
 
 /**
+ * @typedef {import('vscode-languageserver-textdocument').TextDocument} TextDocument
+ * @typedef {import('./server.js').LintServer} LintServer
+ */
+
+/**
  * lintDocument first
  * lints and sends diagnostics for a single file
+ * @this {LintServer}
  * @param {TextDocument} document
  */
 async function lintDocument(document) {
@@ -96,6 +102,9 @@ async function lintDocument(document) {
 
 /**
  * helper to lint and sends diagnostics for multiple files
+ *
+ * @this {LintServer}
+ * @param {TextDocument[]} documents
  */
 async function lintDocuments(documents) {
 	for (const document of documents) {

@@ -7,10 +7,18 @@ const loadJsonFile = require('load-json-file');
 const {uriToPath, pathToUri} = require('./utils');
 
 /**
+ * @typedef {import('vscode-languageserver-textdocument').TextDocument} TextDocument
+ * @typedef {import('./server.js').LintServer} LintServer
+ * @typedef {typeof import('xo')} XO
+ */
+
+/**
  * Get xo from cache if it is there.
  * Attempt to resolve from node_modules relative
  * to the current working directory if it is not
+ * @this LintServer
  * @param {TextDocument} document
+ * @returns {Promise<XO>} XO
  */
 async function resolveXO(document) {
 	const [{uri: folderUri} = {}, {path: customPath} = {}] = await Promise.all([
@@ -20,6 +28,7 @@ async function resolveXO(document) {
 
 	const xoCacheKey = path.dirname(document.uri);
 
+	/** @type {XO|undefined} */
 	let xo = this.xoCache.get(xoCacheKey);
 
 	if (typeof xo?.lintText === 'function') return xo;

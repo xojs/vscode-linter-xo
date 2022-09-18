@@ -1,8 +1,17 @@
 const path = require('node:path');
+
 /**
- * Gets document folder and settings
- * and caches them if needed
+ * @typedef {import('vscode-languageserver-textdocument').TextDocument} TextDocument
+ * @typedef {import('./server.js').LintServer} LintServer
+ */
+
+/**
+ * Gets document config
+ * and caches it if needed
+ *
+ * @this {LintServer}
  * @param {TextDocument} document
+ * @returns {Promise<any>} config
  */
 async function getDocumentConfig(document) {
 	const folderUri = path.dirname(document.uri);
