@@ -9,9 +9,10 @@ const {URI} = require('vscode-uri');
 /**
  * @this {LintServer}
  * @param {TextDocument} document
+ * @param {string} _contents
  * @returns {import('xo').ResultReport} lintResults
  */
-async function getLintResults(document) {
+async function getLintResults(document, _contents, fix) {
 	// first we resolve all the configs we need
 	const [{uri: folderUri} = {}, {options} = {}] = await Promise.all([
 		this.getDocumentFolder(document),
@@ -31,12 +32,14 @@ async function getLintResults(document) {
 
 	const {fsPath: documentFsPath} = URI.parse(document.uri);
 	const {fsPath: folderFsPath} = URI.parse(folderUri);
-	const contents = document.getText();
+	const contents = _contents ?? document.getText();
 
 	// set the options needed for internal xo config resolution
 	options.cwd = folderFsPath;
 	options.filename = documentFsPath;
 	options.filePath = documentFsPath;
+	options.warnIgnored = false;
+	options.fix = fix;
 
 	let report;
 

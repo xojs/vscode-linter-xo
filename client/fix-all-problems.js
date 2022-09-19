@@ -5,6 +5,10 @@ const AllFixesRequest = {
 	type: new RequestType('textDocument/xo/allFixes')
 };
 
+/**
+ *
+ * @param {import('vscode-languageclient/node').LanguageClient} client
+ */
 function fixAllProblems(client) {
 	const textEditor = vscode.window.activeTextEditor;
 	if (!textEditor) {
@@ -15,7 +19,7 @@ function fixAllProblems(client) {
 	client.sendRequest(AllFixesRequest.type, {textDocument: {uri}}).then(
 		(result) => {
 			if (result) {
-				applyTextEdits(uri, result.documentVersion, result.edits);
+				applyTextEdits(uri, result.documentVersion, result.edits, client);
 			}
 		},
 		() => {
@@ -26,6 +30,9 @@ function fixAllProblems(client) {
 	);
 }
 
+/**
+ * @param {import('vscode-languageclient/node').LanguageClient} client
+ */
 function applyTextEdits(uri, documentVersion, edits, client) {
 	const textEditor = vscode.window.activeTextEditor;
 	if (textEditor && textEditor.document.uri.toString() === uri) {
