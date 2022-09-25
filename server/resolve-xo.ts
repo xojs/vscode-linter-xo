@@ -1,34 +1,26 @@
-const path = require('node:path');
-const {Files} = require('vscode-languageserver/node');
-const {URI} = require('vscode-uri');
-const endent = require('endent').default;
-const isSANB = require('is-string-and-not-blank');
-const loadJsonFile = require('load-json-file');
-const {uriToPath, pathToUri} = require('./utils');
-
-/**
- * @typedef {import('vscode-languageserver-textdocument').TextDocument} TextDocument
- * @typedef {import('./server.js').LintServer} LintServer
- * @typedef {typeof import('xo')} XO
- */
+import path from 'node:path';
+import {Files} from 'vscode-languageserver/node';
+import {URI} from 'vscode-uri';
+import endent from 'endent';
+import isSANB from 'is-string-and-not-blank';
+import loadJsonFile from 'load-json-file';
+import {TextDocument} from 'vscode-languageserver-textdocument';
+import {uriToPath, pathToUri} from './utils';
+import type LintServer from './server';
 
 /**
  * Get xo from cache if it is there.
  * Attempt to resolve from node_modules relative
  * to the current working directory if it is not
- * @this LintServer
- * @param {TextDocument} document
- * @returns {Promise<XO>} XO
  */
-async function resolveXO(document) {
-	const [{uri: folderUri} = {}, {path: customPath} = {}] = await Promise.all([
+async function resolveXo(this: LintServer, document: TextDocument): Promise<Xo> {
+	const [{uri: folderUri = ''} = {}, {path: customPath = ''}] = await Promise.all([
 		this.getDocumentFolder(document),
 		this.getDocumentConfig(document)
 	]);
 
 	const xoCacheKey = path.dirname(document.uri);
 
-	/** @type {XO|undefined} */
 	let xo = this.xoCache.get(xoCacheKey);
 
 	if (typeof xo?.lintText === 'function') return xo;
@@ -40,7 +32,7 @@ async function resolveXO(document) {
 	let xoFilePath;
 	const useCustomPath = isSANB(customPath);
 	if (!useCustomPath) {
-		xoFilePath = await Files.resolve('xo', undefined, folderPath);
+		xoFilePath = await Files.resolve('xo', undefined, folderPath, this.connection.tracer.log);
 		xoUri = URI.file(xoFilePath).toString();
 	} else if (useCustomPath && customPath.startsWith('file://')) {
 		xoUri = customPath;
@@ -57,18 +49,17 @@ async function resolveXO(document) {
 
 	let version;
 
-	[xo, {version}] = await Promise.all([
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+	[{default: xo}, {version = ''} = {}] = await Promise.all([
 		import(xoUri),
 		xoFilePath
-			? loadJsonFile(path.join(path.dirname(xoFilePath), 'package.json'))
+			? loadJsonFile<{version: string}>(path.join(path.dirname(xoFilePath), 'package.json'))
 			: Promise.resolve({version: 'custom'})
 	]);
 
-	if (!xo?.default?.lintText) throw new Error("The XO library doesn't export a lintText method.");
+	if (!xo?.lintText) throw new Error("The XO library doesn't export a lintText method.");
 
-	xo.default.version = version;
-
-	await this.connection.console.info(
+	this.log(
 		endent`
 			XO Library ${version}
 				Resolved in Workspace ${folderPath}
@@ -76,9 +67,9 @@ async function resolveXO(document) {
 		`
 	);
 
-	this.xoCache.set(xoCacheKey, xo.default);
+	this.xoCache.set(xoCacheKey, xo);
 
-	return xo.default;
+	return xo;
 }
 
-module.exports = resolveXO;
+export default resolveXo;

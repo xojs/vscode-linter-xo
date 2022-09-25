@@ -1,6 +1,6 @@
-const process = require('process');
-const path = require('path');
-const {
+import * as process from 'node:process';
+import * as path from 'node:path';
+import {
 	createConnection,
 	ProposedFeatures,
 	TextDocuments,
@@ -9,59 +9,86 @@ const {
 	ResponseError,
 	LSPErrorCodes,
 	TextEdit,
-	Range
-} = require('vscode-languageserver/node');
-const {TextDocument} = require('vscode-languageserver-textdocument');
-const autoBind = require('auto-bind');
-const debounce = require('lodash.debounce');
-const Queue = require('queue');
-const utils = require('./utils');
-const CodeActionsBuilder = require('./code-actions-builder');
-const getDocumentConfig = require('./get-document-config');
-const getDocumentFixes = require('./get-document-fixes');
-const getDocumentFolder = require('./get-document-folder');
-const getLintResults = require('./get-lint-results');
-const {lintDocument, lintDocuments} = require('./lint-document');
-const {log, logError} = require('./logger');
-const resolveXO = require('./resolve-xo');
+	Range,
+	Connection,
+	InitializeResult,
+	DocumentFormattingParams,
+	CancellationToken,
+	TextDocumentIdentifier,
+	DidChangeConfigurationParams,
+	TextDocumentChangeEvent,
+	CodeAction
+} from 'vscode-languageserver/node';
+import {TextDocument} from 'vscode-languageserver-textdocument';
+import autoBind from 'auto-bind';
+import debounce from 'lodash/debounce';
+import Queue from 'queue';
+import {CodeActionParams} from 'vscode-languageclient';
+import isUndefined from 'lodash/isUndefined';
+import type {DebouncedFunc} from 'lodash';
 
+import * as utils from './utils.js';
+import CodeActionsBuilder from './code-actions-builder.js';
+import getDocumentConfig from './get-document-config.js';
+import getDocumentFixes from './get-document-fixes.js';
+import getDocumentFolder from './get-document-folder';
+import getLintResults from './get-lint-results.js';
+import {lintDocument, lintDocuments} from './lint-document.js';
+import {log, logError} from './logger';
+import resolveXo from './resolve-xo';
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const DEFAULT_DEBOUNCE = 0;
 
+interface ChangeConfigurationParams extends DidChangeConfigurationParams {
+	settings: {xo: XoConfig};
+}
+
 class LintServer {
+	readonly connection: Connection;
+	readonly documents: TextDocuments<TextDocument>;
+	readonly queue: Queue;
+	log: typeof log;
+	logError: typeof logError;
+	getDocumentConfig: typeof getDocumentConfig;
+	getDocumentFixes: typeof getDocumentFixes;
+	getDocumentFolder: typeof getDocumentFolder;
+	getLintResults: typeof getLintResults;
+	lintDocument: typeof lintDocument;
+	lintDocumentDebounced: DebouncedFunc<typeof lintDocument>;
+	lintDocuments: typeof lintDocuments;
+	resolveXo: typeof resolveXo;
+	foldersCache: Map<string, Partial<TextDocument>>;
+	configurationCache: Map<string, XoConfig>;
+	xoCache: Map<string, Xo>;
+	documentFixes: Map<string, Map<string, XoFix>>;
+
+	hasShownResolutionError: boolean;
+	currentDebounce: number;
+
 	constructor() {
 		/**
 		 * Bind all imported methods
 		 */
-		/** @type {import('./get-document-config')} */
 		this.getDocumentConfig = getDocumentConfig.bind(this);
 
-		/** @type {import('./get-document-fixes')} */
 		this.getDocumentFixes = getDocumentFixes.bind(this);
 
-		/** @type {import('./get-document-folder')} */
 		this.getDocumentFolder = getDocumentFolder.bind(this);
 
-		/** @type {import('./get-lint-results')} */
 		this.getLintResults = getLintResults.bind(this);
 
-		/** @type {import('./lint-document').lintDocument} */
 		this.lintDocument = lintDocument.bind(this);
 
-		/** @type {import('./lint-document').lintDocuments} */
 		this.lintDocuments = lintDocuments.bind(this);
 
-		/** @type {import('./lint-document').lintDocuments} */
 		this.lintDocumentDebounced = debounce(this.lintDocument, DEFAULT_DEBOUNCE, {
 			maxWait: 350
 		});
 
-		/** @type {import('./resolve-xo')} */
-		this.resolveXO = resolveXO.bind(this);
+		this.resolveXo = resolveXo.bind(this);
 
-		/** @type {import('./logger').log} */
 		this.log = log.bind(this);
-
-		/** @type {import('./logger').logError} */
 		this.logError = logError.bind(this);
 
 		/**
@@ -71,21 +98,17 @@ class LintServer {
 
 		/**
 		 * Connection
-		 * @type {import('vscode-languageserver/node').Connection}
 		 */
 		this.connection = createConnection(ProposedFeatures.all);
 
 		/**
 		 * Documents
-		 * @type {TextDocuments}
 		 */
 		this.documents = new TextDocuments(TextDocument);
 
 		/**
 		 * A message queue which allows for async cancellations and
 		 * processing notifications and requests in order
-		 *
-		 * @type {Queue}
 		 */
 		this.queue = new Queue({concurrency: 1, autostart: true});
 
@@ -112,7 +135,7 @@ class LintServer {
 		 * - the formatting request requires user to enable xo as formatter
 		 */
 		this.connection.onRequest(
-			new RequestType('textDocument/xo/allFixes'),
+			new RequestType('textDocument/xo/allFixes').method,
 			this.handleAllFixesRequest
 		);
 		this.connection.onDocumentFormatting(this.handleDocumentFormattingRequest);
@@ -120,27 +143,23 @@ class LintServer {
 
 		/**
 		 * A mapping of folderPaths to the resolved XO module
-		 * @type {Map<string, XO>}
 		 */
 		this.xoCache = new Map();
 
 		/**
 		 * A mapping of folderPaths to configuration options
-		 * @type {Map<string, any>}
 		 */
 		this.configurationCache = new Map();
 
 		/**
 		 * A mapping of folders to the location of their package.json
-		 * @type {Map<string, string>}
 		 */
 		this.foldersCache = new Map();
 
 		/**
 		 * A mapping of document uri strings to their last calculated fixes
-		 * @type {Map<string, TextEdit[]>}
 		 */
-		this.documentEdits = new Map();
+		this.documentFixes = new Map();
 
 		this.hasShownResolutionError = false;
 		this.currentDebounce = DEFAULT_DEBOUNCE;
@@ -156,19 +175,15 @@ class LintServer {
 	/**
 	 * check if document is open
 	 *
-	 * @param {TextDocument} document
-	 * @returns {boolean} is `true` if document is currently open in the editor, `false` otherwise
 	 */
-	isDocumentOpen(document) {
-		return document?.uri && this.documents.get(document.uri);
+	isDocumentOpen(document: TextDocument | TextDocumentIdentifier): boolean {
+		return Boolean(document?.uri && this.documents.get(document.uri));
 	}
 
 	/**
 	 * handle connection.onInitialize
-	 *
-	 * @returns {import('vscode-languageserver/node').InitializeParams}
 	 */
-	async handleInitialize() {
+	async handleInitialize(): Promise<InitializeResult> {
 		return {
 			capabilities: {
 				workspace: {
@@ -188,16 +203,13 @@ class LintServer {
 
 	/**
 	 * Handle connection.onDidChangeConfiguration
-	 *
-	 * @type {import('vscode-languageserver/node').NotificationHandler}
-	 * @param {import('vscode-languageserver/node').DidChangeConfigurationParams} params
 	 */
-	async handleDidChangeConfiguration(params) {
+	async handleDidChangeConfiguration(params: ChangeConfigurationParams) {
 		if (
 			Number.isInteger(Number(params?.settings?.xo?.debounce)) &&
 			Number(params?.settings?.xo?.debounce) !== this.currentDebounce
 		) {
-			this.currentDebounce = params.settings.xo.debounce;
+			this.currentDebounce = params.settings.xo.debounce ?? 0;
 			this.lintDocumentDebounced = debounce(this.lintDocument, params.settings.xo.debounce, {
 				maxWait: 350
 			});
@@ -210,9 +222,6 @@ class LintServer {
 
 	/**
 	 * handle connection.onDidChangeWatchedFiles
-	 *
-	 * @type {import('vscode-languageserver/node').NotificationHandler}
-	 * @returns {Promise<void>}
 	 */
 	async handleDidChangeWatchedFiles() {
 		return this.lintDocuments(this.documents.all());
@@ -220,16 +229,21 @@ class LintServer {
 
 	/**
 	 * Handle custom all fixes request
-	 *
-	 * @type {import('vscode-languageserver/node').ServerRequestHandler}
 	 */
-	async handleAllFixesRequest(params) {
+	async handleAllFixesRequest(params: {
+		textDocument: TextDocumentIdentifier;
+	}): Promise<DocumentFixes | void> {
 		return new Promise((resolve, reject) => {
 			this.queue.push(async () => {
 				try {
 					const fixes = await this.getDocumentFixes(params.textDocument.uri);
+					if (isUndefined(fixes)) {
+						resolve();
+						return;
+					}
+
 					resolve(fixes);
-				} catch (error) {
+				} catch (error: unknown) {
 					reject(error);
 				}
 			});
@@ -238,42 +252,42 @@ class LintServer {
 
 	/**
 	 * Handle LSP document formatting request
-	 *
-	 * @type {import('vscode-languageserver/node').ServerRequestHandler}
-	 * @param {import('vscode-languageserver/node').DocumentFormattingParams} params
-	 * @param {import('vscode-languageserver/node').CancellationToken} token
 	 */
-	async handleDocumentFormattingRequest(params, token) {
+	async handleDocumentFormattingRequest(
+		params: DocumentFormattingParams,
+		token: CancellationToken
+	): Promise<TextEdit[]> {
 		return new Promise((resolve, reject) => {
 			this.queue.push(async () => {
 				try {
-					if (!this.isDocumentOpen(params.textDocument)) return null;
+					if (!this.isDocumentOpen(params.textDocument)) return;
 
 					if (token.isCancellationRequested) {
-						return reject(
-							new ResponseError(LSPErrorCodes.RequestCancelled, 'Request got cancelled')
-						);
+						reject(new ResponseError(LSPErrorCodes.RequestCancelled, 'Request was cancelled'));
+						return;
 					}
 
-					if (
-						params.textDocument.version &&
-						params.textDocument.version !== this.documents.get(params.textDocument.uri).version
-					) {
-						return reject(
-							new ResponseError(LSPErrorCodes.RequestCancelled, 'Request got cancelled')
-						);
+					const cachedTextDocument = this.documents.get(params.textDocument.uri);
+
+					if (typeof cachedTextDocument === 'undefined') {
+						resolve([]);
+						return;
 					}
 
 					const config = await this.getDocumentConfig(params.textDocument);
-					if (!config?.format?.enable) return resolve(null);
+
+					if (typeof config === 'undefined' || !config?.format?.enable) {
+						resolve([]);
+						return;
+					}
 
 					// get fixes and send to client
 					const fixes = await this.getDocumentFixes(params.textDocument.uri);
 
-					if (!fixes?.edits) return resolve();
-
-					/** @type {TextDocument} */
-					const cachedTextDocument = this.documents.get(params.textDocument.uri);
+					if (!fixes?.edits) {
+						resolve([]);
+						return;
+					}
 
 					const originalText = cachedTextDocument.getText();
 
@@ -316,12 +330,16 @@ class LintServer {
 						const pos0 = cachedTextDocument.positionAt(i);
 						const pos1 = cachedTextDocument.positionAt(string0.length - j);
 
-						return resolve([TextEdit.replace(Range.create(pos0, pos1), newText)]);
+						resolve([TextEdit.replace(Range.create(pos0, pos1), newText)]);
+						return;
 					}
 
 					resolve(fixes?.edits);
-				} catch (error) {
-					this.logError(error);
+				} catch (error: unknown) {
+					if (error instanceof Error) {
+						this.logError(error);
+					}
+
 					reject(error);
 				}
 			});
@@ -331,36 +349,38 @@ class LintServer {
 	/**
 	 * Handle LSP code action request
 	 * these happen at the time of an error/warning hover
-	 *
-	 * @type {import('vscode-languageserver/node').ServerRequestHandler}
-	 * @param {import('vscode-languageserver/node').CodeActionParams} params
-	 * @param {import('vscode-languageserver/node').CancellationToken} token
 	 */
-	async handleCodeActionRequest(params, token) {
+	async handleCodeActionRequest(
+		params: CodeActionParams,
+		token: CancellationToken
+	): Promise<CodeAction[]> {
 		return new Promise((resolve, reject) => {
 			this.queue.push(async () => {
 				try {
-					if (!params.context?.diagnostics?.length) return resolve();
-					if (!params?.textDocument?.uri) return resolve();
-					if (token.isCancellationRequested) {
-						return reject(
-							new ResponseError(LSPErrorCodes.RequestCancelled, 'Request got cancelled')
-						);
+					if (!params.context?.diagnostics?.length) {
+						resolve([]);
+						return;
 					}
 
-					if (
-						params.textDocument.version &&
-						params.textDocument.version !== this.documents.get(params.textDocument.uri).version
-					) {
-						return reject(
-							new ResponseError(LSPErrorCodes.RequestCancelled, 'Request got cancelled')
-						);
+					if (!params?.textDocument?.uri) {
+						resolve([]);
+						return;
+					}
+
+					if (token.isCancellationRequested) {
+						reject(new ResponseError(LSPErrorCodes.RequestCancelled, 'Request got cancelled'));
+						return;
 					}
 
 					const [diagnostic] = params.context.diagnostics;
-					const documentEdits = this.documentEdits.get(params.textDocument.uri);
+					const documentEdits = this.documentFixes.get(params.textDocument.uri);
 					const textDocument = this.documents.get(params.textDocument.uri);
 					const edit = documentEdits?.get(utils.computeKey(diagnostic));
+
+					if (isUndefined(edit) || isUndefined(textDocument)) {
+						resolve([]);
+						return;
+					}
 
 					const codeActionBuilder = new CodeActionsBuilder({
 						diagnostic,
@@ -369,8 +389,8 @@ class LintServer {
 					});
 
 					resolve(codeActionBuilder.build());
-				} catch (error) {
-					this.logError(error);
+				} catch (error: unknown) {
+					if (error instanceof Error) this.logError(error);
 					reject(error);
 				}
 			});
@@ -382,14 +402,14 @@ class LintServer {
 	 * queues document content linting
 	 * @param {import('vscode-languageserver/node').TextDocumentChangeEvent} event
 	 */
-	handleDocumentsOnDidChangeContent(event) {
+	handleDocumentsOnDidChangeContent(event: TextDocumentChangeEvent<TextDocument>) {
 		this.queue.push(async () => {
 			try {
-				if (event.document.version !== this.documents.get(event.document.uri).version) return;
+				if (event.document.version !== this.documents.get(event.document.uri)?.version) return;
 
 				await this.lintDocumentDebounced(event.document);
-			} catch (error) {
-				this.logError(error);
+			} catch (error: unknown) {
+				if (error instanceof Error) this.logError(error);
 			}
 		});
 	}
@@ -398,10 +418,8 @@ class LintServer {
 	 * Handle documents.onDidClose
 	 * Clears the diagnostics when document is closed and
 	 * cleans up cached folders that no longer have open documents
-	 *
-	 * @param {import('vscode-languageserver/node').TextDocumentChangeEvent} event
 	 */
-	handleDocumentsOnDidClose(event) {
+	async handleDocumentsOnDidClose(event: TextDocumentChangeEvent<TextDocument>): Promise<void> {
 		const folders = new Set(
 			[...this.documents.all()].map((document) => path.dirname(document.uri))
 		);
@@ -414,8 +432,8 @@ class LintServer {
 			}
 		}
 
-		this.connection.sendDiagnostics({
-			uri: event.document.uri,
+		await this.connection.sendDiagnostics({
+			uri: event.document.uri.toString(),
 			diagnostics: []
 		});
 	}
@@ -423,4 +441,4 @@ class LintServer {
 
 new LintServer().listen();
 
-module.exports = {LintServer};
+export default LintServer;

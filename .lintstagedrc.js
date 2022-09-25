@@ -1,5 +1,5 @@
 module.exports = {
-  "*.md": 'prettier --write',
-  'package.json': 'fixpack',
-  '*.js': 'xo --fix'
+	'*.md': 'prettier --write',
+	'package.json': 'prettier --write',
+	'*.js': 'xo --fix'
 };

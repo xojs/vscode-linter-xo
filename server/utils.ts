@@ -1,9 +1,24 @@
-const path = require('node:path');
-const {URI} = require('vscode-uri');
-const node = require('vscode-languageserver/node');
-const loadJsonFile = require('load-json-file');
+import * as path from 'node:path';
+import * as node from 'vscode-languageserver/node';
+import loadJsonFile from 'load-json-file';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import {Linter} from 'eslint';
+import {URI} from 'vscode-uri';
 
-function parseSeverity(severity) {
+interface XoResult {
+	xo?: string;
+	pkgPath?: string;
+	pkgJson?: any;
+}
+
+interface PkgJson {
+	dependencies: Record<string, string>;
+	devDependencies: Record<string, string>;
+}
+
+type Deps = Record<string, string>;
+
+export function parseSeverity(severity: number): node.DiagnosticSeverity {
 	switch (severity) {
 		case 1:
 			return node.DiagnosticSeverity.Warning;
@@ -14,14 +29,14 @@ function parseSeverity(severity) {
 	}
 }
 
-function makeDiagnostic(problem) {
+export function makeDiagnostic(problem: Linter.LintMessage): node.Diagnostic {
 	const message =
 		// eslint-disable-next-line no-negated-condition
 		problem.ruleId !== null ? `${problem.message} (${problem.ruleId})` : `${problem.message}`;
 	return {
 		message,
 		severity: parseSeverity(problem.severity),
-		code: problem.ruleId,
+		code: problem.ruleId ?? '',
 		source: 'XO',
 		range: {
 			start: {line: problem.line - 1, character: problem.column - 1},
@@ -34,16 +49,18 @@ function makeDiagnostic(problem) {
 	};
 }
 
-function computeKey(diagnostic) {
+export function computeKey(diagnostic: node.Diagnostic): string {
 	const {range} = diagnostic;
-	return `[${range.start.line},${range.start.character},${range.end.line},${range.end.character}]-${diagnostic.code}`;
+	return `[${range.start.line},${range.start.character},${range.end.line},${range.end.character}]-${
+		diagnostic.code?.toString() ?? ''
+	}`;
 }
 
-function uriToPath(uri) {
+export function uriToPath(uri: string): string {
 	return URI.parse(uri).fsPath;
 }
 
-function pathToUri(path) {
+export function pathToUri(path: string): string {
 	return URI.file(path).toString();
 }
 
@@ -55,22 +72,22 @@ function pathToUri(path) {
  * @param {string} cwd - A path to start at
  * @param {string} stopAt - A path to not look past
  */
-async function findXoRoot(cwd) {
+export async function findXoRoot(cwd: string): Promise<XoResult | undefined> {
 	const {findUp} = await import('find-up');
 	const pkgPath = await findUp('package.json', {cwd});
 
 	if (!pkgPath) return {};
 
-	const pkgJson = await loadJsonFile(pkgPath);
+	const pkgJson: PkgJson = await loadJsonFile(pkgPath);
 
-	const deps = {
-		...pkgJson.dependencies,
-		...pkgJson.devDependencies
+	const deps: Deps = {
+		...pkgJson?.dependencies,
+		...pkgJson?.devDependencies
 	};
 
-	if (deps.xo) {
+	if (deps?.xo) {
 		return {
-			xo: deps.xo,
+			xo: deps?.xo,
 			pkgPath,
 			pkgJson
 		};
@@ -78,11 +95,3 @@ async function findXoRoot(cwd) {
 
 	return findXoRoot(path.resolve(path.dirname(pkgPath), '..'));
 }
-
-module.exports = {
-	computeKey,
-	makeDiagnostic,
-	uriToPath,
-	pathToUri,
-	findXoRoot
-};

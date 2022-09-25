@@ -1,32 +1,67 @@
 {
 	"name": "linter-xo",
-	"description": "Linter for XO",
+	"displayName": "xo",
 	"version": "3.13.2",
+	"description": "Linter for XO",
+	"categories": [
+		"Linters",
+		"Formatters"
+	],
+	"keywords": [
+		"code style",
+		"eslint",
+		"formatter",
+		"linter",
+		"xo"
+	],
+	"homepage": "https://github.com/xojs/xo",
+	"bugs": {
+		"url": "https://github.com/xojs/vscode-linter-xo/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/xojs/vscode-linter-xo"
+	},
+	"license": "MIT",
 	"author": {
 		"name": "Spencer Snyder",
 		"email": "sasnyde2@gmail.com",
 		"url": "https://spencersnyder.io"
 	},
-	"activationEvents": [
-		"onStartupFinished"
-	],
-	"bugs": {
-		"url": "https://github.com/xojs/vscode-linter-xo/issues"
+	"publisher": "samverschueren",
+	"main": "./dist/client.js",
+	"scripts": {
+		"build": "npm run clean && npm run transpile && npm run build:client && npm run build:server",
+		"build:client": "esbuild ./client/extension.js --bundle --outfile=dist/client.js --external:vscode --format=cjs --platform=node --minify",
+		"build:dev": "npm run build:client -- --sourcemap && npm run build:server -- --sourcemap",
+		"build:server": "esbuild ./server/dist/server.js --bundle --outfile=dist/server.js --external:vscode --format=cjs --platform=node --minify",
+		"clean": "rimraf dist & rimraf server/dist & rimraf client/dist",
+		"lint": "xo && npm run lint:md",
+		"lint:md": "prettier --parser markdown '**/*.md' --check",
+		"prepare": "husky install",
+		"test": "npm run lint && npm run build",
+		"transpile": "npm run transpile:server",
+		"transpile:server": "tsc --project ./server/tsconfig.json",
+		"vscode:prepublish": "npm run build"
 	},
-	"categories": [
-		"Linters",
-		"Formatters"
-	],
 	"contributes": {
-		"icons": {
-			"xo-logo": {
-				"description": "xo logo",
-				"default": {
-					"fontPath": "./scripts/xo.woff",
-					"fontCharacter": "\\EA01"
-				}
+		"commands": [
+			{
+				"title": "Fix all auto-fixable problems",
+				"category": "xo",
+				"command": "xo.fix"
+			},
+			{
+				"title": "Show Output Channel",
+				"category": "xo",
+				"command": "xo.showOutputChannel"
+			},
+			{
+				"title": "Restart XO linter",
+				"category": "xo",
+				"command": "xo.restart"
 			}
-		},
+		],
 		"configuration": {
 			"type": "object",
 			"title": "xo",
@@ -126,23 +161,35 @@
 				}
 			}
 		},
-		"commands": [
-			{
-				"title": "Fix all auto-fixable problems",
-				"category": "xo",
-				"command": "xo.fix"
-			},
-			{
-				"title": "Show Output Channel",
-				"category": "xo",
-				"command": "xo.showOutputChannel"
-			},
-			{
-				"title": "Restart XO linter",
-				"category": "xo",
-				"command": "xo.restart"
+		"icons": {
+			"xo-logo": {
+				"description": "xo logo",
+				"default": {
+					"fontPath": "./scripts/xo.woff",
+					"fontCharacter": "\\EA01"
+				}
 			}
-		]
+		}
+	},
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"xo": {
+		"prettier": true,
+		"rules": {
+			"unicorn/prefer-module": "off",
+			"unicorn/prevent-abbreviations": "off",
+			"import/extensions": "off",
+			"capitalized-comments": "off",
+			"no-warning-comments": "off"
+		},
+		"settings": {
+			"import/resolver": "node"
+		}
+	},
+	"prettier": {
+		"printWidth": 100,
+		"trailingComma": "none"
 	},
 	"dependencies": {
 		"auto-bind": "^4.0.0",
@@ -151,7 +198,7 @@
 		"find-up": "^6.3.0",
 		"is-string-and-not-blank": "^0.0.2",
 		"load-json-file": "^6.2.0",
-		"lodash.debounce": "^4.0.8",
+		"lodash": "^4.17.21",
 		"queue": "^6.0.2",
 		"vscode-languageclient": "^8.0.2",
 		"vscode-languageserver": "^8.0.2",
@@ -161,61 +208,24 @@
 	"devDependencies": {
 		"@commitlint/cli": "17.0.3",
 		"@commitlint/config-conventional": "17.0.3",
+		"@types/lodash": "^4.14.185",
+		"@types/node": "^18.7.19",
 		"@types/vscode": "^1.70.0",
+		"@types/xo": "^0.39.3",
 		"esbuild": "^0.15.2",
 		"fixpack": "^4.0.0",
 		"husky": "^8.0.1",
 		"lint-staged": "13.0.3",
 		"prettier": "^2.7.1",
+		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^3.0.2",
+		"typescript": "^4.8.3",
 		"webfont": "^11.2.26",
 		"xo": "^0.51.0"
 	},
-	"displayName": "xo",
 	"engines": {
-		"vscode": "^1.70.0",
-		"node": ">=14"
+		"node": ">=14",
+		"vscode": "^1.70.0"
 	},
-	"homepage": "https://github.com/xojs/xo",
-	"icon": "icon.png",
-	"keywords": [
-		"code style",
-		"eslint",
-		"formatter",
-		"linter",
-		"xo"
-	],
-	"license": "MIT",
-	"main": "./dist/client.js",
-	"prettier": {
-		"trailingComma": "none",
-		"printWidth": 100
-	},
-	"publisher": "samverschueren",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/xojs/vscode-linter-xo"
-	},
-	"scripts": {
-		"build": "npm run clean && npm run build:client && npm run build:server",
-		"build:client": "esbuild ./client/extension.js --bundle --outfile=dist/client.js --external:vscode --format=cjs --platform=node --minify",
-		"build:dev": "npm run build:client -- --sourcemap && npm run build:server -- --sourcemap",
-		"build:server": "esbuild ./server/server.js --bundle --outfile=dist/server.js --external:vscode --format=cjs --platform=node --minify",
-		"clean": "rimraf dist",
-		"lint": "xo && npm run lint:md",
-		"lint:md": "prettier --parser markdown '**/*.md' --check",
-		"prepare": "husky install",
-		"test": "npm run lint && npm run build",
-		"vscode:prepublish": "npm run build"
-	},
-	"xo": {
-		"prettier": true,
-		"rules": {
-			"unicorn/prefer-module": "off",
-			"unicorn/prevent-abbreviations": "off",
-			"import/extensions": "off",
-			"capitalized-comments": "off",
-			"no-warning-comments": "off"
-		}
-	}
+	"icon": "icon.png"
 }

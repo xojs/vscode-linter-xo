@@ -1,20 +1,13 @@
-const path = require('path');
-const {findXoRoot, pathToUri, uriToPath} = require('./utils');
-
-/**
- * @typedef {import('vscode-languageserver-textdocument').TextDocument} TextDocument
- * @typedef {import('./server.js').LintServer} LintServer
- */
+import path from 'node:path';
+import {TextDocument} from 'vscode-languageserver-textdocument';
+import type LintServer from './server';
+import {findXoRoot, pathToUri, uriToPath} from './utils';
 
 /**
  * get the root folder document from a document
  * caches workspace folders if needed
- *
- * @this {LintServer}
- * @param {TextDocument} document
- * @returns {Promise<TextDocument>}
  */
-async function getDocumentFolder(document) {
+async function getDocumentFolder(this: LintServer, document: TextDocument) {
 	const documentDirUri = path.dirname(document.uri);
 	// check for cached folder
 	if (this.foldersCache.has(documentDirUri)) {
@@ -23,7 +16,7 @@ async function getDocumentFolder(document) {
 
 	const documentPath = uriToPath(document.uri);
 	const documentDir = path.dirname(documentPath);
-	const {pkgPath} = await findXoRoot(documentDir);
+	const {pkgPath} = (await findXoRoot(documentDir)) ?? {};
 
 	if (pkgPath) {
 		const packageDirUri = pathToUri(path.dirname(pkgPath));
@@ -35,4 +28,4 @@ async function getDocumentFolder(document) {
 	return this.foldersCache.get(documentDirUri);
 }
 
-module.exports = getDocumentFolder;
+export default getDocumentFolder;

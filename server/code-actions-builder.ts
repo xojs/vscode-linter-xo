@@ -1,22 +1,40 @@
-const {TextEdit, Range, Position, CodeActionKind} = require('vscode-languageserver/node');
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+import {
+	TextEdit,
+	Range,
+	Diagnostic,
+	Position,
+	CodeActionKind,
+	CodeAction
+} from 'vscode-languageserver/node';
+import type {TextDocument} from 'vscode-languageserver-textdocument';
+
+interface Options {
+	diagnostic: Diagnostic;
+	textDocument: TextDocument;
+	edit: XoFix;
+}
 
 class CodeActionsBuilder {
-	constructor({diagnostic, textDocument, edit}) {
+	edit: XoFix;
+	code?: string | number;
+	diagnostic: Diagnostic;
+	lineText: string;
+	lineAboveText: string;
+	textDocument: TextDocument;
+	codeActions: CodeAction[];
+	constructor({diagnostic, textDocument, edit}: Options) {
 		const {code} = diagnostic || {};
 		this.code = code;
 		this.edit = edit;
 		this.diagnostic = diagnostic;
 		this.textDocument = textDocument;
-		this.lineText = textDocument.getText({
-			start: {
-				line: diagnostic.range.start.line,
-				character: 0
-			},
-			end: {
-				line: diagnostic.range.start.line,
-				character: Number.MAX_SAFE_INTEGER
-			}
-		});
+		this.lineText = textDocument.getText(
+			Range.create(
+				Position.create(diagnostic.range.start.line, 0),
+				Position.create(diagnostic.range.start.line, Number.MAX_SAFE_INTEGER)
+			)
+		);
 		this.lineAboveText = textDocument.getText({
 			start: {
 				line: diagnostic.range.start.line - 1,
@@ -46,11 +64,8 @@ class CodeActionsBuilder {
 		};
 
 		const matchedForIgnoreComment =
-			this.lineAboveText &&
-			this.lineAboveText.match(
-				// eslint-disable-next-line prefer-regex-literals
-				new RegExp(`// eslint-disable-next-line`)
-			);
+			// eslint-disable-next-line prefer-regex-literals
+			this.lineAboveText && new RegExp(`// eslint-disable-next-line`).exec(this.lineAboveText);
 
 		if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
 			const textEdit = TextEdit.insert(
@@ -88,7 +103,7 @@ class CodeActionsBuilder {
 			}
 		};
 
-		this.codeActions.push(ignoreAction);
+		this.codeActions?.push(ignoreAction);
 	}
 
 	getDisableEntireFile() {
@@ -120,7 +135,7 @@ class CodeActionsBuilder {
 		this.codeActions.push({
 			title: 'Fix with XO',
 			kind: CodeActionKind.Refactor,
-			diagnostic: this.diagnostic,
+			diagnostics: [this.diagnostic],
 			edit: {
 				changes: {
 					[this.textDocument.uri]: [
@@ -138,4 +153,4 @@ class CodeActionsBuilder {
 	}
 }
 
-module.exports = CodeActionsBuilder;
+export default CodeActionsBuilder;
