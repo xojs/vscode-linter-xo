@@ -45,7 +45,7 @@ declare global {
 		edit: Rule.Fix;
 	}
 
-	interface DocumentFixes {
+	interface DocumentFix {
 		documentVersion?: string | number;
 		edits: TextEdit[];
 	}

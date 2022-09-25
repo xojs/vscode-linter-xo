@@ -9,7 +9,6 @@ import {
 	ResponseError,
 	LSPErrorCodes,
 	TextEdit,
-	Range,
 	Connection,
 	InitializeResult,
 	DocumentFormattingParams,
@@ -30,7 +29,7 @@ import type {DebouncedFunc} from 'lodash';
 import * as utils from './utils.js';
 import CodeActionsBuilder from './code-actions-builder.js';
 import getDocumentConfig from './get-document-config.js';
-import getDocumentFixes from './get-document-fixes.js';
+import getDocumentFormatting from './get-document-formatting.js';
 import getDocumentFolder from './get-document-folder';
 import getLintResults from './get-lint-results.js';
 import {lintDocument, lintDocuments} from './lint-document.js';
@@ -51,7 +50,7 @@ class LintServer {
 	log: typeof log;
 	logError: typeof logError;
 	getDocumentConfig: typeof getDocumentConfig;
-	getDocumentFixes: typeof getDocumentFixes;
+	getDocumentFormatting: typeof getDocumentFormatting;
 	getDocumentFolder: typeof getDocumentFolder;
 	getLintResults: typeof getLintResults;
 	lintDocument: typeof lintDocument;
@@ -72,7 +71,7 @@ class LintServer {
 		 */
 		this.getDocumentConfig = getDocumentConfig.bind(this);
 
-		this.getDocumentFixes = getDocumentFixes.bind(this);
+		this.getDocumentFormatting = getDocumentFormatting.bind(this);
 
 		this.getDocumentFolder = getDocumentFolder.bind(this);
 
@@ -139,6 +138,8 @@ class LintServer {
 			this.handleAllFixesRequest
 		);
 		this.connection.onDocumentFormatting(this.handleDocumentFormattingRequest);
+
+		// @ts-expect-error this one is too funky idk
 		this.connection.onCodeAction(this.handleCodeActionRequest);
 
 		/**
@@ -232,17 +233,18 @@ class LintServer {
 	 */
 	async handleAllFixesRequest(params: {
 		textDocument: TextDocumentIdentifier;
-	}): Promise<DocumentFixes | void> {
+	}): Promise<DocumentFix | void> {
 		return new Promise((resolve, reject) => {
 			this.queue.push(async () => {
 				try {
-					const fixes = await this.getDocumentFixes(params.textDocument.uri);
-					if (isUndefined(fixes)) {
+					const documentFix = await this.getDocumentFormatting(params.textDocument.uri);
+
+					if (isUndefined(documentFix)) {
 						resolve();
 						return;
 					}
 
-					resolve(fixes);
+					resolve(documentFix);
 				} catch (error: unknown) {
 					reject(error);
 				}
@@ -282,59 +284,14 @@ class LintServer {
 					}
 
 					// get fixes and send to client
-					const fixes = await this.getDocumentFixes(params.textDocument.uri);
-
-					if (!fixes?.edits) {
-						resolve([]);
-						return;
-					}
-
-					const originalText = cachedTextDocument.getText();
-
-					// clone the cached document
-					const textDocument = TextDocument.create(
-						cachedTextDocument.uri,
-						cachedTextDocument.languageId,
-						cachedTextDocument.version,
-						originalText
+					const {edits, documentVersion} = await this.getDocumentFormatting(
+						params.textDocument.uri
 					);
 
-					// apply the edits to the copy and get the edits that would be
-					// further needed for all the fixes to work.
-					const editedContent = TextDocument.applyEdits(textDocument, fixes.edits);
+					if (documentVersion !== cachedTextDocument.version)
+						throw new Error('Document version mismatch detected');
 
-					const report = await this.getLintResults(textDocument, editedContent, true);
-
-					if (report.results[0].output && report.results[0].output !== editedContent) {
-						this.log('Experimental replace triggered');
-						const string0 = originalText;
-						const string1 = report.results[0].output;
-
-						let i = 0;
-						while (i < string0.length && i < string1.length && string0[i] === string1[i]) {
-							++i;
-						}
-
-						// length of common suffix
-						let j = 0;
-						while (
-							i + j < string0.length &&
-							i + j < string1.length &&
-							string0[string0.length - j - 1] === string1[string1.length - j - 1]
-						) {
-							++j;
-						}
-
-						// eslint-disable-next-line unicorn/prefer-string-slice
-						const newText = string1.substring(i, string1.length - j);
-						const pos0 = cachedTextDocument.positionAt(i);
-						const pos1 = cachedTextDocument.positionAt(string0.length - j);
-
-						resolve([TextEdit.replace(Range.create(pos0, pos1), newText)]);
-						return;
-					}
-
-					resolve(fixes?.edits);
+					resolve(edits);
 				} catch (error: unknown) {
 					if (error instanceof Error) {
 						this.logError(error);
@@ -353,17 +310,17 @@ class LintServer {
 	async handleCodeActionRequest(
 		params: CodeActionParams,
 		token: CancellationToken
-	): Promise<CodeAction[]> {
+	): Promise<CodeAction[] | void> {
 		return new Promise((resolve, reject) => {
 			this.queue.push(async () => {
 				try {
 					if (!params.context?.diagnostics?.length) {
-						resolve([]);
+						resolve();
 						return;
 					}
 
 					if (!params?.textDocument?.uri) {
-						resolve([]);
+						resolve();
 						return;
 					}
 
@@ -378,7 +335,7 @@ class LintServer {
 					const edit = documentEdits?.get(utils.computeKey(diagnostic));
 
 					if (isUndefined(edit) || isUndefined(textDocument)) {
-						resolve([]);
+						resolve();
 						return;
 					}
 

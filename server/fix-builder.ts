@@ -3,7 +3,7 @@ import {Range, TextEdit} from 'vscode-languageserver/node';
 import isUndefined from 'lodash/isUndefined';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 
-class Fixes {
+class Fix {
 	static overlaps(lastEdit: XoFix, newEdit: XoFix) {
 		return Boolean(lastEdit) && lastEdit.edit.range[1] > newEdit.edit.range[0];
 	}
@@ -44,8 +44,7 @@ class Fixes {
 	getAllSorted() {
 		const result = [];
 
-		for (const edit of this.edits.values())
-			if (!isUndefined(edit.edit) && Range.is(edit.edit.range)) result.push(edit);
+		for (const edit of this.edits.values()) if (!isUndefined(edit.edit)) result.push(edit);
 
 		return result.sort((a, b) => {
 			const d = a.edit.range[0] - b.edit.range[0];
@@ -76,7 +75,7 @@ class Fixes {
 		result.push(last);
 		for (let i = 1; i < sorted.length; i++) {
 			const current = sorted[i];
-			if (!Fixes.overlaps(last, current) && !Fixes.sameRange(last, current)) {
+			if (!Fix.overlaps(last, current) && !Fix.sameRange(last, current)) {
 				this.hasOverlaps = true;
 				result.push(current);
 				last = current;
@@ -106,4 +105,4 @@ class Fixes {
 	}
 }
 
-export default Fixes;
+export default Fix;

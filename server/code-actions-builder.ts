@@ -29,12 +29,12 @@ class CodeActionsBuilder {
 		this.edit = edit;
 		this.diagnostic = diagnostic;
 		this.textDocument = textDocument;
-		this.lineText = textDocument.getText(
-			Range.create(
-				Position.create(diagnostic.range.start.line, 0),
-				Position.create(diagnostic.range.start.line, Number.MAX_SAFE_INTEGER)
-			)
-		);
+
+		this.lineText = textDocument.getText({
+			start: Position.create(diagnostic.range.start.line, 0),
+			end: Position.create(diagnostic.range.start.line, Number.MAX_SAFE_INTEGER)
+		});
+
 		this.lineAboveText = textDocument.getText({
 			start: {
 				line: diagnostic.range.start.line - 1,
