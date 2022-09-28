@@ -16,7 +16,8 @@ import {
 	TextDocumentIdentifier,
 	DidChangeConfigurationParams,
 	TextDocumentChangeEvent,
-	CodeAction
+	CodeAction,
+	DocumentRangeFormattingParams
 } from 'vscode-languageserver/node';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import autoBind from 'auto-bind';
@@ -60,7 +61,7 @@ class LintServer {
 	foldersCache: Map<string, Partial<TextDocument>>;
 	configurationCache: Map<string, XoConfig>;
 	xoCache: Map<string, Xo>;
-	documentFixes: Map<string, Map<string, XoFix>>;
+	documentFixCache: Map<string, Map<string, XoFix>>;
 
 	hasShownResolutionError: boolean;
 	currentDebounce: number;
@@ -138,6 +139,7 @@ class LintServer {
 			this.handleAllFixesRequest
 		);
 		this.connection.onDocumentFormatting(this.handleDocumentFormattingRequest);
+		this.connection.onDocumentRangeFormatting(this.handleDocumentFormattingRequest);
 
 		// @ts-expect-error this one is too funky idk
 		this.connection.onCodeAction(this.handleCodeActionRequest);
@@ -160,7 +162,7 @@ class LintServer {
 		/**
 		 * A mapping of document uri strings to their last calculated fixes
 		 */
-		this.documentFixes = new Map();
+		this.documentFixCache = new Map();
 
 		this.hasShownResolutionError = false;
 		this.currentDebounce = DEFAULT_DEBOUNCE;
@@ -197,6 +199,7 @@ class LintServer {
 					change: TextDocumentSyncKind.Incremental
 				},
 				documentFormattingProvider: true,
+				documentRangeFormattingProvider: true,
 				codeActionProvider: true
 			}
 		};
@@ -256,7 +259,7 @@ class LintServer {
 	 * Handle LSP document formatting request
 	 */
 	async handleDocumentFormattingRequest(
-		params: DocumentFormattingParams,
+		params: DocumentRangeFormattingParams | DocumentFormattingParams,
 		token: CancellationToken
 	): Promise<TextEdit[]> {
 		return new Promise((resolve, reject) => {
@@ -285,7 +288,9 @@ class LintServer {
 
 					// get fixes and send to client
 					const {edits, documentVersion} = await this.getDocumentFormatting(
-						params.textDocument.uri
+						params.textDocument.uri,
+						// @ts-expect-error this shouldn't matter at all
+						params.range
 					);
 
 					if (documentVersion !== cachedTextDocument.version)
@@ -330,7 +335,7 @@ class LintServer {
 					}
 
 					const [diagnostic] = params.context.diagnostics;
-					const documentEdits = this.documentFixes.get(params.textDocument.uri);
+					const documentEdits = this.documentFixCache.get(params.textDocument.uri);
 					const textDocument = this.documents.get(params.textDocument.uri);
 					const edit = documentEdits?.get(utils.computeKey(diagnostic));
 
@@ -381,6 +386,7 @@ class LintServer {
 			[...this.documents.all()].map((document) => path.dirname(document.uri))
 		);
 
+		this.documentFixCache.delete(event.document.uri);
 		for (const folder of this.foldersCache.keys()) {
 			if (!folders.has(folder)) {
 				this.foldersCache.delete(folder);

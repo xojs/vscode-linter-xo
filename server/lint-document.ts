@@ -24,7 +24,7 @@ export async function lintDocument(this: LintServer, document: TextDocument): Pr
 		const {results, rulesMeta} = await this.getLintResults(document);
 
 		// Clean previously computed code actions.
-		this.documentFixes.delete(document.uri);
+		this.documentFixCache.delete(document.uri);
 
 		if (results?.length === 0 || !results?.[0]?.messages) return;
 
@@ -68,11 +68,11 @@ export async function lintDocument(this: LintServer, document: TextDocument): Pr
 			if (problem.fix && problem.ruleId) {
 				const {uri} = document;
 
-				let edits = this.documentFixes.get(uri);
+				let edits = this.documentFixCache.get(uri);
 
 				if (!edits) {
 					edits = new Map();
-					this.documentFixes.set(uri, edits);
+					this.documentFixCache.set(uri, edits);
 				}
 
 				edits.set(utils.computeKey(diagnostic), {

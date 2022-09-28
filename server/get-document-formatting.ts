@@ -7,7 +7,11 @@ import type LintServer from './server';
 /**
  * Computes the TextEdits for a text document uri
  */
-async function getDocumentFormatting(this: LintServer, uri: string): Promise<DocumentFix> {
+async function getDocumentFormatting(
+	this: LintServer,
+	uri: string,
+	range?: Range
+): Promise<DocumentFix> {
 	const cachedTextDocument = this.documents.get(uri);
 
 	const defaultResponse = {
@@ -17,13 +21,13 @@ async function getDocumentFormatting(this: LintServer, uri: string): Promise<Doc
 
 	if (isUndefined(cachedTextDocument)) return defaultResponse;
 
-	const documentFixes = this.documentFixes.get(uri);
+	const documentFixCache = this.documentFixCache.get(uri);
 
-	if (isUndefined(documentFixes) || documentFixes.size === 0) {
+	if (isUndefined(documentFixCache) || documentFixCache.size === 0) {
 		return defaultResponse;
 	}
 
-	const documentFix = new Fix(cachedTextDocument, documentFixes);
+	const documentFix = new Fix(cachedTextDocument, documentFixCache, range);
 
 	if (documentFix.isEmpty()) {
 		return defaultResponse;

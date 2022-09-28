@@ -1,7 +1,6 @@
 import {Range, TextEdit} from 'vscode-languageserver/node';
-
-import isUndefined from 'lodash/isUndefined';
 import {TextDocument} from 'vscode-languageserver-textdocument';
+import isUndefined from 'lodash/isUndefined';
 
 class Fix {
 	static overlaps(lastEdit: XoFix, newEdit: XoFix) {
@@ -15,11 +14,13 @@ class Fix {
 	edits: Map<string, XoFix>;
 	textDocument: TextDocument;
 	hasOverlaps: boolean;
+	range?: Range;
 
-	constructor(_textDocument: TextDocument, _edits: Map<string, XoFix>) {
+	constructor(_textDocument: TextDocument, _edits: Map<string, XoFix>, _range?: Range) {
 		this.hasOverlaps = false;
 		this.edits = _edits;
 		this.textDocument = _textDocument;
+		this.range = _range;
 	}
 
 	isEmpty() {
@@ -44,7 +45,26 @@ class Fix {
 	getAllSorted() {
 		const result = [];
 
-		for (const edit of this.edits.values()) if (!isUndefined(edit.edit)) result.push(edit);
+		for (const edit of this.edits.values()) {
+			let isInRange = true;
+
+			if (!isUndefined(this.range)) {
+				const startOffset = this.textDocument.offsetAt(this.range.start);
+				const endOffset = this.textDocument.offsetAt(this.range.end);
+
+				const [startEditPosition, endEditPosition] = edit.edit.range;
+
+				isInRange =
+					// if given range completey covers the edit
+					(startOffset <= startEditPosition && endOffset >= endEditPosition) ||
+					// if edit start offset only is in range
+					(startOffset >= startEditPosition && startOffset <= endEditPosition) ||
+					// if edit end offset only is in range
+					(endOffset >= startEditPosition && endOffset <= endEditPosition);
+			}
+
+			if (!isUndefined(edit.edit) && isInRange) result.push(edit);
+		}
 
 		return result.sort((a, b) => {
 			const d = a.edit.range[0] - b.edit.range[0];
