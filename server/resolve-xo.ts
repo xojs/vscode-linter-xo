@@ -47,11 +47,10 @@ async function resolveXo(this: LintServer, document: TextDocument): Promise<Xo> 
 		throw new Error(`Unknown path format “${customPath}”: Needs to start with “/”, “./”, or "../"`);
 	}
 
-	let version;
+	let version: string;
 
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	[{default: xo}, {version = ''} = {}] = await Promise.all([
-		import(xoUri),
+		import(xoUri) as Promise<{default: Xo}>,
 		xoFilePath
 			? loadJsonFile<{version: string}>(path.join(path.dirname(xoFilePath), 'package.json'))
 			: Promise.resolve({version: 'custom'})

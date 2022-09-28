@@ -21,11 +21,10 @@ async function getDocumentConfig(
 		return {};
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-	const config: XoConfig = await this.connection.workspace.getConfiguration({
+	const config: XoConfig = (await this.connection.workspace.getConfiguration({
 		scopeUri: folderUri,
 		section: 'xo'
-	});
+	})) as XoConfig;
 
 	this.configurationCache.set(folderUri, config);
 

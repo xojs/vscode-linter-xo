@@ -259,7 +259,7 @@ class LintServer {
 	 * Handle LSP document formatting request
 	 */
 	async handleDocumentFormattingRequest(
-		params: DocumentRangeFormattingParams | DocumentFormattingParams,
+		params: DocumentFormattingParams | DocumentRangeFormattingParams,
 		token: CancellationToken
 	): Promise<TextEdit[]> {
 		return new Promise((resolve, reject) => {
@@ -286,11 +286,9 @@ class LintServer {
 						return;
 					}
 
-					// get fixes and send to client
 					const {edits, documentVersion} = await this.getDocumentFormatting(
 						params.textDocument.uri,
-						// @ts-expect-error this shouldn't matter at all
-						params.range
+						'range' in params ? params.range : undefined
 					);
 
 					if (documentVersion !== cachedTextDocument.version)
