@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"target": "es2020",
+		"module": "commonjs",
+		"moduleResolution": "Node16",
+		"esModuleInterop": true,
+		"lib": ["es2020"],
+		"strict": true,
+		"noEmit": true
+	},
+	"exclude": ["node_modules"],
+	"include": ["server/**/*.ts"]
+}
