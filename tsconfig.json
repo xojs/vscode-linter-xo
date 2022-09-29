@@ -9,5 +9,5 @@
 		"noEmit": true
 	},
 	"exclude": ["node_modules"],
-	"include": ["server/**/*.ts"]
+	"include": ["server/**/*.ts", "client/**/*.ts"]
 }

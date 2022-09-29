@@ -1,8 +1,8 @@
-const vscode = require('vscode');
+import * as vscode from 'vscode';
 
-let statusBar;
+let statusBar: vscode.StatusBarItem;
 
-function updateStatusBar() {
+function updateStatusBar(): vscode.StatusBarItem | undefined {
 	const xoConfig = vscode.workspace.getConfiguration('xo');
 	const statusBarOption = xoConfig.get('statusBar');
 
@@ -19,7 +19,7 @@ function updateStatusBar() {
 	statusBar.command = 'xo.showOutputChannel';
 
 	const latestDocument = vscode.window.activeTextEditor?.document;
-	const fileTypes = xoConfig.get('validate', []);
+	const fileTypes = xoConfig.get('validate', []) as string[];
 
 	const shouldShowStatusBar =
 		statusBarOption === 'Always' ||
@@ -40,4 +40,4 @@ function updateStatusBar() {
 	return statusBar;
 }
 
-module.exports = updateStatusBar;
+export default updateStatusBar;

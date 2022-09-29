@@ -1,13 +1,6 @@
 import * as process from 'node:process';
 import * as path from 'node:path';
-import {
-	createConnection,
-	ProposedFeatures,
-	TextDocuments,
-	RequestType,
-	TextDocumentSyncKind,
-	ResponseError,
-	LSPErrorCodes,
+import type {
 	TextEdit,
 	Connection,
 	InitializeResult,
@@ -19,11 +12,20 @@ import {
 	CodeAction,
 	DocumentRangeFormattingParams
 } from 'vscode-languageserver/node';
+import {
+	createConnection,
+	ProposedFeatures,
+	TextDocuments,
+	RequestType,
+	TextDocumentSyncKind,
+	ResponseError,
+	LSPErrorCodes
+} from 'vscode-languageserver/node';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import autoBind from 'auto-bind';
 import debounce from 'lodash/debounce';
 import Queue from 'queue';
-import {CodeActionParams} from 'vscode-languageclient';
+import type {CodeActionParams} from 'vscode-languageclient';
 import isUndefined from 'lodash/isUndefined';
 import type {DebouncedFunc} from 'lodash';
 

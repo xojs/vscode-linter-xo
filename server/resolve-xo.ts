@@ -4,7 +4,7 @@ import {URI} from 'vscode-uri';
 import endent from 'endent';
 import isSANB from 'is-string-and-not-blank';
 import loadJsonFile from 'load-json-file';
-import {TextDocument} from 'vscode-languageserver-textdocument';
+import type {TextDocument} from 'vscode-languageserver-textdocument';
 import {uriToPath, pathToUri} from './utils';
 import type LintServer from './server';
 

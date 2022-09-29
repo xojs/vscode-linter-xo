@@ -1,61 +1,60 @@
-const {RequestType} = require('vscode-languageclient/node');
-const vscode = require('vscode');
+import type {LanguageClient, TextEdit} from 'vscode-languageclient/node';
+import {RequestType} from 'vscode-languageclient/node';
+import type {Uri} from 'vscode';
+import * as vscode from 'vscode';
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const AllFixesRequest = {
 	type: new RequestType('textDocument/xo/allFixes')
 };
 
-/**
- *
- * @param {import('vscode-languageclient/node').LanguageClient} client
- */
-function fixAllProblems(client) {
+async function fixAllProblems(client: LanguageClient) {
 	const textEditor = vscode.window.activeTextEditor;
 	if (!textEditor) {
 		return;
 	}
 
 	const uri = textEditor.document.uri.toString();
-	client.sendRequest(AllFixesRequest.type, {textDocument: {uri}}).then(
-		(result) => {
-			if (result) {
-				applyTextEdits(uri, result.documentVersion, result.edits, client);
-			}
-		},
-		() => {
-			vscode.window.showErrorMessage(
-				'Failed to apply xo fixes to the document. Please consider opening an issue with steps to reproduce.'
-			);
-		}
-	);
+
+	const result = (await client.sendRequest(AllFixesRequest.type, {
+		textDocument: {uri}
+	})) as DocumentFix;
+
+	try {
+		await applyTextEdits(uri, Number(result.documentVersion), result.edits, client);
+	} catch {
+		await vscode.window.showErrorMessage(
+			'Failed to apply xo fixes to the document. Please consider opening an issue with steps to reproduce.'
+		);
+	}
 }
 
-/**
- * @param {import('vscode-languageclient/node').LanguageClient} client
- */
-function applyTextEdits(uri, documentVersion, edits, client) {
+async function applyTextEdits(
+	uri: string,
+	documentVersion: number,
+	edits: TextEdit[],
+	client: LanguageClient
+) {
 	const textEditor = vscode.window.activeTextEditor;
-	if (textEditor && textEditor.document.uri.toString() === uri) {
+	if (textEditor?.document.uri.toString() === uri) {
 		if (textEditor.document.version !== documentVersion) {
-			vscode.window.showInformationMessage(
+			await vscode.window.showInformationMessage(
 				"xo fixes are outdated and can't be applied to the document."
 			);
 		}
 
-		textEditor
-			.edit((mutator) => {
-				for (const edit of edits) {
-					mutator.replace(client.protocol2CodeConverter.asRange(edit.range), edit.newText);
-				}
-			})
-			.then((success) => {
-				if (!success) {
-					vscode.window.showErrorMessage(
-						'Failed to apply xo fixes to the document. Please consider opening an issue with steps to reproduce.'
-					);
-				}
-			});
+		const success = await textEditor.edit((mutator) => {
+			for (const edit of edits) {
+				mutator.replace(client.protocol2CodeConverter.asRange(edit.range), edit.newText);
+			}
+		});
+
+		if (!success) {
+			await vscode.window.showErrorMessage(
+				'Failed to apply xo fixes to the document. Please consider opening an issue with steps to reproduce.'
+			);
+		}
 	}
 }
 
-module.exports = fixAllProblems;
+export default fixAllProblems;

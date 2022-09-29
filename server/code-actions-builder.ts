@@ -1,12 +1,6 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
-import {
-	TextEdit,
-	Range,
-	Diagnostic,
-	Position,
-	CodeActionKind,
-	CodeAction
-} from 'vscode-languageserver/node';
+import {TextEdit, Range, Position, CodeActionKind} from 'vscode-languageserver/node';
+import type {Diagnostic, CodeAction} from 'vscode-languageserver/node';
 import type {TextDocument} from 'vscode-languageserver-textdocument';
 
 interface Options {

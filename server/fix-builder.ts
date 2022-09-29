@@ -1,6 +1,6 @@
 import {Range, TextEdit} from 'vscode-languageserver/node';
-import {TextDocument} from 'vscode-languageserver-textdocument';
 import isUndefined from 'lodash/isUndefined';
+import type {TextDocument} from 'vscode-languageserver-textdocument';
 
 class Fix {
 	static overlaps(lastEdit: XoFix, newEdit: XoFix) {

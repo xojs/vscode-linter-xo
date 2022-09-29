@@ -1,0 +1,21 @@
+{
+	"prettier": true,
+	"rules": {
+		"unicorn/prefer-module": "off",
+		"unicorn/prevent-abbreviations": "off",
+		"import/extensions": "off",
+		"capitalized-comments": "off",
+		"no-warning-comments": "off"
+	},
+	"settings": {
+		"import/resolver": "node"
+	},
+	"overrides": [
+		{
+			"files": "**/*.ts",
+			"rules": {
+				"@typescript-eslint/consistent-type-definitions": ["error", "interface"]
+			}
+		}
+	]
+}

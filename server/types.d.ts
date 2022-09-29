@@ -1,7 +1,6 @@
-import {Options, ResultReport} from 'xo';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import {ESLint, Rule} from 'eslint';
-import {TextEdit} from 'vscode-languageserver/node';
+import type {Options, ResultReport} from 'xo';
+import type {ESLint, Rule} from 'eslint';
+import type {TextEdit} from 'vscode-languageserver/node';
 
 declare enum SeverityOption {
 	off = 'off',

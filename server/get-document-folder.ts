@@ -1,7 +1,8 @@
 import path from 'node:path';
-import {TextDocument} from 'vscode-languageserver-textdocument';
-import type LintServer from './server';
+import type {TextDocument} from 'vscode-languageserver-textdocument';
+
 import {findXoRoot, pathToUri, uriToPath} from './utils';
+import type LintServer from './server';
 
 /**
  * get the root folder document from a document

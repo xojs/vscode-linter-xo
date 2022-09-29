@@ -1,13 +1,14 @@
-const process = require('process');
-const vscode = require('vscode');
-const {TransportKind, LanguageClient, SettingMonitor} = require('vscode-languageclient/node');
-const isSANB = require('is-string-and-not-blank');
-const fixAllProblems = require('./fix-all-problems');
-const statusBar = require('./status-bar');
+import process from 'node:process';
+import type {ExtensionContext, StatusBarItem} from 'vscode';
+import {workspace, commands} from 'vscode';
+import {TransportKind, LanguageClient, SettingMonitor} from 'vscode-languageclient/node';
+import isSANB from 'is-string-and-not-blank';
+import fixAllProblems from './fix-all-problems';
+import statusBar from './status-bar';
 
-let client;
+let client: LanguageClient;
 
-function activate(context) {
+export function activate(context: ExtensionContext) {
 	// The server is implemented in node
 	const serverModule = context.asAbsolutePath('dist/server.js');
 
@@ -16,9 +17,10 @@ function activate(context) {
 		cwd: process.cwd()
 	};
 
-	const xoOptions = vscode.workspace.getConfiguration('xo');
+	const xoOptions = workspace.getConfiguration('xo');
 
-	let runtime;
+	let runtime: string | undefined;
+
 	if (isSANB(xoOptions.get('runtime'))) runtime = xoOptions.get('runtime');
 
 	const serverOptions = {
@@ -38,7 +40,7 @@ function activate(context) {
 
 	let validate = JSON.stringify(xoOptions.get('validate'));
 	const documentSelector = [];
-	for (const language of xoOptions.get('validate')) {
+	for (const language of xoOptions.get('validate', [])) {
 		documentSelector.push({language, scheme: 'file'}, {language, scheme: 'untitled'});
 	}
 
@@ -49,10 +51,10 @@ function activate(context) {
 			fileEvents: [
 				// we relint all open textDocuments whenever a config changes
 				// that may possibly affect the options xo should be using
-				vscode.workspace.createFileSystemWatcher('**/.eslintignore'),
-				vscode.workspace.createFileSystemWatcher('**/.xo-confi{g.cjs,g.json,g.js,g}'),
-				vscode.workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g}'),
-				vscode.workspace.createFileSystemWatcher('**/package.json')
+				workspace.createFileSystemWatcher('**/.eslintignore'),
+				workspace.createFileSystemWatcher('**/.xo-confi{g.cjs,g.json,g.js,g}'),
+				workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g}'),
+				workspace.createFileSystemWatcher('**/package.json')
 			]
 		}
 	};
@@ -62,39 +64,36 @@ function activate(context) {
 
 	context.subscriptions.push(
 		new SettingMonitor(client, 'xo.enable').start(),
-		vscode.commands.registerCommand('xo.fix', () => fixAllProblems(client)),
-		vscode.commands.registerCommand('xo.showOutputChannel', () => {
+		commands.registerCommand('xo.fix', async () => fixAllProblems(client)),
+		commands.registerCommand('xo.showOutputChannel', () => {
 			client.outputChannel.show();
 		}),
-		vscode.commands.registerCommand('xo.restart', () => {
-			client.restart().catch((error) => client.error(`Restarting client failed`, error, 'force'));
+		commands.registerCommand('xo.restart', () => {
+			client.restart().catch((error) => {
+				client.error(`Restarting client failed`, error, 'force');
+			});
 		})
 	);
 
-	vscode.workspace.onDidChangeConfiguration(() => {
+	workspace.onDidChangeConfiguration(async () => {
 		if (validate !== JSON.stringify(xoOptions.get('validate'))) {
 			validate = JSON.stringify(xoOptions.get('validate'));
-			vscode.commands.executeCommand('workbench.action.reloadWindow');
+			await commands.executeCommand('workbench.action.reloadWindow');
 		}
 
-		statusBar(client);
+		statusBar();
 	});
 
-	vscode.workspace.onDidOpenTextDocument(() => statusBar(client));
-	vscode.workspace.onDidCloseTextDocument(() => statusBar(client));
+	workspace.onDidOpenTextDocument(() => statusBar());
+	workspace.onDidCloseTextDocument(() => statusBar());
 
-	context.subscriptions.push(statusBar(client));
+	if (typeof statusBar === 'function') context.subscriptions.push(statusBar()!);
 }
 
-function deactivate() {
+export function deactivate() {
 	if (!client) {
 		return undefined;
 	}
 
 	return client.stop();
 }
-
-module.exports = {
-	activate,
-	deactivate
-};

@@ -32,11 +32,10 @@
 	"main": "./dist/client.js",
 	"scripts": {
 		"build": "npm run clean && npm run build:client -- --minify && npm run build:server -- --minify",
-		"build:client": "esbuild ./client/extension.js --bundle --outfile=dist/client.js --external:vscode --format=cjs --platform=node",
+		"build:client": "esbuild ./client/extension.ts --bundle --outfile=dist/client.js --external:vscode --format=cjs --platform=node",
 		"build:dev": "npm run clean && npm run build:client -- --sourcemap && npm run build:server -- --sourcemap",
 		"build:server": "esbuild ./server/server.ts --bundle --outfile=dist/server.js --external:vscode --format=cjs --platform=node",
-		"check": "npm run check:server",
-		"check:server": "tsc --project ./tsconfig.json",
+		"check": "tsc --project ./tsconfig.json",
 		"clean": "rimraf dist & rimraf server/dist & rimraf client/dist",
 		"lint": "xo && npm run lint:md",
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
@@ -174,19 +173,6 @@
 	"activationEvents": [
 		"onStartupFinished"
 	],
-	"xo": {
-		"prettier": true,
-		"rules": {
-			"unicorn/prefer-module": "off",
-			"unicorn/prevent-abbreviations": "off",
-			"import/extensions": "off",
-			"capitalized-comments": "off",
-			"no-warning-comments": "off"
-		},
-		"settings": {
-			"import/resolver": "node"
-		}
-	},
 	"prettier": {
 		"printWidth": 100,
 		"trailingComma": "none"
@@ -212,12 +198,12 @@
 		"@types/node": "^18.7.23",
 		"@types/vscode": "^1.71.0",
 		"@types/xo": "^0.39.3",
-		"esbuild": "^0.15.9",
+		"esbuild": "^0.15.10",
 		"fixpack": "^4.0.0",
 		"husky": "^8.0.1",
 		"lint-staged": "13.0.3",
 		"prettier": "^2.7.1",
-		"prettier-plugin-packagejson": "^2.2.18",
+		"prettier-plugin-packagejson": "^2.3.0",
 		"rimraf": "^3.0.2",
 		"typescript": "^4.8.4",
 		"webfont": "^11.2.26",

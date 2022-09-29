@@ -1,6 +1,7 @@
 import path from 'node:path';
-import {TextDocumentIdentifier} from 'vscode-languageserver';
 import isUndefined from 'lodash/isUndefined';
+import type {TextDocumentIdentifier} from 'vscode-languageserver';
+
 import type LintServer from './server';
 
 /**
