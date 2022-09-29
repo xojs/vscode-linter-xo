@@ -1,6 +1,5 @@
 import type {LanguageClient, TextEdit} from 'vscode-languageclient/node';
 import {RequestType} from 'vscode-languageclient/node';
-import type {Uri} from 'vscode';
 import * as vscode from 'vscode';
 import type {DocumentFix} from '../server/types';
 

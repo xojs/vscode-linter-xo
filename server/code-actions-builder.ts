@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
 import {TextEdit, Range, Position, CodeActionKind} from 'vscode-languageserver/node';
 import type {Diagnostic, CodeAction} from 'vscode-languageserver/node';
 import type {TextDocument} from 'vscode-languageserver-textdocument';
@@ -19,7 +18,7 @@ class CodeActionsBuilder {
 	textDocument: TextDocument;
 	codeActions: CodeAction[];
 	constructor({diagnostic, textDocument, edit}: Options) {
-		const {code} = diagnostic || {};
+		const {code} = diagnostic;
 		this.code = code;
 		this.edit = edit;
 		this.diagnostic = diagnostic;
@@ -44,14 +43,16 @@ class CodeActionsBuilder {
 	}
 
 	build() {
-		this.getFix();
 		this.getDisableNextLine();
 		this.getDisableEntireFile();
+		this.getFix();
 
 		return this.codeActions;
 	}
 
 	getDisableNextLine() {
+		if (typeof this.code !== 'string') return;
+
 		let changes = [];
 		const ignoreRange = {
 			line: this.diagnostic.range.start.line,
@@ -102,6 +103,8 @@ class CodeActionsBuilder {
 	}
 
 	getDisableEntireFile() {
+		if (typeof this.code !== 'string') return;
+
 		const shebang = this.textDocument.getText(
 			Range.create(Position.create(0, 0), Position.create(0, 2))
 		);
@@ -129,7 +132,7 @@ class CodeActionsBuilder {
 
 		this.codeActions.push({
 			title: 'Fix with XO',
-			kind: CodeActionKind.Refactor,
+			kind: CodeActionKind.QuickFix,
 			diagnostics: [this.diagnostic],
 			edit: {
 				changes: {
