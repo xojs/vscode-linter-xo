@@ -1,7 +1,7 @@
 import path from 'node:path';
 import isUndefined from 'lodash/isUndefined';
 import type {TextDocumentIdentifier} from 'vscode-languageserver';
-
+import type {XoConfig} from './types';
 import type LintServer from './server';
 
 /**
@@ -15,7 +15,7 @@ async function getDocumentConfig(
 	const folderUri = path.dirname(document.uri);
 
 	if (this.configurationCache.has(folderUri)) {
-		const config = this.configurationCache.get(folderUri);
+		const config: XoConfig = this.configurationCache.get(folderUri)!;
 
 		if (!isUndefined(config)) return config;
 

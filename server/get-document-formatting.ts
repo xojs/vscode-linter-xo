@@ -3,6 +3,7 @@ import {TextDocument} from 'vscode-languageserver-textdocument';
 import {TextEdit, Range} from 'vscode-languageserver/node';
 import Fix from './fix-builder';
 import type LintServer from './server';
+import type {DocumentFix} from './types';
 
 /**
  * Computes the TextEdits for a text document uri

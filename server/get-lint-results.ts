@@ -2,6 +2,7 @@ import process from 'node:process';
 import {URI} from 'vscode-uri';
 import type {TextDocument} from 'vscode-languageserver-textdocument';
 import type LintServer from './server';
+import type {XoResult, LintTextOptions} from './types';
 
 async function getLintResults(
 	this: LintServer,
@@ -47,6 +48,7 @@ async function getLintResults(
 
 	try {
 		process.chdir(lintTextOptions.cwd);
+
 		// eslint-disable-next-line @typescript-eslint/await-thenable
 		report = await xo.lintText(contents, lintTextOptions);
 	} finally {

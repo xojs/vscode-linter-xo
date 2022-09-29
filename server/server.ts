@@ -38,6 +38,7 @@ import getLintResults from './get-lint-results.js';
 import {lintDocument, lintDocuments} from './lint-document.js';
 import {log, logError} from './logger';
 import resolveXo from './resolve-xo';
+import type {XoConfig, DocumentFix, Xo, XoFix} from './types';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const DEFAULT_DEBOUNCE = 0;

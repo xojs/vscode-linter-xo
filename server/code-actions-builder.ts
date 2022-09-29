@@ -2,6 +2,7 @@
 import {TextEdit, Range, Position, CodeActionKind} from 'vscode-languageserver/node';
 import type {Diagnostic, CodeAction} from 'vscode-languageserver/node';
 import type {TextDocument} from 'vscode-languageserver-textdocument';
+import type {XoFix} from './types';
 
 interface Options {
 	diagnostic: Diagnostic;
