@@ -67,9 +67,6 @@ export function pathToUri(path: string): string {
  * recursively searches up the directory tree to
  * find the nearest directory with a package json with an xo
  * dependency. Returns an empty object if none can be found.
- *
- * @param {string} cwd - A path to start at
- * @param {string} stopAt - A path to not look past
  */
 export async function findXoRoot(cwd: string): Promise<XoResult | undefined> {
 	const {findUp} = await import('find-up');

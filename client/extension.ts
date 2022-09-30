@@ -59,7 +59,6 @@ export function activate(context: ExtensionContext) {
 		}
 	};
 
-	/** @type {import('vscode-languageclient/node').LanguageClient} */
 	client = new LanguageClient('xo', serverOptions, clientOptions);
 
 	context.subscriptions.push(

@@ -15,8 +15,8 @@ export function log(this: LintServer, ...messages: unknown[]): void {
 			if (message instanceof Map)
 				message = `Map(${JSON.stringify([...message.entries()], null, 2)})`;
 			if (typeof message === 'object') message = JSON.stringify(message, null, 2);
-			// eslint-disable-next-line unicorn/prefer-spread, @typescript-eslint/restrict-template-expressions
-			return acc.concat(`${message} `);
+			// eslint-disable-next-line unicorn/prefer-spread
+			return acc.concat(`${message as string} `);
 		}, `[${ts}] `)
 	);
 }

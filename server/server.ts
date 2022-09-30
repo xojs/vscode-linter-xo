@@ -28,7 +28,6 @@ import Queue from 'queue';
 import type {CodeActionParams} from 'vscode-languageclient';
 import isUndefined from 'lodash/isUndefined';
 import type {DebouncedFunc} from 'lodash';
-
 import * as utils from './utils.js';
 import CodeActionsBuilder from './code-actions-builder.js';
 import getDocumentConfig from './get-document-config.js';
@@ -143,8 +142,6 @@ class LintServer {
 		);
 		this.connection.onDocumentFormatting(this.handleDocumentFormattingRequest);
 		this.connection.onDocumentRangeFormatting(this.handleDocumentFormattingRequest);
-
-		// @ts-expect-error this one is too funky idk
 		this.connection.onCodeAction(this.handleCodeActionRequest);
 
 		/**
@@ -316,17 +313,17 @@ class LintServer {
 	async handleCodeActionRequest(
 		params: CodeActionParams,
 		token: CancellationToken
-	): Promise<CodeAction[] | void> {
+	): Promise<CodeAction[] | undefined> {
 		return new Promise((resolve, reject) => {
 			this.queue.push(async () => {
 				try {
 					if (!params.context?.diagnostics?.length) {
-						resolve();
+						resolve(undefined);
 						return;
 					}
 
 					if (!params?.textDocument?.uri) {
-						resolve();
+						resolve(undefined);
 						return;
 					}
 
@@ -341,7 +338,7 @@ class LintServer {
 					const edit = documentEdits?.get(utils.computeKey(diagnostic));
 
 					if (isUndefined(edit) || isUndefined(textDocument)) {
-						resolve();
+						resolve(undefined);
 						return;
 					}
 
