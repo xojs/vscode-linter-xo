@@ -6,11 +6,11 @@ import type {XoFix} from './types';
 interface Options {
 	diagnostic: Diagnostic;
 	textDocument: TextDocument;
-	edit: XoFix;
+	edit?: XoFix;
 }
 
 class CodeActionsBuilder {
-	edit: XoFix;
+	edit?: XoFix;
 	code?: string | number;
 	diagnostic: Diagnostic;
 	lineText: string;
@@ -44,10 +44,57 @@ class CodeActionsBuilder {
 
 	build() {
 		this.getDisableNextLine();
+		this.getDisableSameLine();
 		this.getDisableEntireFile();
 		this.getFix();
 
 		return this.codeActions;
+	}
+
+	getDisableSameLine() {
+		if (typeof this.code !== 'string') return;
+
+		let changes = [];
+
+		const startPosition: Position = {
+			line: this.diagnostic.range.start.line,
+			character: Number.MAX_SAFE_INTEGER
+		};
+
+		const matchedForIgnoreComment =
+			// eslint-disable-next-line prefer-regex-literals
+			this.lineText && new RegExp(`// eslint-disable-line`).exec(this.lineText);
+
+		if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
+			const textEdit = TextEdit.insert(startPosition, `, ${this.code}`);
+
+			changes.push(textEdit);
+		}
+
+		if (changes.length === 0) {
+			const newedit: TextEdit = {
+				range: {
+					start: startPosition,
+					end: startPosition
+				},
+				newText: `  // eslint-disable-line ${this.code}\n`
+			};
+
+			changes = [newedit];
+		}
+
+		const ignoreAction: CodeAction = {
+			title: `Add Ignore Rule Same Line ${this.code}`,
+			kind: CodeActionKind.QuickFix,
+			diagnostics: [this.diagnostic],
+			edit: {
+				changes: {
+					[this.textDocument.uri]: changes
+				}
+			}
+		};
+
+		this.codeActions?.push(ignoreAction);
 	}
 
 	getDisableNextLine() {
@@ -88,10 +135,10 @@ class CodeActionsBuilder {
 			changes = [newedit];
 		}
 
-		const ignoreAction = {
-			title: `Ignore Rule ${this.code}`,
+		const ignoreAction: CodeAction = {
+			title: `Add Ignore Rule Line Above ${this.code}`,
 			kind: CodeActionKind.QuickFix,
-			diagnostic: this.diagnostic,
+			diagnostics: [this.diagnostic],
 			edit: {
 				changes: {
 					[this.textDocument.uri]: changes
@@ -112,9 +159,9 @@ class CodeActionsBuilder {
 		const line = shebang === '#!' ? 1 : 0;
 
 		const ignoreFileAction = {
-			title: `Ignore Rule ${this.code} for entire file`,
+			title: `Add Ignore Rule ${this.code} for entire file`,
 			kind: CodeActionKind.QuickFix,
-			diagnostic: this.diagnostic,
+			diagnostics: [this.diagnostic],
 			edit: {
 				changes: {
 					[this.textDocument.uri]: [

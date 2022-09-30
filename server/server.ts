@@ -337,7 +337,7 @@ class LintServer {
 					const textDocument = this.documents.get(params.textDocument.uri);
 					const edit = documentEdits?.get(utils.computeKey(diagnostic));
 
-					if (isUndefined(edit) || isUndefined(textDocument)) {
+					if (isUndefined(textDocument)) {
 						resolve(undefined);
 						return;
 					}
