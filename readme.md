@@ -72,31 +72,6 @@ Reloads XO server.
 | `xo.runtime`          | `string`                  | `null`                                                                                          | By default, VSCode starts xo with its own bundled nodejs version. This may cause different results from the cli if you are using a different version of node. You can set a runtime path so that you are always using the same node version. <br/><br/>example:<br/>`"xo.runtime": "/usr/local/bin/node"`                                                                                                                                              |
 | `xo.statusBar`        | `Relevant\|Always\|Never` | `"Relevant"`                                                                                    | When to show the status bar icon.                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
-## Recent Updates
-
-- v3.12.0
-
-  - Refactor and architectural changes to support better logic around xo resolution
-    - Previously required xo to be in the root folder of the vscode workspace
-    - Now only requires that xo is a dependency in any parent directory. The extension now looks up from the file it is linting for a package.json with xo as a dependency.
-    - Caching now happens on a per folder basis and is cleaned up as files are closed and recached when they open. This helps simplify logic and able to remove a lot of supporting code and alleviates problems from stale cache.
-  - fixes a bug where eslint-plugins/configs without docs would throw an error
-
-- v3.11.0
-
-  - Adds validate option to allow formatting more file types
-
-- v3.10.0
-
-  - Adds ignore rule Code Actions for both single line or file.
-  - Adds logic to use metaResults from xo .51+ and fallback to eslint-rule-docs for older versions
-  - Internal improves fixing logic for overlapping rules
-  - Move from objects to Maps for rule caching
-
-- v3.9.0
-
-  - Adds links to rule documents
-
 ## Known Issues
 
 - Turning on the setting "files.trimTrailingWhitespace" to true can cause a race condition with xo that causes code to get erroneously trimmed when formatting on save. This typically only occurs when debounce is turned (above 0 ms). Avoid using both "files.trimTrailingWhitespace" and "xo.debounce" options at the same time.
