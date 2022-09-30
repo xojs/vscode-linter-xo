@@ -26,7 +26,7 @@ The xo extension searches up when you open a file for a package.json with `xo` l
 
 You can enable XO as a formatter for TypeScript and JavaScript.
 
-In either your workspace or user settings add the following settings.
+In either your workspace or user settings add the following settings. Linter xo now supports `editor.formatOnSaveMode` set to `"modifications"` :tada:.
 
 > optionally turn on "editor.formatOnSave"
 

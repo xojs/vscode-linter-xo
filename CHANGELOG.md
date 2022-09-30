@@ -1,3 +1,8 @@
+### v3.13.0
+
+- Internally refactored back to typescript since the compilation has been fully supported since 4.7 release.
+- Now supports range formatting and `editor.formatOnSaveMode` set to `"modifications"`.
+
 ### v3.12.0
 
 - Refactor and architectural changes to support better logic around xo resolution
