@@ -215,7 +215,7 @@
 	},
 	"engines": {
 		"node": ">=14",
-		"vscode": "^1.71.0"
+		"vscode": "^1.82.0"
 	},
 	"icon": "icon.png"
 }
