@@ -1,8 +1,8 @@
 import process from 'node:process';
 import {URI} from 'vscode-uri';
-import type {TextDocument} from 'vscode-languageserver-textdocument';
+import {type TextDocument} from 'vscode-languageserver-textdocument';
 import type LintServer from './server';
-import type {XoResult, LintTextOptions} from './types';
+import {type XoResult, type LintTextOptions} from './types';
 
 async function getLintResults(
 	this: LintServer,

@@ -1,6 +1,6 @@
 import {DiagnosticSeverity} from 'vscode-languageserver/node';
 import getRuleUrl from 'eslint-rule-docs';
-import type {TextDocument} from 'vscode-languageserver-textdocument';
+import {type TextDocument} from 'vscode-languageserver-textdocument';
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
 import * as utils from './utils';

@@ -3,7 +3,7 @@ import * as node from 'vscode-languageserver/node';
 import loadJsonFile from 'load-json-file';
 import {URI} from 'vscode-uri';
 // eslint-disable-next-line import/no-extraneous-dependencies
-import type {Linter} from 'eslint';
+import {type Linter} from 'eslint';
 
 interface XoResult {
 	xo?: string;

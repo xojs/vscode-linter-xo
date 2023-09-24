@@ -1,17 +1,5 @@
 import * as process from 'node:process';
 import * as path from 'node:path';
-import type {
-	TextEdit,
-	Connection,
-	InitializeResult,
-	DocumentFormattingParams,
-	CancellationToken,
-	TextDocumentIdentifier,
-	DidChangeConfigurationParams,
-	TextDocumentChangeEvent,
-	CodeAction,
-	DocumentRangeFormattingParams
-} from 'vscode-languageserver/node';
 import {
 	createConnection,
 	ProposedFeatures,
@@ -19,15 +7,25 @@ import {
 	RequestType,
 	TextDocumentSyncKind,
 	ResponseError,
-	LSPErrorCodes
+	LSPErrorCodes,
+	type TextEdit,
+	type Connection,
+	type InitializeResult,
+	type DocumentFormattingParams,
+	type CancellationToken,
+	type TextDocumentIdentifier,
+	type DidChangeConfigurationParams,
+	type TextDocumentChangeEvent,
+	type CodeAction,
+	type DocumentRangeFormattingParams
 } from 'vscode-languageserver/node';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import autoBind from 'auto-bind';
 import debounce from 'lodash/debounce';
 import Queue from 'queue';
-import type {CodeActionParams} from 'vscode-languageclient';
+import {type CodeActionParams} from 'vscode-languageclient';
 import isUndefined from 'lodash/isUndefined';
-import type {DebouncedFunc} from 'lodash';
+import {type DebouncedFunc} from 'lodash';
 import * as utils from './utils.js';
 import CodeActionsBuilder from './code-actions-builder.js';
 import getDocumentConfig from './get-document-config.js';
@@ -37,7 +35,7 @@ import getLintResults from './get-lint-results.js';
 import {lintDocument, lintDocuments} from './lint-document.js';
 import {log, logError} from './logger';
 import resolveXo from './resolve-xo';
-import type {XoConfig, DocumentFix, Xo, XoFix} from './types';
+import {type XoConfig, type DocumentFix, type Xo, type XoFix} from './types';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const DEFAULT_DEBOUNCE = 0;
