@@ -1,3 +1,7 @@
+### v3.15.0
+
+- Instead of alerting user for document version mismatch, we send the correct LSP error code to the client for this information, where the language client can decide what to do with the error. Resolves [#128](https://github.com/xojs/vscode-linter-xo/issues/128).
+
 ### v3.14.0
 
 - Internally refactored back to typescript since the compilation has been fully supported since 4.7 release.
