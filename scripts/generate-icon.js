@@ -22,4 +22,5 @@ async function generateFont() {
 	}
 }
 
+// eslint-disable-next-line unicorn/prefer-top-level-await
 generateFont();

@@ -26,7 +26,7 @@ async function getLintResults(
 	if (!folderUri) {
 		const error = new Error('No valid xo folder could be found for this file. Skipping linting.');
 		this.logError(error);
-		return {results: [], warningCount: 0, errorCount: 0, rulesMeta: {}};
+		return {cwd: folderUri, results: [], warningCount: 0, errorCount: 0, rulesMeta: {}};
 	}
 
 	const xo = await this.resolveXo(document);

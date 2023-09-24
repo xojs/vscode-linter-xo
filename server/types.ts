@@ -1,4 +1,5 @@
 import type {Options, ResultReport} from 'xo';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import type {ESLint, Rule} from 'eslint';
 import type {TextEdit} from 'vscode-languageserver/node';
 

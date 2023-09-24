@@ -274,14 +274,14 @@ class LintServer {
 
 					const cachedTextDocument = this.documents.get(params.textDocument.uri);
 
-					if (typeof cachedTextDocument === 'undefined') {
+					if (cachedTextDocument === undefined) {
 						resolve([]);
 						return;
 					}
 
 					const config = await this.getDocumentConfig(params.textDocument);
 
-					if (typeof config === 'undefined' || !config?.format?.enable) {
+					if (config === undefined || !config?.format?.enable) {
 						resolve([]);
 						return;
 					}
@@ -291,8 +291,12 @@ class LintServer {
 						'range' in params ? params.range : undefined
 					);
 
-					if (documentVersion !== cachedTextDocument.version)
-						throw new Error('Document version mismatch detected');
+					if (documentVersion !== cachedTextDocument.version) {
+						throw new ResponseError(
+							LSPErrorCodes.ContentModified,
+							'Document version mismatch detected'
+						);
+					}
 
 					resolve(edits);
 				} catch (error: unknown) {

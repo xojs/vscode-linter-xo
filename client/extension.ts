@@ -89,7 +89,7 @@ export function activate(context: ExtensionContext) {
 	if (typeof statusBar === 'function') context.subscriptions.push(statusBar()!);
 }
 
-export function deactivate() {
+export async function deactivate() {
 	if (!client) {
 		return undefined;
 	}

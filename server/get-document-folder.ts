@@ -1,6 +1,5 @@
 import path from 'node:path';
 import type {TextDocument} from 'vscode-languageserver-textdocument';
-
 import {findXoRoot, pathToUri, uriToPath} from './utils';
 import type LintServer from './server';
 

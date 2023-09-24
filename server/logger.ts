@@ -22,6 +22,6 @@ export function log(this: LintServer, ...messages: unknown[]): void {
 }
 
 export function logError(this: LintServer, error: Error): void {
-	this.log(error?.message ? error.message : 'Unknown Error');
+	this.log(error?.message ?? 'Unknown Error');
 	this.log(error?.stack);
 }

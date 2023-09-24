@@ -2,6 +2,7 @@ import * as path from 'node:path';
 import * as node from 'vscode-languageserver/node';
 import loadJsonFile from 'load-json-file';
 import {URI} from 'vscode-uri';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import type {Linter} from 'eslint';
 
 interface XoResult {
@@ -19,19 +20,23 @@ type Deps = Record<string, string>;
 
 export function parseSeverity(severity: number): node.DiagnosticSeverity {
 	switch (severity) {
-		case 1:
+		case 1: {
 			return node.DiagnosticSeverity.Warning;
-		case 2:
+		}
+
+		case 2: {
 			return node.DiagnosticSeverity.Error;
-		default:
+		}
+
+		default: {
 			return node.DiagnosticSeverity.Error;
+		}
 	}
 }
 
 export function makeDiagnostic(problem: Linter.LintMessage): node.Diagnostic {
 	const message =
-		// eslint-disable-next-line no-negated-condition
-		problem.ruleId !== null ? `${problem.message} (${problem.ruleId})` : `${problem.message}`;
+		problem.ruleId === null ? `${problem.message}` : `${problem.message} (${problem.ruleId})`;
 	return {
 		message,
 		severity: parseSeverity(problem.severity),
