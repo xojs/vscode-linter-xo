@@ -83,7 +83,7 @@ class CodeActionsBuilder {
 					start: startPosition,
 					end: startPosition
 				},
-				newText: `  // eslint-disable-line ${this.code}\n`
+				newText: `  // eslint-disable-line ${this.code}`
 			};
 
 			changes = [newedit];
