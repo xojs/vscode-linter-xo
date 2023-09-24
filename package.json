@@ -214,7 +214,7 @@
 		"xo": "^0.56.0"
 	},
 	"engines": {
-		"node": ">=14",
+		"node": ">=16",
 		"vscode": "^1.82.0"
 	},
 	"icon": "icon.png"
