@@ -38,7 +38,13 @@ In either your workspace or user settings add the following settings. Linter xo 
 	"[javascript]": {
 		"editor.defaultFormatter": "samverschueren.linter-xo"
 	},
+	"[javascriptreact]": {
+		"editor.defaultFormatter": "samverschueren.linter-xo"
+	},
 	"[typescript]": {
+		"editor.defaultFormatter": "samverschueren.linter-xo"
+	},
+	"[typescriptreact]": {
 		"editor.defaultFormatter": "samverschueren.linter-xo"
 	}
 }
