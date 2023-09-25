@@ -1,3 +1,7 @@
+### v3.16.0
+
+- No longer lint node_modules. Resolves [#131](https://github.com/xojs/vscode-linter-xo/issues/131)
+
 ### v3.15.1
 
 - fix a bug where an extra line was added when a an ignore-same-line code action was requested
