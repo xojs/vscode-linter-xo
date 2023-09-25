@@ -170,7 +170,7 @@ class LintServer {
 		// Listen for text document create, change
 		this.documents.listen(this.connection);
 		this.connection.listen();
-		this.connection.console.info(`XO Server Starting in Node ${process.version}`);
+		this.connection.console.info(`XO Language Server Starting in Node ${process.version}`);
 	}
 
 	/**
@@ -362,12 +362,17 @@ class LintServer {
 	/**
 	 * Handle documents.onDidChangeContent
 	 * queues document content linting
-	 * @param {import('vscode-languageserver/node').TextDocumentChangeEvent} event
+	 * @param {TextDocumentChangeEvent} event
 	 */
 	handleDocumentsOnDidChangeContent(event: TextDocumentChangeEvent<TextDocument>) {
 		this.queue.push(async () => {
 			try {
 				if (event.document.version !== this.documents.get(event.document.uri)?.version) return;
+
+				if (event.document.uri.includes('node_modules')) {
+					this.log('skipping node_modules file');
+					return;
+				}
 
 				await this.lintDocumentDebounced(event.document);
 			} catch (error: unknown) {
