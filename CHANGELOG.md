@@ -1,3 +1,8 @@
+### v3.17.0
+
+- Client refactor and status bar icon only shows on relevant xo files. Server will not start until a relevant xo file is open, which helps reduce the extension overhead when a non xo repo is open.
+- handles validate option change without refresh window hack.
+
 ### v3.16.0
 
 - No longer lint node_modules. Resolves [#131](https://github.com/xojs/vscode-linter-xo/issues/131)
