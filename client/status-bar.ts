@@ -1,43 +1,55 @@
-import * as vscode from 'vscode';
+import {workspace, window, type StatusBarItem, type TextDocument} from 'vscode';
+import {xoRootCache} from './cache';
 
-let statusBar: vscode.StatusBarItem;
+const statusBar = window.createStatusBarItem('xoStatusBarItem', 2, 0);
+statusBar.name = 'xo';
+statusBar.text = '$(xo-logo)';
+statusBar.command = 'xo.showOutputChannel';
+statusBar.tooltip = 'Show XO output channel';
 
-function updateStatusBar(): vscode.StatusBarItem | undefined {
-	const xoConfig = vscode.workspace.getConfiguration('xo');
-	const statusBarOption = xoConfig.get('statusBar');
+export async function updateStatusBar(textDocument?: TextDocument): Promise<StatusBarItem> {
+	try {
+		const xoConfig = workspace.getConfiguration('xo', textDocument);
 
-	if (statusBarOption === 'Never') {
-		if (statusBar) {
+		const statusBarOption =
+			xoConfig.get<'Always' | 'Never' | 'Relevant'>('statusBar') ?? 'Relevant';
+		if (statusBarOption === 'Never') {
 			statusBar.hide();
+			return statusBar;
 		}
 
-		return;
-	}
-
-	statusBar = statusBar ?? vscode.window.createStatusBarItem('xoStatusBarItem', 2, 0);
-	statusBar.text = '$(xo-logo)';
-	statusBar.command = 'xo.showOutputChannel';
-
-	const latestDocument = vscode.window.activeTextEditor?.document;
-	const fileTypes = xoConfig.get('validate', []) as string[];
-
-	const shouldShowStatusBar =
-		statusBarOption === 'Always' ||
-		(statusBarOption === 'Relevant' &&
-			vscode.workspace.textDocuments.find(
-				(textDocument) =>
-					(textDocument.fileName === latestDocument?.fileName &&
-						fileTypes.includes(textDocument.languageId)) ||
-					textDocument.fileName.startsWith('extension-output')
-			));
-
-	if (shouldShowStatusBar) {
+		statusBar.text = '$(gear~spin)';
 		statusBar.show();
-	} else {
-		statusBar.hide();
+
+		if (statusBarOption === 'Always') {
+			statusBar.show();
+			return statusBar;
+		}
+
+		if (!textDocument) {
+			statusBar.hide();
+			return statusBar;
+		}
+
+		const languages = xoConfig.get<string[]>('validate', [
+			'javascript',
+			'javascriptreact',
+			'typescript',
+			'typescriptreact',
+			'vue'
+		]);
+		const isXoOutputChannel = textDocument.uri.fsPath === 'samverschueren.linter-xo.xo';
+		const isRelevantLanguage = languages.includes(textDocument.languageId);
+		const hasXoRoot = await xoRootCache.get(textDocument.uri.fsPath);
+
+		const isRelevant = isXoOutputChannel || (isRelevantLanguage && hasXoRoot);
+
+		if (isRelevant) statusBar.show();
+		else statusBar.hide();
+
+		statusBar.text = '$(xo-logo)';
+		return statusBar;
+	} catch {
+		return statusBar;
 	}
-
-	return statusBar;
 }
-
-export default updateStatusBar;

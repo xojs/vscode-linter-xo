@@ -5,7 +5,7 @@ import {URI} from 'vscode-uri';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {type Linter} from 'eslint';
 
-interface XoResult {
+export interface XoResult {
 	xo?: string;
 	pkgPath?: string;
 	pkgJson?: any;
@@ -73,7 +73,7 @@ export function pathToUri(path: string): string {
  * find the nearest directory with a package json with an xo
  * dependency. Returns an empty object if none can be found.
  */
-export async function findXoRoot(cwd: string): Promise<XoResult | undefined> {
+export async function findXoRoot(cwd: string): Promise<XoResult> {
 	const {findUp} = await import('find-up');
 	const pkgPath = await findUp('package.json', {cwd});
 

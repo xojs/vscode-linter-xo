@@ -1,92 +1,132 @@
-import process from 'node:process';
-import type {ExtensionContext, StatusBarItem} from 'vscode';
-import {workspace, commands} from 'vscode';
-import {TransportKind, LanguageClient, SettingMonitor} from 'vscode-languageclient/node';
-import isSANB from 'is-string-and-not-blank';
-import fixAllProblems from './fix-all-problems';
-import statusBar from './status-bar';
+import {type ConfigurationChangeEvent, type ExtensionContext, workspace, window} from 'vscode';
+import {type LanguageClient, type DocumentSelector} from 'vscode-languageclient/node';
+import Queue from 'queue';
+import pkg from '../package.json';
+import {createLanguageClient} from './create-language-client';
+import {updateStatusBar} from './status-bar';
+import {xoRootCache} from './cache';
+import {registerCommands} from './register-commands';
 
 let client: LanguageClient;
 
-export function activate(context: ExtensionContext) {
-	// The server is implemented in node
-	const serverModule = context.asAbsolutePath('dist/server.js');
+const queue = new Queue({autostart: true, concurrency: 1});
 
-	const debugOptions = {
-		execArgv: ['--nolazy', '--inspect=6004'],
-		cwd: process.cwd()
-	};
+export async function activate(context: ExtensionContext) {
+	const logger = window.createOutputChannel('xo', {log: true});
+	xoRootCache.logger = logger;
 
-	const xoOptions = workspace.getConfiguration('xo');
+	logger.info(`[client] Activating XO extension v${pkg.version}`);
+	logger.clear();
 
-	let runtime: string | undefined;
+	const shouldStartServer = await xoRootCache.get(window.activeTextEditor?.document.uri.fsPath);
+	const xoConfig = workspace.getConfiguration('xo');
+	const runtime = xoConfig.get<string>('runtime');
+	let languages = xoConfig.get<string[]>('validate')!;
 
-	if (isSANB(xoOptions.get('runtime'))) runtime = xoOptions.get('runtime');
+	client = await createLanguageClient({context, outputChannel: logger, runtime, languages});
+	/**
+	 * Update status bar on activation, and dispose of the status bar when the extension is deactivated
+	 */
+	const statusBar = await updateStatusBar(window.activeTextEditor?.document);
 
-	const serverOptions = {
-		run: {
-			module: serverModule,
-			runtime,
-			transport: TransportKind.ipc,
-			options: {cwd: process.cwd()}
-		},
-		debug: {
-			module: serverModule,
-			runtime,
-			transport: TransportKind.ipc,
-			options: debugOptions
-		}
-	};
-
-	let validate = JSON.stringify(xoOptions.get('validate'));
-	const documentSelector = [];
-	for (const language of xoOptions.get('validate', [])) {
-		documentSelector.push({language, scheme: 'file'}, {language, scheme: 'untitled'});
-	}
-
-	const clientOptions = {
-		documentSelector,
-		synchronize: {
-			configurationSection: 'xo',
-			fileEvents: [
-				// we relint all open textDocuments whenever a config changes
-				// that may possibly affect the options xo should be using
-				workspace.createFileSystemWatcher('**/.eslintignore'),
-				workspace.createFileSystemWatcher('**/.xo-confi{g.cjs,g.json,g.js,g}'),
-				workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g}'),
-				workspace.createFileSystemWatcher('**/package.json')
-			]
-		}
-	};
-
-	client = new LanguageClient('xo', serverOptions, clientOptions);
+	registerCommands({context, client, logger});
 
 	context.subscriptions.push(
-		new SettingMonitor(client, 'xo.enable').start(),
-		commands.registerCommand('xo.fix', async () => fixAllProblems(client)),
-		commands.registerCommand('xo.showOutputChannel', () => {
-			client.outputChannel.show();
-		}),
-		commands.registerCommand('xo.restart', () => {
-			client.restart().catch((error) => {
-				client.error(`Restarting client failed`, error, 'force');
+		/**
+		 * react to config changes - if the `xo.validate` setting changes, we need to restart the client
+		 */
+		workspace.onDidChangeConfiguration((configChange: ConfigurationChangeEvent) => {
+			queue.push(async () => {
+				try {
+					const isValidateChanged = configChange.affectsConfiguration('xo.validate');
+
+					if (isValidateChanged) {
+						logger.info(
+							'[client] xo.validate change detected, restarting client with new options.'
+						);
+
+						statusBar.text = '$(gear~spin)';
+						statusBar.show();
+
+						languages = workspace.getConfiguration('xo').get<string[]>('validate', languages);
+
+						client.clientOptions.documentSelector = [];
+						if (languages && languages.length > 0)
+							for (const language of languages) {
+								(client.clientOptions.documentSelector as DocumentSelector).push(
+									{language, scheme: 'file'},
+									{language, scheme: 'untitled'}
+								);
+							}
+
+						await client.restart();
+
+						statusBar.text = '$(xo-logo)';
+
+						statusBar.hide();
+						logger.info('[client] Restarted client with new xo.validate options.');
+					}
+
+					const isEnabledChanged = configChange.affectsConfiguration('xo.enable');
+
+					if (isEnabledChanged) {
+						const enabled = workspace.getConfiguration('xo').get<boolean>('enable', true);
+
+						if (client.needsStart() && enabled) {
+							await client.start();
+						}
+
+						if (client.needsStop() && !enabled) {
+							await client.dispose();
+						}
+					}
+				} catch (error) {
+					logger.error(`[client] Restarting client failed`, error);
+				}
 			});
-		})
+		}),
+		/**
+		 * Only show status bar on relevant files where xo is set up to lint
+		 * updated on every active editor change, also check if we should start the
+		 * server for the first time if xo wasn't originally in the workspace
+		 */
+		window.onDidChangeActiveTextEditor((textEditor) => {
+			queue.push(async () => {
+				try {
+					const {document: textDocument} = textEditor ?? {};
+					await updateStatusBar(textDocument);
+					// if the client was not started
+					if (
+						textDocument &&
+						client.needsStart() &&
+						(await xoRootCache.get(textDocument.uri.fsPath))
+					)
+						await client.start();
+				} catch (error) {
+					statusBar.text = '$(xo-logo)';
+					logger.error(`[client] There was a problem updating the statusbar`, error);
+				}
+			});
+		}),
+		/**
+		 * Check again whether or not we need a server instance
+		 * if folders are added are removed from the workspace
+		 */
+		workspace.onDidCloseTextDocument((textDocument) => {
+			queue.push(async () => {
+				xoRootCache.delete(textDocument.uri.fsPath);
+			});
+		}),
+		statusBar
 	);
 
-	workspace.onDidChangeConfiguration(async () => {
-		if (validate !== JSON.stringify(xoOptions.get('validate'))) {
-			validate = JSON.stringify(xoOptions.get('validate'));
-			await commands.executeCommand('workbench.action.reloadWindow');
-		}
-
-		statusBar();
-	});
-
-	workspace.onDidOpenTextDocument(() => statusBar());
-	workspace.onDidCloseTextDocument(() => statusBar());
-
-	if (typeof statusBar === 'function') context.subscriptions.push(statusBar()!);
+	if (shouldStartServer) {
+		logger.info('[client] XO was present in the workspace, server is now starting.');
+		await client.start();
+		context.subscriptions.push(client);
+	} else {
+		logger.info('[client] XO was not present in the workspace, server will not be started.');
+	}
 }
 
 export async function deactivate() {

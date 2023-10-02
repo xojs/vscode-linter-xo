@@ -1,14 +1,13 @@
-import type {LanguageClient, TextEdit} from 'vscode-languageclient/node';
-import {RequestType} from 'vscode-languageclient/node';
+import {type LanguageClient, type TextEdit, RequestType} from 'vscode-languageclient/node';
 import * as vscode from 'vscode';
-import type {DocumentFix} from '../server/types';
+import {type DocumentFix} from '../server/types';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const AllFixesRequest = {
 	type: new RequestType('textDocument/xo/allFixes')
 };
 
-async function fixAllProblems(client: LanguageClient) {
+export async function fixAllProblems(client: LanguageClient) {
 	const textEditor = vscode.window.activeTextEditor;
 	if (!textEditor) {
 		return;
@@ -56,5 +55,3 @@ async function applyTextEdits(
 		}
 	}
 }
-
-export default fixAllProblems;

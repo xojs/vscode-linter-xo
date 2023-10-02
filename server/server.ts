@@ -65,6 +65,7 @@ class LintServer {
 
 	hasShownResolutionError: boolean;
 	currentDebounce: number;
+	hasReceivedShutdownRequest?: boolean;
 
 	constructor() {
 		/**
@@ -119,9 +120,11 @@ class LintServer {
 		this.documents.onDidClose(this.handleDocumentsOnDidClose);
 
 		/**
-		 * setup connection listeners
+		 * setup connection lifecycle listeners
 		 */
 		this.connection.onInitialize(this.handleInitialize);
+		this.connection.onShutdown(this.handleShutdown);
+		this.connection.onExit(this.exit);
 
 		/**
 		 * handle workspace and xo configuration changes
@@ -170,7 +173,7 @@ class LintServer {
 		// Listen for text document create, change
 		this.documents.listen(this.connection);
 		this.connection.listen();
-		this.connection.console.info(`XO Language Server Starting in Node ${process.version}`);
+		this.log(`XO Language Server Starting in Node ${process.version}`);
 	}
 
 	/**
@@ -404,6 +407,22 @@ class LintServer {
 			uri: event.document.uri.toString(),
 			diagnostics: []
 		});
+	}
+
+	async handleShutdown() {
+		this.log('XO Server recieved shut down request');
+		this.hasReceivedShutdownRequest = true;
+		this.queue.end();
+	}
+
+	async exit() {
+		if (this.hasReceivedShutdownRequest) {
+			this.log('XO Server exiting');
+			// eslint-disable-next-line unicorn/no-process-exit
+			process.exit(0);
+		} else {
+			this.log('XO Server exiting with error');
+		}
 	}
 }
 

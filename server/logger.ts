@@ -6,9 +6,6 @@ import type LintServer from './server';
  * for development and debugging
  */
 export function log(this: LintServer, ...messages: unknown[]): void {
-	const d = new Date();
-	const ts = `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}:${d.getMilliseconds()}`;
-
 	this.connection.console.log(
 		// eslint-disable-next-line unicorn/no-array-reduce
 		messages.reduce((acc: string, message: unknown) => {
@@ -17,7 +14,7 @@ export function log(this: LintServer, ...messages: unknown[]): void {
 			if (typeof message === 'object') message = JSON.stringify(message, null, 2);
 			// eslint-disable-next-line unicorn/prefer-spread
 			return acc.concat(`${message as string} `);
-		}, `[${ts}] `)
+		}, '[server] ')
 	);
 }
 
