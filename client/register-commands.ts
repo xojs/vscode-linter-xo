@@ -2,6 +2,12 @@ import {type ExtensionContext, commands, type LogOutputChannel} from 'vscode';
 import {type LanguageClient} from 'vscode-languageclient/node';
 import {fixAllProblems} from './fix-all-problems';
 
+/**
+ * Register the commands provided by xo extension
+ * and add them as disposable subscriptions to the context
+ *
+ * @param options - options for registering commands
+ */
 export function registerCommands({
 	context,
 	client,

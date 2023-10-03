@@ -1,6 +1,10 @@
 import {type LogOutputChannel} from 'vscode';
 import {findXoRoot} from '../server/utils';
 
+/**
+ * Cache for file fspaths that have an xo root
+ * in their directory tree.
+ */
 export class XoRootCache {
 	logger?: LogOutputChannel;
 
@@ -23,11 +27,14 @@ export class XoRootCache {
 			}
 
 			const xoRoot = await findXoRoot(uri);
+
+			const isXoFile = Boolean(xoRoot?.pkgPath);
+
 			if (xoRoot) {
-				this.cache.set(uri, Boolean(xoRoot?.pkgPath));
+				this.cache.set(uri, isXoFile);
 			}
 
-			return xoRoot;
+			return isXoFile;
 		} catch (error) {
 			if (error instanceof Error) {
 				this.logger?.error(error);

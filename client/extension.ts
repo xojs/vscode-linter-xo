@@ -94,14 +94,17 @@ export async function activate(context: ExtensionContext) {
 			queue.push(async () => {
 				try {
 					const {document: textDocument} = textEditor ?? {};
+					logger.debug('[client] Active text editor changed', textDocument?.uri.fsPath);
 					await updateStatusBar(textDocument);
 					// if the client was not started
 					if (
 						textDocument &&
 						client.needsStart() &&
 						(await xoRootCache.get(textDocument.uri.fsPath))
-					)
+					) {
+						logger.debug('[client] Starting LSP client');
 						await client.start();
+					}
 				} catch (error) {
 					statusBar.text = '$(xo-logo)';
 					logger.error(`[client] There was a problem updating the statusbar`, error);
