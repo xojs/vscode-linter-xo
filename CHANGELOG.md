@@ -1,3 +1,7 @@
+### v3.17.1
+
+- fix bug for status bar and server starting for non-xo js/ts files.
+
 ### v3.17.0
 
 - Client refactor and status bar icon only shows on relevant xo files. Server will not start until a relevant xo file is open, which helps reduce the extension overhead when a non xo repo is open.
