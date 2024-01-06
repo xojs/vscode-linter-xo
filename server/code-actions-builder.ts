@@ -8,71 +8,56 @@ import {
 } from 'vscode-languageserver/node';
 import {type TextDocument} from 'vscode-languageserver-textdocument';
 import {type XoFix} from './types';
+import * as utils from './utils.js';
 
-interface Options {
-	diagnostic: Diagnostic;
-	textDocument: TextDocument;
-	edit?: XoFix;
-}
-
-class CodeActionsBuilder {
-	edit?: XoFix;
-	code?: string | number;
-	diagnostic: Diagnostic;
-	lineText: string;
-	lineAboveText: string;
-	textDocument: TextDocument;
-	codeActions: CodeAction[];
-	constructor({diagnostic, textDocument, edit}: Options) {
-		const {code} = diagnostic;
-		this.code = code;
-		this.edit = edit;
-		this.diagnostic = diagnostic;
+export class QuickFixCodeActionsBuilder {
+	constructor(
+		private readonly textDocument: TextDocument,
+		private readonly diagnostics: Diagnostic[],
+		private readonly fixCache: Map<string, XoFix> | undefined
+	) {
 		this.textDocument = textDocument;
+		this.diagnostics = diagnostics;
+		this.fixCache = fixCache;
+	}
 
-		this.lineText = textDocument.getText({
+	build(): CodeAction[] {
+		return this.diagnostics.flatMap<CodeAction>((diagnostic) => {
+			const diagnosticCodeActions: CodeAction[] = [];
+
+			const disableSameLineCodeAction = this.getDisableSameLine(diagnostic);
+			if (disableSameLineCodeAction) diagnosticCodeActions.push(disableSameLineCodeAction);
+
+			const disableNextLineCodeAction = this.getDisableNextLine(diagnostic);
+			if (disableNextLineCodeAction) diagnosticCodeActions.push(disableNextLineCodeAction);
+
+			const disableFileCodeAction = this.getDisableEntireFile(diagnostic);
+			if (disableFileCodeAction) diagnosticCodeActions.push(disableFileCodeAction);
+
+			const fix = this.getFix(diagnostic, CodeActionKind.QuickFix);
+			if (fix) diagnosticCodeActions.push(fix);
+
+			return diagnosticCodeActions;
+		});
+	}
+
+	getDisableSameLine(diagnostic: Diagnostic) {
+		let changes = [];
+
+		const startPosition: Position = {
+			line: diagnostic.range.start.line,
+			character: Number.MAX_SAFE_INTEGER
+		};
+
+		const lineText = this.textDocument.getText({
 			start: Position.create(diagnostic.range.start.line, 0),
 			end: Position.create(diagnostic.range.start.line, Number.MAX_SAFE_INTEGER)
 		});
 
-		this.lineAboveText = textDocument.getText({
-			start: {
-				line: diagnostic.range.start.line - 1,
-				character: 0
-			},
-			end: {
-				line: diagnostic.range.start.line - 1,
-				character: Number.MAX_SAFE_INTEGER
-			}
-		});
-		this.codeActions = [];
-	}
-
-	build() {
-		this.getDisableNextLine();
-		this.getDisableSameLine();
-		this.getDisableEntireFile();
-		this.getFix();
-
-		return this.codeActions;
-	}
-
-	getDisableSameLine() {
-		if (typeof this.code !== 'string') return;
-
-		let changes = [];
-
-		const startPosition: Position = {
-			line: this.diagnostic.range.start.line,
-			character: Number.MAX_SAFE_INTEGER
-		};
-
-		const matchedForIgnoreComment =
-			// eslint-disable-next-line prefer-regex-literals
-			this.lineText && new RegExp(`// eslint-disable-line`).exec(this.lineText);
+		const matchedForIgnoreComment = lineText && /\/\/ eslint-disable-line/.exec(lineText);
 
 		if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
-			const textEdit = TextEdit.insert(startPosition, `, ${this.code}`);
+			const textEdit = TextEdit.insert(startPosition, `, ${diagnostic.code}`);
 
 			changes.push(textEdit);
 		}
@@ -83,16 +68,16 @@ class CodeActionsBuilder {
 					start: startPosition,
 					end: startPosition
 				},
-				newText: `  // eslint-disable-line ${this.code}`
+				newText: `  // eslint-disable-line ${diagnostic.code}`
 			};
 
 			changes = [newedit];
 		}
 
 		const ignoreAction: CodeAction = {
-			title: `Add Ignore Rule Same Line ${this.code}`,
+			title: `Add Ignore Rule Same Line ${diagnostic.code}`,
 			kind: CodeActionKind.QuickFix,
-			diagnostics: [this.diagnostic],
+			diagnostics: [diagnostic],
 			edit: {
 				changes: {
 					[this.textDocument.uri]: changes
@@ -100,33 +85,41 @@ class CodeActionsBuilder {
 			}
 		};
 
-		this.codeActions?.push(ignoreAction);
+		return ignoreAction;
 	}
 
-	getDisableNextLine() {
-		if (typeof this.code !== 'string') return;
-
+	getDisableNextLine(diagnostic: Diagnostic) {
 		let changes = [];
+
 		const ignoreRange = {
-			line: this.diagnostic.range.start.line,
+			line: diagnostic.range.start.line,
 			character: 0
 		};
 
+		const lineText = this.textDocument.getText({
+			start: Position.create(diagnostic.range.start.line, 0),
+			end: Position.create(diagnostic.range.start.line, Number.MAX_SAFE_INTEGER)
+		});
+
+		const lineAboveText = this.textDocument.getText({
+			start: Position.create(diagnostic.range.start.line - 1, 0),
+			end: Position.create(diagnostic.range.start.line - 1, Number.MAX_SAFE_INTEGER)
+		});
+
 		const matchedForIgnoreComment =
-			// eslint-disable-next-line prefer-regex-literals
-			this.lineAboveText && new RegExp(`// eslint-disable-next-line`).exec(this.lineAboveText);
+			lineAboveText && /\/\/ eslint-disable-next-line/.exec(lineAboveText);
 
 		if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
 			const textEdit = TextEdit.insert(
-				Position.create(this.diagnostic.range.start.line - 1, Number.MAX_SAFE_INTEGER),
-				`, ${this.code}`
+				Position.create(diagnostic.range.start.line - 1, Number.MAX_SAFE_INTEGER),
+				`, ${diagnostic.code}`
 			);
 
 			changes.push(textEdit);
 		}
 
 		if (changes.length === 0) {
-			const matches = /^([ |\t]*)/.exec(this.lineText);
+			const matches = /^([ |\t]*)/.exec(lineText);
 
 			const indentation = Array.isArray(matches) && matches.length > 0 ? matches[0] : '';
 
@@ -135,16 +128,16 @@ class CodeActionsBuilder {
 					start: ignoreRange,
 					end: ignoreRange
 				},
-				newText: `${indentation}// eslint-disable-next-line ${this.code}\n`
+				newText: `${indentation}// eslint-disable-next-line ${diagnostic.code}\n`
 			};
 
 			changes = [newedit];
 		}
 
 		const ignoreAction: CodeAction = {
-			title: `Add Ignore Rule Line Above ${this.code}`,
+			title: `Add Ignore Rule Line Above ${diagnostic.code}`,
 			kind: CodeActionKind.QuickFix,
-			diagnostics: [this.diagnostic],
+			diagnostics: [diagnostic],
 			edit: {
 				changes: {
 					[this.textDocument.uri]: changes
@@ -152,12 +145,10 @@ class CodeActionsBuilder {
 			}
 		};
 
-		this.codeActions?.push(ignoreAction);
+		return ignoreAction;
 	}
 
-	getDisableEntireFile() {
-		if (typeof this.code !== 'string') return;
-
+	getDisableEntireFile(diagnostic: Diagnostic) {
 		const shebang = this.textDocument.getText(
 			Range.create(Position.create(0, 0), Position.create(0, 2))
 		);
@@ -165,43 +156,43 @@ class CodeActionsBuilder {
 		const line = shebang === '#!' ? 1 : 0;
 
 		const ignoreFileAction = {
-			title: `Add Ignore Rule ${this.code} for entire file`,
+			title: `Add Ignore Rule ${diagnostic.code} for entire file`,
 			kind: CodeActionKind.QuickFix,
-			diagnostics: [this.diagnostic],
+			diagnostics: [diagnostic],
 			edit: {
 				changes: {
 					[this.textDocument.uri]: [
-						TextEdit.insert(Position.create(line, 0), `/* eslint-disable ${this.code} */\n`)
+						TextEdit.insert(Position.create(line, 0), `/* eslint-disable ${diagnostic.code} */\n`)
 					]
 				}
 			}
 		};
 
-		this.codeActions.push(ignoreFileAction);
+		return ignoreFileAction;
 	}
 
-	getFix() {
-		if (!this.edit) return;
+	getFix(diagnostic: Diagnostic, codeActionKind: CodeActionKind) {
+		const edit = this.fixCache?.get(utils.computeKey(diagnostic));
 
-		this.codeActions.push({
+		if (!edit) return;
+
+		return {
 			title: 'Fix with XO',
-			kind: CodeActionKind.QuickFix,
-			diagnostics: [this.diagnostic],
+			kind: codeActionKind,
+			diagnostics: [diagnostic],
 			edit: {
 				changes: {
 					[this.textDocument.uri]: [
 						TextEdit.replace(
 							Range.create(
-								this.textDocument.positionAt(this.edit?.edit?.range?.[0]),
-								this.textDocument.positionAt(this.edit?.edit?.range?.[1])
+								this.textDocument.positionAt(edit?.edit?.range?.[0]),
+								this.textDocument.positionAt(edit?.edit?.range?.[1])
 							),
-							this.edit.edit.text || ''
+							edit.edit.text || ''
 						)
 					]
 				}
 			}
-		});
+		};
 	}
 }
-
-export default CodeActionsBuilder;

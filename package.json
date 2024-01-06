@@ -37,13 +37,13 @@
 		"build": "npm run clean && npm run build:client -- --minify && npm run build:server -- --minify",
 		"build:client": "esbuild ./client/extension.ts --bundle --outfile=dist/client.js --external:vscode --format=cjs --platform=node",
 		"build:dev": "npm run clean && npm run build:client -- --sourcemap && npm run build:server -- --sourcemap",
-		"build:server": "esbuild ./server/server.ts --bundle --outfile=dist/server.js --external:vscode --format=cjs --platform=node",
+		"build:server": "esbuild ./server/index.ts --bundle --outfile=dist/server.js --external:vscode --format=cjs --platform=node",
 		"check": "tsc --project ./tsconfig.json",
 		"clean": "rimraf dist & rimraf server/dist & rimraf client/dist",
 		"lint": "xo && npm run lint:md",
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
 		"prepare": "husky install",
-		"test": "npm run lint && npm run build",
+		"test": "rimraf .tsimp && ava",
 		"vscode:prepublish": "npm run check && npm run build"
 	},
 	"contributes": {
@@ -183,6 +183,19 @@
 		"printWidth": 100,
 		"trailingComma": "none"
 	},
+	"ava": {
+		"environmentVariables": {
+			"NODE_NO_WARNINGS": "1",
+			"NODE_OPTIONS": "--loader tsimp/loader "
+		},
+		"extensions": [
+			"ts"
+		],
+		"files": [
+			"test/**/*"
+		],
+		"verbose": true
+	},
 	"dependencies": {
 		"auto-bind": "^4.0.0",
 		"endent": "^2.1.0",
@@ -195,24 +208,25 @@
 		"vscode-languageclient": "^9.0.1",
 		"vscode-languageserver": "^9.0.1",
 		"vscode-languageserver-textdocument": "^1.0.11",
-		"vscode-uri": "^3.0.7"
+		"vscode-uri": "^3.0.8"
 	},
 	"devDependencies": {
-		"@commitlint/cli": "17.7.2",
-		"@commitlint/config-conventional": "17.7.0",
-		"@types/lodash": "^4.14.199",
-		"@types/node": "^20.8.2",
-		"@types/vscode": "^1.82.0",
-		"@types/xo": "^0.39.6",
-		"esbuild": "^0.19.4",
-		"fixpack": "^4.0.0",
+		"@commitlint/cli": "18.4.4",
+		"@commitlint/config-conventional": "18.4.4",
+		"@types/lodash": "^4.14.202",
+		"@types/node": "^20.10.6",
+		"@types/vscode": "^1.85.0",
+		"@types/xo": "^0.39.8",
+		"ava": "^6.0.1",
+		"esbuild": "^0.19.11",
 		"husky": "^8.0.3",
-		"lint-staged": "14.0.1",
-		"prettier": "^3.0.3",
-		"prettier-plugin-packagejson": "^2.4.6",
+		"lint-staged": "15.2.0",
+		"prettier": "^3.1.1",
+		"prettier-plugin-packagejson": "^2.4.9",
 		"rimraf": "^5.0.5",
-		"typescript": "^5.2.2",
-		"webfont": "^11.2.26",
+		"tsimp": "^2.0.10",
+		"typescript": "^5.3.3",
+		"webfont": "^6.0.2",
 		"xo": "^0.56.0"
 	},
 	"engines": {

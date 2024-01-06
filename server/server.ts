@@ -8,6 +8,7 @@ import {
 	TextDocumentSyncKind,
 	ResponseError,
 	LSPErrorCodes,
+	CodeActionKind,
 	type TextEdit,
 	type Connection,
 	type InitializeResult,
@@ -26,8 +27,7 @@ import Queue from 'queue';
 import {type CodeActionParams} from 'vscode-languageclient';
 import isUndefined from 'lodash/isUndefined';
 import {type DebouncedFunc} from 'lodash';
-import * as utils from './utils.js';
-import CodeActionsBuilder from './code-actions-builder.js';
+import {QuickFixCodeActionsBuilder} from './code-actions-builder.js';
 import getDocumentConfig from './get-document-config.js';
 import getDocumentFormatting from './get-document-formatting.js';
 import getDocumentFolder from './get-document-folder';
@@ -201,7 +201,9 @@ class LintServer {
 				},
 				documentFormattingProvider: true,
 				documentRangeFormattingProvider: true,
-				codeActionProvider: true
+				codeActionProvider: {
+					codeActionKinds: [CodeActionKind.QuickFix, CodeActionKind.SourceFixAll]
+				}
 			}
 		};
 	}
@@ -322,7 +324,8 @@ class LintServer {
 		return new Promise((resolve, reject) => {
 			this.queue.push(async () => {
 				try {
-					if (!params.context?.diagnostics?.length) {
+					const {context} = params;
+					if (!context?.diagnostics?.length) {
 						resolve(undefined);
 						return;
 					}
@@ -337,23 +340,34 @@ class LintServer {
 						return;
 					}
 
-					const [diagnostic] = params.context.diagnostics;
-					const documentEdits = this.documentFixCache.get(params.textDocument.uri);
-					const textDocument = this.documents.get(params.textDocument.uri);
-					const edit = documentEdits?.get(utils.computeKey(diagnostic));
+					const document = this.documents.get(params.textDocument.uri);
+					if (!document) return;
 
-					if (isUndefined(textDocument)) {
-						resolve(undefined);
-						return;
+					const codeActions: CodeAction[] = [];
+					if (context.only?.includes(CodeActionKind.SourceFixAll)) {
+						const fixes = await this.getDocumentFormatting(params.textDocument.uri);
+						const codeAction: CodeAction = {
+							title: 'Fix all XO auto-fixable problems',
+							kind: CodeActionKind.SourceFixAll,
+							edit: {
+								changes: {
+									[document.uri]: fixes.edits
+								}
+							}
+						};
+						codeActions.push(codeAction);
 					}
 
-					const codeActionBuilder = new CodeActionsBuilder({
-						diagnostic,
-						edit,
-						textDocument
-					});
+					if (context.only?.includes(CodeActionKind.QuickFix)) {
+						const codeActionBuilder = new QuickFixCodeActionsBuilder(
+							document,
+							context.diagnostics,
+							this.documentFixCache.get(document.uri)
+						);
+						codeActions.push(...codeActionBuilder.build());
+					}
 
-					resolve(codeActionBuilder.build());
+					resolve(codeActions);
 				} catch (error: unknown) {
 					if (error instanceof Error) this.logError(error);
 					reject(error);
@@ -425,7 +439,5 @@ class LintServer {
 		}
 	}
 }
-
-new LintServer().listen();
 
 export default LintServer;
