@@ -67,7 +67,7 @@ class LintServer {
 	currentDebounce: number;
 	hasReceivedShutdownRequest?: boolean;
 
-	constructor() {
+	constructor({isTest}: {isTest?: boolean} = {}) {
 		/**
 		 * Bind all imported methods
 		 */
@@ -100,7 +100,9 @@ class LintServer {
 		/**
 		 * Connection
 		 */
-		this.connection = createConnection(ProposedFeatures.all);
+		this.connection = isTest
+			? createConnection(process.stdin, process.stdout)
+			: createConnection(ProposedFeatures.all);
 
 		/**
 		 * Documents
@@ -170,9 +172,9 @@ class LintServer {
 	}
 
 	listen() {
+		this.connection.listen();
 		// Listen for text document create, change
 		this.documents.listen(this.connection);
-		this.connection.listen();
 		this.log(`XO Language Server Starting in Node ${process.version}`);
 	}
 
