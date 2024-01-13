@@ -194,7 +194,8 @@
 			"ts"
 		],
 		"files": [
-			"test/**/*"
+			"test/**/*",
+			"!test/native/**/*"
 		],
 		"verbose": true
 	},
