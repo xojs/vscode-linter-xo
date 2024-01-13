@@ -44,6 +44,8 @@
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
 		"prepare": "husky install",
 		"test": "rimraf .tsimp && ava",
+		"test:native": "rimraf .tsimp && NODE_NO_WARNINGS=1 node --test --loader tsimp/loader test/native/*.ts",
+		"test:native:coverage": "rimraf .tsimp && NODE_NO_WARNINGS=1 c8 node --test --loader tsimp/loader test/native/*.ts",
 		"vscode:prepublish": "npm run check && npm run build"
 	},
 	"contributes": {
