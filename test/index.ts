@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import {test, describe} from 'node:test';
 import assert from 'node:assert';
-import Server from '../../server/server.js';
+import Server from '../server/server.js';
 
 describe('Server', () => {
 	test('Server is a function', (t) => {

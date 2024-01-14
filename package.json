@@ -43,9 +43,8 @@
 		"lint": "xo && npm run lint:md",
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
 		"prepare": "husky install",
-		"test": "rimraf .tsimp && ava",
-		"test:native": "rimraf .tsimp && NODE_NO_WARNINGS=1 node --test --loader tsimp/loader test/native/*.ts",
-		"test:native:coverage": "rimraf .tsimp && NODE_NO_WARNINGS=1 c8 node --test --loader tsimp/loader test/native/*.ts",
+		"test:": "rimraf .tsimp && NODE_NO_WARNINGS=1 node --import tsimp/import --test test/native/**/*.ts",
+		"test:coverage": "rimraf .tsimp && NODE_NO_WARNINGS=1 c8 node --import tsimp/import --test test/native/**/*.ts",
 		"vscode:prepublish": "npm run check && npm run build"
 	},
 	"contributes": {
@@ -185,20 +184,6 @@
 		"printWidth": 100,
 		"trailingComma": "none"
 	},
-	"ava": {
-		"environmentVariables": {
-			"NODE_NO_WARNINGS": "1",
-			"NODE_OPTIONS": "--loader tsimp/loader "
-		},
-		"extensions": [
-			"ts"
-		],
-		"files": [
-			"test/**/*",
-			"!test/native/**/*"
-		],
-		"verbose": true
-	},
 	"dependencies": {
 		"auto-bind": "^4.0.0",
 		"endent": "^2.1.0",
@@ -221,14 +206,12 @@
 		"@types/sinon": "^17.0.2",
 		"@types/vscode": "^1.85.0",
 		"@types/xo": "^0.39.8",
-		"ava": "^6.0.1",
 		"esbuild": "^0.19.11",
 		"husky": "^8.0.3",
 		"lint-staged": "15.2.0",
 		"prettier": "^3.1.1",
 		"prettier-plugin-packagejson": "^2.4.9",
 		"rimraf": "^5.0.5",
-		"sinon": "^17.0.1",
 		"tsimp": "^2.0.10",
 		"typescript": "^5.3.3",
 		"webfont": "^6.0.2",
