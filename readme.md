@@ -1,6 +1,6 @@
 # vscode-linter-xo
 
-![Github Actions Status](https://github.com/xojs/vscode-linter-xo/blob/master/.github/workflows/node.js.yml/badge.svg)
+![Github Actions Status](https://github.com/xojs/vscode-linter-xo/actions/workflows/node.js.yml/badge.svg)
 
 > Linter for [XO](https://github.com/sindresorhus/xo)
 
