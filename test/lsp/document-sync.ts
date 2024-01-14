@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-floating-promises */
 import {test, describe, mock, type Mock} from 'node:test';
 import assert from 'node:assert';
 import {TextDocument} from 'vscode-languageserver-textdocument';

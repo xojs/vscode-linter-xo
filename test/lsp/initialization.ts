@@ -1,16 +1,15 @@
-/* eslint-disable @typescript-eslint/no-floating-promises */
 import {describe, test} from 'node:test';
 import assert from 'node:assert';
 import Server from '../../server/server.js';
 
-const server = new Server({isTest: true});
+describe('Server.handleInitialize', async () => {
+	const server = new Server({isTest: true});
 
-describe('Server.handleInitialize', () => {
-	test('Server.handleInitialize is a function', (t) => {
+	await test('Server.handleInitialize is a function', (t) => {
 		assert.equal(typeof server.handleInitialize, 'function');
 	});
 
-	test('InitializeResult matches snapshot', async (t) => {
+	await test('InitializeResult matches snapshot', async (t) => {
 		const result = await server.handleInitialize();
 		assert.deepEqual(result, {
 			capabilities: {

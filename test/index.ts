@@ -1,15 +1,7 @@
-/* eslint-disable @typescript-eslint/no-floating-promises */
-import {test, describe} from 'node:test';
-import assert from 'node:assert';
-import Server from '../server/server.js';
+/* eslint-disable import/no-unassigned-import */
+// since globs are not fully supported in node v18 and v20 we import the files manually here
 
-describe('Server', () => {
-	test('Server is a function', (t) => {
-		assert.strictEqual(typeof Server, 'function');
-	});
-
-	test('Server can instantiate', (t) => {
-		const server = new Server({isTest: true});
-		assert.strictEqual(typeof server, 'object');
-	});
-});
+// TODO: remove this file once node v21 is LTS
+import './server.js';
+import './lsp/document-sync.js';
+import './lsp/initialization.js';
