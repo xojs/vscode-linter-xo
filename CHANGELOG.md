@@ -1,3 +1,8 @@
+### v3.18.0
+
+- Refactors code actions handlers and support source.fixAll code action
+- Adds tests for the server. Finally 🚀.
+
 ### v3.17.1
 
 - fix bug for status bar and server starting for non-xo js/ts files.

@@ -50,6 +50,20 @@ In either your workspace or user settings add the following settings. Linter xo 
 }
 ```
 
+### Code Actions on Save
+
+As of v3.18, vscode-linter-xo will respect the 'source.fixAll' code action request and auto format code on save. If you choose to auto format by this method, it is best to turn "editor.formatOnSave" off.
+
+```json
+{
+	"editor.formatOnSave": false,
+	"xo.format.enable": true,
+	"editor.codeActionsOnSave": {
+		"source.fixAll": true
+	}
+}
+```
+
 ## Commands
 
 To use: pull up the command pallete (usually `F1` or `Ctrl + Shift + P`) and start typing `xo`.

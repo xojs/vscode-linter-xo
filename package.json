@@ -203,26 +203,26 @@
 		"@commitlint/cli": "18.4.4",
 		"@commitlint/config-conventional": "18.4.4",
 		"@types/lodash": "^4.14.202",
-		"@types/node": "^20.10.6",
-		"@types/sinon": "^17.0.2",
+		"@types/node": "^20.11.2",
 		"@types/vscode": "^1.85.0",
 		"@types/xo": "^0.39.8",
 		"c8": "^9.1.0",
 		"esbuild": "^0.19.11",
 		"husky": "^8.0.3",
 		"lint-staged": "15.2.0",
-		"prettier": "^3.1.1",
+		"prettier": "^3.2.2",
 		"prettier-plugin-packagejson": "^2.4.9",
 		"rimraf": "^5.0.5",
 		"tap-mocha-reporter": "^5.0.4",
 		"tsx": "^4.7.0",
 		"typescript": "^5.3.3",
+		"vsce": "^2.15.0",
 		"webfont": "^6.0.2",
 		"xo": "^0.56.0"
 	},
 	"engines": {
 		"node": ">=16",
-		"vscode": "^1.82.0"
+		"vscode": "^1.85.0"
 	},
 	"icon": "icon.png"
 }
