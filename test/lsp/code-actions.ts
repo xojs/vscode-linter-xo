@@ -33,7 +33,7 @@ describe('Server code actions', async () => {
 		server = new Server({isTest: true});
 		server.documents = documents;
 		mock.method(server, 'log', noop);
-		mock.method(server, 'getDocumentFormatting', noop);
+		mock.method(server, 'getDocumentFormatting');
 	});
 
 	test.afterEach(async () => {
