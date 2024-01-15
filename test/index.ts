@@ -5,3 +5,4 @@
 import './server.js';
 import './lsp/document-sync.js';
 import './lsp/initialization.js';
+import './lsp/code-actions.js';

@@ -33,7 +33,8 @@ describe('Server documents syncing', () => {
 		mock.method(server.connection, 'sendDiagnostics', noop);
 	});
 
-	test.afterEach(() => {
+	test.afterEach(async () => {
+		await server.handleShutdown();
 		// @ts-expect-error this helps cleanup and keep types clean
 		server = undefined;
 		mock.restoreAll();

@@ -43,8 +43,9 @@
 		"lint": "xo && npm run lint:md",
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
 		"prepare": "husky install",
-		"test": "NODE_NO_WARNINGS=1 node --require tsx/cjs --test test/index.ts",
+		"test": "node --trace-warnings --require tsx/cjs --test test/index.ts ",
 		"test:coverage": "NODE_NO_WARNINGS=1 c8 node --require tsx/cjs --test test/index.ts",
+		"test:watch": "node --require tsx/cjs --watch --test test/index.ts",
 		"vscode:prepublish": "npm run check && npm run build"
 	},
 	"contributes": {
@@ -206,6 +207,7 @@
 		"@types/sinon": "^17.0.2",
 		"@types/vscode": "^1.85.0",
 		"@types/xo": "^0.39.8",
+		"c8": "^9.1.0",
 		"esbuild": "^0.19.11",
 		"husky": "^8.0.3",
 		"lint-staged": "15.2.0",

@@ -321,9 +321,9 @@ class LintServer {
 	 */
 	async handleCodeActionRequest(
 		params: CodeActionParams,
-		token: CancellationToken
+		token?: CancellationToken
 	): Promise<CodeAction[] | undefined> {
-		return new Promise((resolve, reject) => {
+		return new Promise<CodeAction[] | undefined>((resolve, reject) => {
 			this.queue.push(async () => {
 				try {
 					const {context} = params;
@@ -337,7 +337,7 @@ class LintServer {
 						return;
 					}
 
-					if (token.isCancellationRequested) {
+					if (token?.isCancellationRequested) {
 						reject(new ResponseError(LSPErrorCodes.RequestCancelled, 'Request got cancelled'));
 						return;
 					}
@@ -419,7 +419,7 @@ class LintServer {
 			}
 		}
 
-		await this.connection.sendDiagnostics({
+		await this.connection?.sendDiagnostics({
 			uri: event.document.uri.toString(),
 			diagnostics: []
 		});
@@ -429,6 +429,7 @@ class LintServer {
 		this.log('XO Server recieved shut down request');
 		this.hasReceivedShutdownRequest = true;
 		this.queue.end();
+		this.connection.dispose();
 	}
 
 	async exit() {
