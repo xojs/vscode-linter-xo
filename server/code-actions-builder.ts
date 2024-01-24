@@ -78,7 +78,7 @@ export class QuickFixCodeActionsBuilder {
 		}
 
 		const ignoreAction: CodeAction = {
-			title: `Add Ignore Rule ${diagnostic.code}: Same Line`,
+			title: `Ignore Rule ${diagnostic.code}: Same Line`,
 			kind: CodeActionKind.QuickFix,
 			diagnostics: [diagnostic],
 			edit: {
@@ -138,7 +138,7 @@ export class QuickFixCodeActionsBuilder {
 		}
 
 		const ignoreAction: CodeAction = {
-			title: `Add Ignore Rule ${diagnostic.code}: Next Line`,
+			title: `Ignore Rule ${diagnostic.code}: Line Above`,
 			kind: CodeActionKind.QuickFix,
 			diagnostics: [diagnostic],
 			edit: {
@@ -159,7 +159,7 @@ export class QuickFixCodeActionsBuilder {
 		const line = shebang === '#!' ? 1 : 0;
 
 		const ignoreFileAction = {
-			title: `Add Ignore Rule ${diagnostic.code}: Entire File`,
+			title: `Ignore Rule ${diagnostic.code}: Entire File`,
 			kind: CodeActionKind.QuickFix,
 			diagnostics: [diagnostic],
 			edit: {

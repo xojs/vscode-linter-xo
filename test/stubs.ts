@@ -22,7 +22,7 @@ export const getCodeActionParams = (): CodeActionParams => ({
 
 export const getIgnoreSameLineCodeAction = () => ({
 	...CodeAction.create(
-		'Add Ignore Rule test: Same Line',
+		'Ignore Rule test: Same Line',
 		{
 			changes: {
 				uri: [
@@ -43,7 +43,7 @@ export const getIgnoreSameLineCodeAction = () => ({
 
 export const getIgnoreNextLineCodeAction = () => ({
 	...CodeAction.create(
-		'Add Ignore Rule test: Next Line',
+		'Ignore Rule test: Line Above',
 		{
 			changes: {
 				uri: [
@@ -61,7 +61,7 @@ export const getIgnoreNextLineCodeAction = () => ({
 
 export const getIgnoreFileCodeAction = () => ({
 	...CodeAction.create(
-		'Add Ignore Rule test: Entire File',
+		'Ignore Rule test: Entire File',
 		{
 			changes: {
 				uri: [
