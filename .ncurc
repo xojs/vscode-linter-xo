@@ -1,0 +1,7 @@
+{
+	"reject": [
+		"auto-bind",
+		"load-json-file",
+		"queue"
+	]
+}
