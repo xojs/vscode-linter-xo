@@ -43,7 +43,7 @@
 		"lint": "xo && npm run lint:md",
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
 		"prepare": "husky install",
-		"test": "NODE_NO_WARNINGS=1 node --trace-warnings --require tsx/cjs --test test/index.ts | tap-mocha-reporter spec",
+		"test": "NODE_NO_WARNINGS=1 node --require tsx/cjs --test test/index.ts | tap-mocha-reporter spec",
 		"test:coverage": "NODE_NO_WARNINGS=1 c8 node --require tsx/cjs --test test/index.ts",
 		"test:watch": "NODE_NO_WARNINGS=1 node --require tsx/cjs --watch --test test/index.ts",
 		"vscode:prepublish": "npm run check && npm run build"

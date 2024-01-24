@@ -1,15 +1,23 @@
 import {test, describe, mock, type Mock} from 'node:test';
+import {setTimeout} from 'node:timers/promises';
 import assert from 'node:assert';
-import {setTimeout} from 'node:timers';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import {
 	Position,
 	Diagnostic,
+	CodeActionKind,
 	type CodeActionParams,
 	type Range,
 	type TextDocumentIdentifier
 } from 'vscode-languageserver';
 import Server from '../../server/server.js';
+import {
+	getCodeActionParams,
+	getIgnoreSameLineCodeAction,
+	getIgnoreNextLineCodeAction,
+	getIgnoreFileCodeAction,
+	getTextDocument
+} from '../stubs.js';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
@@ -47,7 +55,7 @@ describe('Server code actions', async () => {
 		assert.equal(typeof server.handleCodeActionRequest, 'function');
 	});
 
-	test('Server.handleCodeActionRequest returns an empty array if no code actions are available', async (t) => {
+	await test('Server.handleCodeActionRequest returns an empty array if no code actions are available', async (t) => {
 		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
 		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
 		const mockCodeActionParams: CodeActionParams = {
@@ -59,7 +67,7 @@ describe('Server code actions', async () => {
 		assert.deepEqual(codeActions, []);
 	});
 
-	test('codeActionKind source.fixAll calls getDocumentFormatting for the document', async (t) => {
+	await test('codeActionKind source.fixAll calls getDocumentFormatting for the document', async (t) => {
 		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
 		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
 		const mockCodeActionParams: CodeActionParams = {
@@ -77,5 +85,60 @@ describe('Server code actions', async () => {
 		]);
 		assert.equal(server.getDocumentFormatting.mock.callCount(), 1);
 		assert.deepEqual(server.getDocumentFormatting.mock.calls[0].arguments, ['uri']);
+	});
+
+	await test('codeActionKind only source.quickfix does not call getDocumentFormatting for the document', async (t) => {
+		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
+		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
+		const mockCodeActionParams: CodeActionParams = {
+			textDocument,
+			range,
+			context: {
+				diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')],
+				only: ['source.quickfix']
+			}
+		};
+		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
+
+		assert.deepEqual(codeActions, []);
+		assert.equal(server.getDocumentFormatting.mock.callCount(), 0);
+	});
+
+	await test('codeAction without "only" does not call getDocumentFormatting for the document', async (t) => {
+		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
+		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
+		const mockCodeActionParams: CodeActionParams = {
+			textDocument,
+			range,
+			context: {
+				diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')]
+			}
+		};
+		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
+
+		assert.deepEqual(codeActions, []);
+		assert.equal(server.getDocumentFormatting.mock.callCount(), 0);
+	});
+
+	await test('codeAction without "only" produces quickfix code actions', async (t) => {
+		const codeActions = await server.handleCodeActionRequest(getCodeActionParams());
+
+		assert.deepStrictEqual(codeActions, [
+			getIgnoreSameLineCodeAction(),
+			getIgnoreNextLineCodeAction(),
+			getIgnoreFileCodeAction()
+		]);
+	});
+
+	await test('codeAction with only quickfix produces quickfix code actions', async (t) => {
+		const params = getCodeActionParams();
+		params.context.only = [CodeActionKind.QuickFix];
+		const codeActions = await server.handleCodeActionRequest(params);
+
+		assert.deepStrictEqual(codeActions, [
+			getIgnoreSameLineCodeAction(),
+			getIgnoreNextLineCodeAction(),
+			getIgnoreFileCodeAction()
+		]);
 	});
 });

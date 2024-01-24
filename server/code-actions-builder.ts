@@ -1,5 +1,6 @@
 import {
 	TextEdit,
+	uinteger,
 	Range,
 	Position,
 	CodeActionKind,
@@ -22,23 +23,25 @@ export class QuickFixCodeActionsBuilder {
 	}
 
 	build(): CodeAction[] {
-		return this.diagnostics.flatMap<CodeAction>((diagnostic) => {
-			const diagnosticCodeActions: CodeAction[] = [];
+		return this.diagnostics
+			.filter((diagnostic) => diagnostic.source === 'XO')
+			.flatMap<CodeAction>((diagnostic) => {
+				const diagnosticCodeActions: CodeAction[] = [];
 
-			const disableSameLineCodeAction = this.getDisableSameLine(diagnostic);
-			if (disableSameLineCodeAction) diagnosticCodeActions.push(disableSameLineCodeAction);
+				const disableSameLineCodeAction = this.getDisableSameLine(diagnostic);
+				if (disableSameLineCodeAction) diagnosticCodeActions.push(disableSameLineCodeAction);
 
-			const disableNextLineCodeAction = this.getDisableNextLine(diagnostic);
-			if (disableNextLineCodeAction) diagnosticCodeActions.push(disableNextLineCodeAction);
+				const disableNextLineCodeAction = this.getDisableNextLine(diagnostic);
+				if (disableNextLineCodeAction) diagnosticCodeActions.push(disableNextLineCodeAction);
 
-			const disableFileCodeAction = this.getDisableEntireFile(diagnostic);
-			if (disableFileCodeAction) diagnosticCodeActions.push(disableFileCodeAction);
+				const disableFileCodeAction = this.getDisableEntireFile(diagnostic);
+				if (disableFileCodeAction) diagnosticCodeActions.push(disableFileCodeAction);
 
-			const fix = this.getFix(diagnostic, CodeActionKind.QuickFix);
-			if (fix) diagnosticCodeActions.push(fix);
+				const fix = this.getFix(diagnostic, CodeActionKind.QuickFix);
+				if (fix) diagnosticCodeActions.push(fix);
 
-			return diagnosticCodeActions;
-		});
+				return diagnosticCodeActions;
+			});
 	}
 
 	getDisableSameLine(diagnostic: Diagnostic) {
@@ -46,12 +49,12 @@ export class QuickFixCodeActionsBuilder {
 
 		const startPosition: Position = {
 			line: diagnostic.range.start.line,
-			character: Number.MAX_SAFE_INTEGER
+			character: uinteger.MAX_VALUE
 		};
 
 		const lineText = this.textDocument.getText({
 			start: Position.create(diagnostic.range.start.line, 0),
-			end: Position.create(diagnostic.range.start.line, Number.MAX_SAFE_INTEGER)
+			end: Position.create(diagnostic.range.start.line, uinteger.MAX_VALUE)
 		});
 
 		const matchedForIgnoreComment = lineText && /\/\/ eslint-disable-line/.exec(lineText);
@@ -75,7 +78,7 @@ export class QuickFixCodeActionsBuilder {
 		}
 
 		const ignoreAction: CodeAction = {
-			title: `Add Ignore Rule Same Line ${diagnostic.code}`,
+			title: `Add Ignore Rule ${diagnostic.code}: Same Line`,
 			kind: CodeActionKind.QuickFix,
 			diagnostics: [diagnostic],
 			edit: {
@@ -98,12 +101,12 @@ export class QuickFixCodeActionsBuilder {
 
 		const lineText = this.textDocument.getText({
 			start: Position.create(diagnostic.range.start.line, 0),
-			end: Position.create(diagnostic.range.start.line, Number.MAX_SAFE_INTEGER)
+			end: Position.create(diagnostic.range.start.line, uinteger.MAX_VALUE)
 		});
 
 		const lineAboveText = this.textDocument.getText({
 			start: Position.create(diagnostic.range.start.line - 1, 0),
-			end: Position.create(diagnostic.range.start.line - 1, Number.MAX_SAFE_INTEGER)
+			end: Position.create(diagnostic.range.start.line - 1, uinteger.MAX_VALUE)
 		});
 
 		const matchedForIgnoreComment =
@@ -111,7 +114,7 @@ export class QuickFixCodeActionsBuilder {
 
 		if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
 			const textEdit = TextEdit.insert(
-				Position.create(diagnostic.range.start.line - 1, Number.MAX_SAFE_INTEGER),
+				Position.create(diagnostic.range.start.line - 1, uinteger.MAX_VALUE),
 				`, ${diagnostic.code}`
 			);
 
@@ -135,7 +138,7 @@ export class QuickFixCodeActionsBuilder {
 		}
 
 		const ignoreAction: CodeAction = {
-			title: `Add Ignore Rule Line Above ${diagnostic.code}`,
+			title: `Add Ignore Rule ${diagnostic.code}: Next Line`,
 			kind: CodeActionKind.QuickFix,
 			diagnostics: [diagnostic],
 			edit: {
@@ -156,7 +159,7 @@ export class QuickFixCodeActionsBuilder {
 		const line = shebang === '#!' ? 1 : 0;
 
 		const ignoreFileAction = {
-			title: `Add Ignore Rule ${diagnostic.code} for entire file`,
+			title: `Add Ignore Rule ${diagnostic.code}: Entire File`,
 			kind: CodeActionKind.QuickFix,
 			diagnostics: [diagnostic],
 			edit: {
@@ -177,7 +180,7 @@ export class QuickFixCodeActionsBuilder {
 		if (!edit) return;
 
 		return {
-			title: 'Fix with XO',
+			title: `Fix ${diagnostic.code} with XO`,
 			kind: codeActionKind,
 			diagnostics: [diagnostic],
 			edit: {

@@ -360,7 +360,7 @@ class LintServer {
 						codeActions.push(codeAction);
 					}
 
-					if (context.only?.includes(CodeActionKind.QuickFix)) {
+					if (!context.only || context.only?.includes(CodeActionKind.QuickFix)) {
 						const codeActionBuilder = new QuickFixCodeActionsBuilder(
 							document,
 							context.diagnostics,
