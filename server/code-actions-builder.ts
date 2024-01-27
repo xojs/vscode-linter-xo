@@ -71,7 +71,7 @@ export class QuickFixCodeActionsBuilder {
 					start: startPosition,
 					end: startPosition
 				},
-				newText: `  // eslint-disable-line ${diagnostic.code}`
+				newText: ` // eslint-disable-line ${diagnostic.code}`
 			};
 
 			changes = [newedit];
