@@ -31,7 +31,7 @@ export const getIgnoreSameLineCodeAction = () => ({
 							Position.create(0, uinteger.MAX_VALUE),
 							Position.create(0, uinteger.MAX_VALUE)
 						),
-						newText: '  // eslint-disable-line test'
+						newText: ' // eslint-disable-line test'
 					}
 				]
 			}

@@ -43,7 +43,7 @@
 		"lint": "xo && npm run lint:md",
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
 		"prepare": "husky install",
-		"test": "NODE_NO_WARNINGS=1 node --require tsx/cjs --test test/index.ts | tap-mocha-reporter spec",
+		"test": "NODE_NO_WARNINGS=1 node --require tsx/cjs --test test/index.ts",
 		"test:coverage": "NODE_NO_WARNINGS=1 c8 node --require tsx/cjs --test test/index.ts",
 		"test:watch": "NODE_NO_WARNINGS=1 node --require tsx/cjs --watch --test test/index.ts",
 		"vscode:prepublish": "npm run check && npm run build"
@@ -213,7 +213,6 @@
 		"prettier": "^3.2.4",
 		"prettier-plugin-packagejson": "^2.4.9",
 		"rimraf": "^5.0.5",
-		"tap-mocha-reporter": "^5.0.4",
 		"tsx": "^4.7.0",
 		"typescript": "^5.3.3",
 		"vsce": "^2.15.0",

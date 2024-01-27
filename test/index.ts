@@ -6,3 +6,4 @@ import './server.test.js';
 import './lsp/document-sync.test.js';
 import './lsp/initialization.test.js';
 import './lsp/code-actions.test.js';
+import './code-actions-builder.test.js';
