@@ -9,6 +9,7 @@ import {
 	type CodeActionParams,
 	type Range,
 	type TextDocumentIdentifier
+	// type Connection
 } from 'vscode-languageserver';
 import Server from '../../server/server.js';
 import {
@@ -27,6 +28,7 @@ describe('Server code actions', async () => {
 		log: Mock<Server['log']>;
 		getDocumentFormatting: Mock<Server['getDocumentFormatting']>;
 		documents: Map<string, TextDocument> & {all?: typeof Map.prototype.values};
+		getDocumentConfig: Mock<Server['getDocumentConfig']>;
 	};
 
 	test.beforeEach((t) => {
@@ -42,6 +44,7 @@ describe('Server code actions', async () => {
 		server.documents = documents;
 		mock.method(server, 'log', noop);
 		mock.method(server, 'getDocumentFormatting');
+		mock.method(server, 'getDocumentConfig', async () => ({enable: true}));
 	});
 
 	test.afterEach(async () => {
@@ -64,6 +67,7 @@ describe('Server code actions', async () => {
 			context: {diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')]}
 		};
 		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
+		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.deepEqual(codeActions, []);
 	});
 
@@ -79,10 +83,11 @@ describe('Server code actions', async () => {
 			}
 		};
 		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
-
+		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.deepEqual(codeActions, [
 			{title: 'Fix all XO auto-fixable problems', kind: 'source.fixAll', edit: {changes: {uri: []}}}
 		]);
+		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.equal(server.getDocumentFormatting.mock.callCount(), 1);
 		assert.deepEqual(server.getDocumentFormatting.mock.calls[0].arguments, ['uri']);
 	});
@@ -99,7 +104,7 @@ describe('Server code actions', async () => {
 			}
 		};
 		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
-
+		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.deepEqual(codeActions, []);
 		assert.equal(server.getDocumentFormatting.mock.callCount(), 0);
 	});
@@ -115,7 +120,7 @@ describe('Server code actions', async () => {
 			}
 		};
 		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
-
+		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.deepEqual(codeActions, []);
 		assert.equal(server.getDocumentFormatting.mock.callCount(), 0);
 	});
@@ -140,5 +145,14 @@ describe('Server code actions', async () => {
 			getIgnoreNextLineCodeAction(),
 			getIgnoreFileCodeAction()
 		]);
+	});
+
+	await test('codeAction with only quickfix produces quickfix code actions', async (t) => {
+		const params = getCodeActionParams();
+		params.context.only = [CodeActionKind.QuickFix];
+		mock.method(server, 'getDocumentConfig', async () => ({enable: false}));
+		const codeActions = await server.handleCodeActionRequest(params);
+
+		assert.deepStrictEqual(codeActions, undefined);
 	});
 });

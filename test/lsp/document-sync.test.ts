@@ -8,10 +8,14 @@ import Server from '../../server/server.js';
 const noop = () => {};
 
 describe('Server documents syncing', () => {
-	let server: Omit<Server, 'lintDocument' | 'documents' | 'connection' | 'log'> & {
+	let server: Omit<
+		Server,
+		'lintDocument' | 'documents' | 'connection' | 'log' | 'getDocumentConfig'
+	> & {
 		lintDocument: Mock<Server['lintDocument']>;
 		log: Mock<Server['log']>;
 		documents: Map<string, TextDocument> & {all?: typeof Map.prototype.values};
+		getDocumentConfig: Mock<Server['getDocumentConfig']>;
 		connection: Omit<Connection, 'sendDiagnostics'> & {
 			sendDiagnostics: Mock<Connection['sendDiagnostics']>;
 		};
@@ -30,6 +34,7 @@ describe('Server documents syncing', () => {
 		server.documents = documents;
 		mock.method(server, 'log', noop);
 		mock.method(server, 'lintDocument', noop);
+		mock.method(server, 'getDocumentConfig', async () => ({enable: true}));
 		mock.method(server.connection, 'sendDiagnostics', noop);
 	});
 
@@ -53,6 +58,7 @@ describe('Server documents syncing', () => {
 				resolve(undefined);
 			});
 		});
+		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.equal(server.lintDocument.mock.callCount(), 1);
 	});
 
@@ -91,5 +97,19 @@ describe('Server documents syncing', () => {
 			uri: 'uri',
 			diagnostics: []
 		});
+	});
+
+	test('Server.handleDocumentOnDidChangeContent does not send diagnostics if xo is disabled', async (t) => {
+		mock.method(server, 'getDocumentConfig', async () => ({enable: false}));
+		server.handleDocumentsOnDidChangeContent({
+			document: TextDocument.create('uri', 'javascript', 1, 'content')
+		});
+		await new Promise((resolve) => {
+			server.queue.once('end', () => {
+				resolve(undefined);
+			});
+		});
+		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
+		assert.equal(server.connection.sendDiagnostics.mock.callCount(), 0);
 	});
 });

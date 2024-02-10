@@ -17,7 +17,9 @@ export async function lintDocument(this: LintServer, document: TextDocument): Pr
 
 		if (document.version !== currentDocument.version) return;
 
-		const {overrideSeverity} = await this.getDocumentConfig(document);
+		const {overrideSeverity, enable} = await this.getDocumentConfig(document);
+
+		if (!enable) return;
 
 		const {results, rulesMeta} = await this.getLintResults(document);
 

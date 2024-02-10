@@ -11,22 +11,21 @@ async function getDocumentConfig(
 	this: LintServer,
 	document: TextDocumentIdentifier
 ): Promise<XoConfig> {
-	const folderUri = path.dirname(document.uri);
-
-	if (this.configurationCache.has(folderUri)) {
-		const config: XoConfig = this.configurationCache.get(folderUri)!;
+	if (this.configurationCache.has(document.uri)) {
+		const config: XoConfig = this.configurationCache.get(document.uri)!;
 
 		if (config !== undefined) return config;
 
 		return {};
 	}
 
-	const config: XoConfig = (await this.connection.workspace.getConfiguration({
-		scopeUri: folderUri,
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+	const config: XoConfig = await this.connection.workspace.getConfiguration({
+		scopeUri: document.uri,
 		section: 'xo'
-	})) as XoConfig;
+	});
 
-	this.configurationCache.set(folderUri, config);
+	this.configurationCache.set(document.uri, config);
 
 	return config;
 }

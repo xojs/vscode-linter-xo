@@ -57,7 +57,6 @@ class LintServer {
 	documentFixCache: Map<string, Map<string, XoFix>>;
 	hasShownResolutionError: boolean;
 	hasReceivedShutdownRequest?: boolean;
-	debounceTime = 0;
 
 	constructor({isTest}: {isTest?: boolean} = {}) {
 		/**
@@ -157,7 +156,7 @@ class LintServer {
 		this.xoCache = new Map();
 
 		/**
-		 * A mapping of folderPaths to configuration options
+		 * A mapping of document uri strings to configuration options
 		 */
 		this.configurationCache = new Map();
 
@@ -217,13 +216,6 @@ class LintServer {
 	 * Handle connection.onDidChangeConfiguration
 	 */
 	async handleDidChangeConfiguration(params: ChangeConfigurationParams) {
-		if (
-			Number.isInteger(Number(params?.settings?.xo?.debounce)) &&
-			Number(params?.settings?.xo?.debounce) !== this.debounceTime
-		) {
-			this.debounceTime = params.settings.xo.debounce ?? 0;
-		}
-
 		// recache each folder config
 		this.configurationCache.clear();
 		return this.lintDocuments(this.documents.all());
@@ -286,7 +278,7 @@ class LintServer {
 
 					const config = await this.getDocumentConfig(params.textDocument);
 
-					if (config === undefined || !config?.format?.enable) {
+					if (config === undefined || !config?.format?.enable || !config.enable) {
 						resolve([]);
 						return;
 					}
@@ -345,7 +337,18 @@ class LintServer {
 					}
 
 					const document = this.documents.get(params.textDocument.uri);
-					if (!document) return;
+
+					if (!document) {
+						resolve(undefined);
+						return;
+					}
+
+					const config = await this.getDocumentConfig(document);
+
+					if (config === undefined || !config.enable) {
+						resolve(undefined);
+						return;
+					}
 
 					const codeActions: CodeAction[] = [];
 					if (context.only?.includes(CodeActionKind.SourceFixAll)) {
@@ -397,8 +400,9 @@ class LintServer {
 					return;
 				}
 
+				const config = await this.getDocumentConfig(event.document);
 				const {default: debounce} = await import('p-debounce');
-				await debounce(this.lintDocument, this.debounceTime)(event.document);
+				await debounce(this.lintDocument, config.debounce ?? 0)(event.document);
 			} catch (error: unknown) {
 				if (error instanceof Error) this.logError(error);
 			}

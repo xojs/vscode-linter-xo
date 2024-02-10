@@ -87,7 +87,9 @@ export async function activate(context: ExtensionContext) {
 
 					logger.debug('[client] onDidChangeActiveTextEditor', textDocument?.uri.fsPath);
 
-					const isEnabled = workspace.getConfiguration('xo').get<boolean>('enable', true);
+					const isEnabled = workspace
+						.getConfiguration('xo', textDocument)
+						.get<boolean>('enable', true);
 
 					if (!isEnabled) {
 						logger.debug('[client] onDidChangeActiveTextEditor > XO is not enabled');
