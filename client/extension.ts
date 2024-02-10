@@ -7,7 +7,7 @@ import {updateStatusBar} from './status-bar';
 import {xoRootCache} from './cache';
 import {registerCommands} from './register-commands';
 
-let client: LanguageClient;
+let languageClient: LanguageClient;
 
 const queue = new Queue({autostart: true, concurrency: 1});
 
@@ -16,20 +16,19 @@ export async function activate(context: ExtensionContext) {
 	xoRootCache.logger = logger;
 
 	logger.info(`[client] Activating XO extension v${pkg.version}`);
-	logger.clear();
 
-	const shouldStartServer = await xoRootCache.get(window.activeTextEditor?.document.uri.fsPath);
 	const xoConfig = workspace.getConfiguration('xo');
 	const runtime = xoConfig.get<string>('runtime');
-	let languages = xoConfig.get<string[]>('validate')!;
+	const languages = xoConfig.get<string[]>('validate');
+	const hasValidXoRoot = await xoRootCache.get(window.activeTextEditor?.document.uri.fsPath);
 
-	client = await createLanguageClient({context, outputChannel: logger, runtime, languages});
+	languageClient = await createLanguageClient({context, outputChannel: logger, runtime, languages});
 	/**
 	 * Update status bar on activation, and dispose of the status bar when the extension is deactivated
 	 */
 	const statusBar = await updateStatusBar(window.activeTextEditor?.document);
 
-	registerCommands({context, client, logger});
+	registerCommands({context, client: languageClient, logger});
 
 	context.subscriptions.push(
 		/**
@@ -38,6 +37,8 @@ export async function activate(context: ExtensionContext) {
 		workspace.onDidChangeConfiguration((configChange: ConfigurationChangeEvent) => {
 			queue.push(async () => {
 				try {
+					logger.debug('[client] Configuration change detected');
+
 					const isValidateChanged = configChange.affectsConfiguration('xo.validate');
 
 					if (isValidateChanged) {
@@ -48,40 +49,29 @@ export async function activate(context: ExtensionContext) {
 						statusBar.text = '$(gear~spin)';
 						statusBar.show();
 
-						languages = workspace.getConfiguration('xo').get<string[]>('validate', languages);
+						const languages = workspace.getConfiguration('xo').get<string[]>('validate');
 
-						client.clientOptions.documentSelector = [];
+						languageClient.clientOptions.documentSelector = [];
 						if (languages && languages.length > 0)
 							for (const language of languages) {
-								(client.clientOptions.documentSelector as DocumentSelector).push(
+								(languageClient.clientOptions.documentSelector as DocumentSelector).push(
 									{language, scheme: 'file'},
 									{language, scheme: 'untitled'}
 								);
 							}
 
-						await client.restart();
+						await languageClient.restart();
 
 						statusBar.text = '$(xo-logo)';
 
 						statusBar.hide();
 						logger.info('[client] Restarted client with new xo.validate options.');
 					}
-
-					const isEnabledChanged = configChange.affectsConfiguration('xo.enable');
-
-					if (isEnabledChanged) {
-						const enabled = workspace.getConfiguration('xo').get<boolean>('enable', true);
-
-						if (client.needsStart() && enabled) {
-							await client.start();
-						}
-
-						if (client.needsStop() && !enabled) {
-							await client.dispose();
-						}
-					}
 				} catch (error) {
-					logger.error(`[client] Restarting client failed`, error);
+					if (error instanceof Error) {
+						logger.error(`[client] There was a problem handling the configuration change.`);
+						logger.error(error);
+					}
 				}
 			});
 		}),
@@ -94,20 +84,33 @@ export async function activate(context: ExtensionContext) {
 			queue.push(async () => {
 				try {
 					const {document: textDocument} = textEditor ?? {};
-					logger.debug('[client] Active text editor changed', textDocument?.uri.fsPath);
+
+					logger.debug('[client] onDidChangeActiveTextEditor', textDocument?.uri.fsPath);
+
+					const isEnabled = workspace.getConfiguration('xo').get<boolean>('enable', true);
+
+					if (!isEnabled) {
+						logger.debug('[client] onDidChangeActiveTextEditor > XO is not enabled');
+						return;
+					}
+
 					await updateStatusBar(textDocument);
-					// if the client was not started
+
 					if (
+						isEnabled &&
 						textDocument &&
-						client.needsStart() &&
+						languageClient.needsStart() &&
 						(await xoRootCache.get(textDocument.uri.fsPath))
 					) {
-						logger.debug('[client] Starting LSP client');
-						await client.start();
+						logger.debug('[client] Starting Language Client');
+						await languageClient.start();
 					}
 				} catch (error) {
-					statusBar.text = '$(xo-logo)';
-					logger.error(`[client] There was a problem updating the statusbar`, error);
+					if (error instanceof Error) {
+						statusBar.text = '$(xo-logo)';
+						logger.error(`[client] There was a problem handling the active text editor change.`);
+						logger.error(error);
+					}
 				}
 			});
 		}),
@@ -120,22 +123,28 @@ export async function activate(context: ExtensionContext) {
 				xoRootCache.delete(textDocument.uri.fsPath);
 			});
 		}),
+		/**
+		 * Dispose of the status bar when the extension is deactivated
+		 */
 		statusBar
 	);
 
-	if (shouldStartServer) {
-		logger.info('[client] XO was present in the workspace, server is now starting.');
-		await client.start();
-		context.subscriptions.push(client);
-	} else {
-		logger.info('[client] XO was not present in the workspace, server will not be started.');
+	if (hasValidXoRoot) {
+		logger.info('[client] XO is enabled and is needed for linting file, server is now starting.');
+		await languageClient.start();
+		context.subscriptions.push(languageClient);
+		return;
+	}
+
+	if (!hasValidXoRoot) {
+		logger.info('[client] XO is enabled and server will start when a relevant file is opened.');
 	}
 }
 
 export async function deactivate() {
-	if (!client) {
+	if (!languageClient) {
 		return undefined;
 	}
 
-	return client.stop();
+	return languageClient.stop();
 }

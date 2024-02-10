@@ -71,7 +71,7 @@
 			"title": "xo",
 			"properties": {
 				"xo.enable": {
-					"scope": "window",
+					"scope": "resource",
 					"type": "boolean",
 					"default": true,
 					"description": "Control whether xo is enabled or not."
@@ -192,7 +192,7 @@
 		"find-up": "^7.0.0",
 		"is-string-and-not-blank": "^0.0.2",
 		"load-json-file": "^6.2.0",
-		"lodash": "^4.17.21",
+		"p-debounce": "^4.0.0",
 		"queue": "^6.0.2",
 		"vscode-languageclient": "^9.0.1",
 		"vscode-languageserver": "^9.0.1",
@@ -202,7 +202,6 @@
 	"devDependencies": {
 		"@commitlint/cli": "18.6.0",
 		"@commitlint/config-conventional": "18.6.0",
-		"@types/lodash": "^4.14.202",
 		"@types/node": "^20.11.8",
 		"@types/vscode": "^1.85.0",
 		"@types/xo": "^0.39.8",

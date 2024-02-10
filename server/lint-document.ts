@@ -1,8 +1,6 @@
 import {DiagnosticSeverity} from 'vscode-languageserver/node';
 import getRuleUrl from 'eslint-rule-docs';
 import {type TextDocument} from 'vscode-languageserver-textdocument';
-import isObject from 'lodash/isObject';
-import isString from 'lodash/isString';
 import * as utils from './utils';
 import type LintServer from './server';
 
@@ -41,9 +39,9 @@ export async function lintDocument(this: LintServer, document: TextDocument): Pr
 			}
 
 			if (
-				isObject(rulesMeta) &&
-				isString(diagnostic.code) &&
-				isObject(rulesMeta[diagnostic.code]) &&
+				typeof rulesMeta === 'object' &&
+				typeof diagnostic.code === 'string' &&
+				typeof rulesMeta[diagnostic.code] === 'object' &&
 				rulesMeta?.[diagnostic.code]?.docs?.url
 			) {
 				const href = rulesMeta?.[diagnostic.code].docs?.url;
@@ -108,10 +106,12 @@ export async function lintDocument(this: LintServer, document: TextDocument): Pr
  */
 export async function lintDocuments(this: LintServer, documents: TextDocument[]): Promise<void> {
 	for (const document of documents) {
-		this.queue.push(async () => {
+		const lintDocument = async () => {
 			if (document.version !== this.documents.get(document.uri)?.version) return;
 
 			await this.lintDocument(document);
-		});
+		};
+
+		this.queue.push(lintDocument);
 	}
 }

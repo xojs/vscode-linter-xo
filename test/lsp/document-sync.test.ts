@@ -8,8 +8,8 @@ import Server from '../../server/server.js';
 const noop = () => {};
 
 describe('Server documents syncing', () => {
-	let server: Omit<Server, 'lintDocumentDebounced' | 'documents' | 'connection' | 'log'> & {
-		lintDocumentDebounced: Mock<Server['lintDocumentDebounced']>;
+	let server: Omit<Server, 'lintDocument' | 'documents' | 'connection' | 'log'> & {
+		lintDocument: Mock<Server['lintDocument']>;
 		log: Mock<Server['log']>;
 		documents: Map<string, TextDocument> & {all?: typeof Map.prototype.values};
 		connection: Omit<Connection, 'sendDiagnostics'> & {
@@ -29,7 +29,7 @@ describe('Server documents syncing', () => {
 		server = new Server({isTest: true});
 		server.documents = documents;
 		mock.method(server, 'log', noop);
-		mock.method(server, 'lintDocumentDebounced', noop);
+		mock.method(server, 'lintDocument', noop);
 		mock.method(server.connection, 'sendDiagnostics', noop);
 	});
 
@@ -53,7 +53,7 @@ describe('Server documents syncing', () => {
 				resolve(undefined);
 			});
 		});
-		assert.equal(server.lintDocumentDebounced.mock.callCount(), 1);
+		assert.equal(server.lintDocument.mock.callCount(), 1);
 	});
 
 	test('Server.handleDocumentsOnDidChangeContent does not lint document if version is mismatched', async (t) => {
@@ -65,7 +65,7 @@ describe('Server documents syncing', () => {
 				resolve(undefined);
 			});
 		});
-		assert.equal(server.lintDocumentDebounced.mock.callCount(), 0);
+		assert.equal(server.lintDocument.mock.callCount(), 0);
 	});
 
 	test('Server.handleDocumentsOnDidChangeContent does not lint document if document is in node_modules and logs message', async (t) => {
@@ -79,7 +79,7 @@ describe('Server documents syncing', () => {
 		});
 		assert.equal(server.log.mock.callCount(), 1);
 		assert.equal(server.log.mock.calls[0].arguments[0], 'skipping node_modules file');
-		assert.equal(server.lintDocumentDebounced.mock.callCount(), 0);
+		assert.equal(server.lintDocument.mock.callCount(), 0);
 	});
 
 	test('Server.handleDocumentsOnDidClose sends empty diagnostics for closed file', async (t) => {

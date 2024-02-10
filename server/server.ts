@@ -22,11 +22,8 @@ import {
 } from 'vscode-languageserver/node';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import autoBind from 'auto-bind';
-import debounce from 'lodash/debounce';
 import Queue from 'queue';
 import {type CodeActionParams} from 'vscode-languageclient';
-import isUndefined from 'lodash/isUndefined';
-import {type DebouncedFunc} from 'lodash';
 import {QuickFixCodeActionsBuilder} from './code-actions-builder.js';
 import getDocumentConfig from './get-document-config.js';
 import getDocumentFormatting from './get-document-formatting.js';
@@ -36,9 +33,6 @@ import {lintDocument, lintDocuments} from './lint-document.js';
 import {log, logError} from './logger';
 import resolveXo from './resolve-xo';
 import {type XoConfig, type DocumentFix, type Xo, type XoFix} from './types';
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
-const DEFAULT_DEBOUNCE = 0;
 
 interface ChangeConfigurationParams extends DidChangeConfigurationParams {
 	settings: {xo: XoConfig};
@@ -55,17 +49,15 @@ class LintServer {
 	getDocumentFolder: typeof getDocumentFolder;
 	getLintResults: typeof getLintResults;
 	lintDocument: typeof lintDocument;
-	lintDocumentDebounced: DebouncedFunc<typeof lintDocument>;
 	lintDocuments: typeof lintDocuments;
 	resolveXo: typeof resolveXo;
 	foldersCache: Map<string, Partial<TextDocument>>;
 	configurationCache: Map<string, XoConfig>;
 	xoCache: Map<string, Xo>;
 	documentFixCache: Map<string, Map<string, XoFix>>;
-
 	hasShownResolutionError: boolean;
-	currentDebounce: number;
 	hasReceivedShutdownRequest?: boolean;
+	debounceTime = 0;
 
 	constructor({isTest}: {isTest?: boolean} = {}) {
 		/**
@@ -82,10 +74,6 @@ class LintServer {
 		this.lintDocument = lintDocument.bind(this);
 
 		this.lintDocuments = lintDocuments.bind(this);
-
-		this.lintDocumentDebounced = debounce(this.lintDocument, DEFAULT_DEBOUNCE, {
-			maxWait: 350
-		});
 
 		this.resolveXo = resolveXo.bind(this);
 
@@ -114,6 +102,22 @@ class LintServer {
 		 * processing notifications and requests in order
 		 */
 		this.queue = new Queue({concurrency: 1, autostart: true});
+
+		// let id = 0;
+
+		// // get notified when jobs complete
+		// this.queue.on('success', (result, job) => {
+		// 	this.log('job finished processing:', job.name, job.id);
+		// });
+
+		// this.queue.on('error', (error, job) => {
+		// 	this.logError(error as Error);
+		// });
+
+		// this.queue.on('start', (job) => {
+		// 	job.id = id++;
+		// 	this.log('job started processing:', job.name, job.id);
+		// });
 
 		/**
 		 * setup documents listeners
@@ -168,7 +172,6 @@ class LintServer {
 		this.documentFixCache = new Map();
 
 		this.hasShownResolutionError = false;
-		this.currentDebounce = DEFAULT_DEBOUNCE;
 	}
 
 	listen() {
@@ -216,12 +219,9 @@ class LintServer {
 	async handleDidChangeConfiguration(params: ChangeConfigurationParams) {
 		if (
 			Number.isInteger(Number(params?.settings?.xo?.debounce)) &&
-			Number(params?.settings?.xo?.debounce) !== this.currentDebounce
+			Number(params?.settings?.xo?.debounce) !== this.debounceTime
 		) {
-			this.currentDebounce = params.settings.xo.debounce ?? 0;
-			this.lintDocumentDebounced = debounce(this.lintDocument, params.settings.xo.debounce, {
-				maxWait: 350
-			});
+			this.debounceTime = params.settings.xo.debounce ?? 0;
 		}
 
 		// recache each folder config
@@ -247,7 +247,7 @@ class LintServer {
 				try {
 					const documentFix = await this.getDocumentFormatting(params.textDocument.uri);
 
-					if (isUndefined(documentFix)) {
+					if (documentFix === undefined) {
 						resolve();
 						return;
 					}
@@ -268,7 +268,7 @@ class LintServer {
 		token: CancellationToken
 	): Promise<TextEdit[]> {
 		return new Promise((resolve, reject) => {
-			this.queue.push(async () => {
+			const documentFormattingRequestHandler = async () => {
 				try {
 					if (!this.isDocumentOpen(params.textDocument)) return;
 
@@ -311,7 +311,9 @@ class LintServer {
 
 					reject(error);
 				}
-			});
+			};
+
+			this.queue.push(documentFormattingRequestHandler);
 		});
 	}
 
@@ -324,7 +326,7 @@ class LintServer {
 		token?: CancellationToken
 	): Promise<CodeAction[] | undefined> {
 		return new Promise<CodeAction[] | undefined>((resolve, reject) => {
-			this.queue.push(async () => {
+			const codeActionRequestHandler = async () => {
 				try {
 					const {context} = params;
 					if (!context?.diagnostics?.length) {
@@ -374,7 +376,9 @@ class LintServer {
 					if (error instanceof Error) this.logError(error);
 					reject(error);
 				}
-			});
+			};
+
+			this.queue.push(codeActionRequestHandler);
 		});
 	}
 
@@ -384,7 +388,7 @@ class LintServer {
 	 * @param {TextDocumentChangeEvent} event
 	 */
 	handleDocumentsOnDidChangeContent(event: TextDocumentChangeEvent<TextDocument>) {
-		this.queue.push(async () => {
+		const onDidChangeContentHandler = async () => {
 			try {
 				if (event.document.version !== this.documents.get(event.document.uri)?.version) return;
 
@@ -393,11 +397,14 @@ class LintServer {
 					return;
 				}
 
-				await this.lintDocumentDebounced(event.document);
+				const {default: debounce} = await import('p-debounce');
+				await debounce(this.lintDocument, this.debounceTime)(event.document);
 			} catch (error: unknown) {
 				if (error instanceof Error) this.logError(error);
 			}
-		});
+		};
+
+		this.queue.push(onDidChangeContentHandler);
 	}
 
 	/**

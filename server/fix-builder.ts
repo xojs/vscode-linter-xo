@@ -1,5 +1,4 @@
 import {Range, TextEdit} from 'vscode-languageserver/node';
-import isUndefined from 'lodash/isUndefined';
 import {type TextDocument} from 'vscode-languageserver-textdocument';
 import {type XoFix} from './types';
 
@@ -49,7 +48,7 @@ class Fix {
 		for (const edit of this.edits.values()) {
 			let isInRange = true;
 
-			if (!isUndefined(this.range)) {
+			if (this.range !== undefined) {
 				const startOffset = this.textDocument.offsetAt(this.range.start);
 				const endOffset = this.textDocument.offsetAt(this.range.end);
 
@@ -64,7 +63,7 @@ class Fix {
 					(endOffset >= startEditPosition && endOffset <= endEditPosition);
 			}
 
-			if (!isUndefined(edit.edit) && isInRange) result.push(edit);
+			if (edit.edit !== undefined && isInRange) result.push(edit);
 		}
 
 		return result.sort((a, b) => {

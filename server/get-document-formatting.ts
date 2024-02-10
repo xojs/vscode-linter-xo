@@ -1,4 +1,3 @@
-import isUndefined from 'lodash/isUndefined';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import {TextEdit, Range} from 'vscode-languageserver/node';
 import Fix from './fix-builder';
@@ -20,11 +19,11 @@ async function getDocumentFormatting(
 		edits: []
 	};
 
-	if (isUndefined(cachedTextDocument)) return defaultResponse;
+	if (cachedTextDocument === undefined) return defaultResponse;
 
 	const documentFixCache = this.documentFixCache.get(uri);
 
-	if (isUndefined(documentFixCache) || documentFixCache.size === 0) {
+	if (documentFixCache === undefined || documentFixCache.size === 0) {
 		return defaultResponse;
 	}
 

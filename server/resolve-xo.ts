@@ -54,20 +54,21 @@ async function resolveXo(this: LintServer, document: TextDocument): Promise<Xo> 
 		import(xoUri) as Promise<{default: Xo}>,
 		xoFilePath
 			? loadJsonFile<{version: string}>(path.join(path.dirname(xoFilePath), 'package.json'))
-			: Promise.resolve({version: 'custom'})
+			: {version: 'custom'}
 	]);
 
 	if (!xo?.lintText) throw new Error("The XO library doesn't export a lintText method.");
 
+	// if (!this.xoCache.has(xoCacheKey)) {
 	this.log(
 		endent`
 			XO Library ${version}
-				Resolved in Workspace ${folderPath}
-				Cached for Folder ${uriToPath(xoCacheKey)}
-		`
+			Resolved in Workspace ${folderPath}
+			Cached for Folder ${uriToPath(xoCacheKey)}
+			`
 	);
-
 	this.xoCache.set(xoCacheKey, xo);
+	// }
 
 	return xo;
 }

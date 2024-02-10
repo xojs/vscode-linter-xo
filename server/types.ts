@@ -18,7 +18,7 @@ export interface LintTextOptions extends Options {
 }
 
 export interface Xo {
-	lintText(text: string, options?: LintTextOptions): XoResult;
+	lintText(text: string, options?: LintTextOptions): Promise<XoResult>;
 }
 
 export interface FormatOption {

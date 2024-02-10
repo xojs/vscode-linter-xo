@@ -42,19 +42,17 @@ async function getLintResults(
 	lintTextOptions.warnIgnored = false;
 	lintTextOptions.fix = fix;
 
-	let report;
-
+	/**
+	 * Changing the current working directory to the folder
+	 */
 	const cwd = process.cwd();
 
-	try {
-		process.chdir(lintTextOptions.cwd);
+	process.chdir(lintTextOptions.cwd);
 
-		// eslint-disable-next-line @typescript-eslint/await-thenable
-		report = await xo.lintText(contents, lintTextOptions);
-	} finally {
-		if (cwd !== process.cwd()) {
-			process.chdir(cwd);
-		}
+	const report = await xo.lintText(contents, lintTextOptions);
+
+	if (cwd !== process.cwd()) {
+		process.chdir(cwd);
 	}
 
 	return report;
