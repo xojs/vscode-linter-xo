@@ -220,7 +220,7 @@
 	},
 	"engines": {
 		"node": ">=16",
-		"vscode": "^1.85.0"
+		"vscode": "^1.86.0"
 	},
 	"icon": "icon.png"
 }
