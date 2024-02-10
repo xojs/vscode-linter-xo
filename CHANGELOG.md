@@ -1,3 +1,10 @@
+### v3.19.0
+
+- switched lodash debounce to p-debounce to fix concurrency bugs (hopefully do not see performance regressions from this change)
+- added better checking and respect for the enable option (closes #139)
+
+**Full Changelog**: https://github.com/xojs/vscode-linter-xo/compare/v3.18.2...v3.19.0
+
 ### v3.18.0
 
 - Refactors code actions handlers and support source.fixAll code action
