@@ -2,7 +2,6 @@ import path from 'node:path';
 import {Files} from 'vscode-languageserver/node';
 import {URI} from 'vscode-uri';
 import endent from 'endent';
-import isSANB from 'is-string-and-not-blank';
 import loadJsonFile from 'load-json-file';
 import {type TextDocument} from 'vscode-languageserver-textdocument';
 import {type Xo} from './types';
@@ -26,20 +25,17 @@ async function resolveXo(this: LintServer, document: TextDocument): Promise<Xo> 
 
 	if (typeof xo?.lintText === 'function') return xo;
 
-	// determine whether we should show resolution errors first
 	const folderPath = uriToPath(folderUri);
 
 	let xoUri;
 	let xoFilePath;
-	const useCustomPath = isSANB(customPath);
+	const useCustomPath = typeof customPath === 'string';
+
 	if (!useCustomPath) {
 		xoFilePath = await Files.resolve('xo', undefined, folderPath, this.connection.tracer.log);
 		xoUri = URI.file(xoFilePath).toString();
 	} else if (useCustomPath && customPath.startsWith('file://')) {
 		xoUri = customPath;
-		this.connection.console.warn(
-			'Using a file uri for "xo.path" setting is deprecated and will be removed in the future, please provide an absolute or relative path to the file.'
-		);
 	} else if (useCustomPath && path.isAbsolute(customPath)) {
 		xoUri = pathToUri(customPath);
 	} else if (useCustomPath && !path.isAbsolute(customPath)) {
@@ -57,18 +53,17 @@ async function resolveXo(this: LintServer, document: TextDocument): Promise<Xo> 
 			: {version: 'custom'}
 	]);
 
-	if (!xo?.lintText) throw new Error("The XO library doesn't export a lintText method.");
+	if (typeof xo?.lintText !== 'function')
+		throw new Error("The XO library doesn't export a lintText method.");
 
-	// if (!this.xoCache.has(xoCacheKey)) {
 	this.log(
 		endent`
-			XO Library ${version}
+			XO Library ${version} Loaded
 			Resolved in Workspace ${folderPath}
 			Cached for Folder ${uriToPath(xoCacheKey)}
 			`
 	);
 	this.xoCache.set(xoCacheKey, xo);
-	// }
 
 	return xo;
 }

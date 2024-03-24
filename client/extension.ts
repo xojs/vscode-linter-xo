@@ -1,11 +1,17 @@
-import {type ConfigurationChangeEvent, type ExtensionContext, workspace, window} from 'vscode';
-import {type LanguageClient, type DocumentSelector} from 'vscode-languageclient/node';
+import {
+	type ConfigurationChangeEvent,
+	type ExtensionContext,
+	workspace,
+	window,
+	commands
+} from 'vscode';
+import {type LanguageClient, type DocumentSelector, RequestType} from 'vscode-languageclient/node';
 import Queue from 'queue';
 import pkg from '../package.json';
 import {createLanguageClient} from './create-language-client';
 import {updateStatusBar} from './status-bar';
 import {xoRootCache} from './cache';
-import {registerCommands} from './register-commands';
+import {fixAllProblems} from './fix-all-problems';
 
 let languageClient: LanguageClient;
 
@@ -23,14 +29,41 @@ export async function activate(context: ExtensionContext) {
 	const hasValidXoRoot = await xoRootCache.get(window.activeTextEditor?.document.uri.fsPath);
 
 	languageClient = await createLanguageClient({context, outputChannel: logger, runtime, languages});
+
+	const restart = async () => {
+		await languageClient.restart();
+	};
+
 	/**
 	 * Update status bar on activation, and dispose of the status bar when the extension is deactivated
 	 */
 	const statusBar = await updateStatusBar(window.activeTextEditor?.document);
 
-	registerCommands({context, client: languageClient, logger});
-
 	context.subscriptions.push(
+		/**
+		 * register xo extensions provided commands
+		 */
+		commands.registerCommand('xo.fix', async () => fixAllProblems(languageClient)),
+		commands.registerCommand('xo.showOutputChannel', () => {
+			logger.show();
+		}),
+		commands.registerCommand('xo.restart', async () => {
+			try {
+				logger.info('[client] Restarting client');
+				await languageClient.restart();
+			} catch (error) {
+				languageClient.error(`[client] Restarting client failed`, error, 'force');
+			}
+		}),
+		/**
+		 * Allow the server to send a restart request to the client
+		 *
+		 * This restart request is sent by the server when the server
+		 * detects that the configuration has changed. This is the only
+		 * way to get all the configuration changes to take effect due to
+		 * inaccessible caches in ESLint and XO.
+		 */
+		languageClient.onRequest(new RequestType('workspace/xo/restart'), restart),
 		/**
 		 * react to config changes - if the `xo.validate` setting changes, we need to restart the client
 		 */

@@ -60,10 +60,24 @@ export function computeKey(diagnostic: node.Diagnostic): string {
 	}`;
 }
 
+/**
+ * Shortcut to convert a uri string to a path
+ * URI.parse(uri).fsPath
+ *
+ * @param uri
+ * @returns the uri fsPath
+ */
 export function uriToPath(uri: string): string {
 	return URI.parse(uri).fsPath;
 }
 
+/**
+ * Shortcut to convert a path to a uri string
+ * URI.file(path).toString()
+ *
+ * @param path
+ * @returns uri string
+ */
 export function pathToUri(path: string): string {
 	return URI.file(path).toString();
 }

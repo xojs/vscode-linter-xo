@@ -92,6 +92,27 @@ describe('Server code actions', async () => {
 		assert.deepEqual(server.getDocumentFormatting.mock.calls[0].arguments, ['uri']);
 	});
 
+	await test('codeActionKind source.fixAll.xo calls getDocumentFormatting for the document', async (t) => {
+		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
+		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
+		const mockCodeActionParams: CodeActionParams = {
+			textDocument,
+			range,
+			context: {
+				diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')],
+				only: ['source.fixAll.xo']
+			}
+		};
+		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
+		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
+		assert.deepEqual(codeActions, [
+			{title: 'Fix all XO auto-fixable problems', kind: 'source.fixAll', edit: {changes: {uri: []}}}
+		]);
+		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
+		assert.equal(server.getDocumentFormatting.mock.callCount(), 1);
+		assert.deepEqual(server.getDocumentFormatting.mock.calls[0].arguments, ['uri']);
+	});
+
 	await test('codeActionKind only source.quickfix does not call getDocumentFormatting for the document', async (t) => {
 		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
 		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};

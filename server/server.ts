@@ -51,10 +51,15 @@ class LintServer {
 	lintDocument: typeof lintDocument;
 	lintDocuments: typeof lintDocuments;
 	resolveXo: typeof resolveXo;
+	/** A mapping of folders to the location of their package.json */
 	foldersCache: Map<string, Partial<TextDocument>>;
+	/** A mapping of document uri strings to configuration options */
 	configurationCache: Map<string, XoConfig>;
+	/** A mapping of folderPaths to the resolved XO module */
 	xoCache: Map<string, Xo>;
+	/** A mapping of document uri strings to their last calculated fixes */
 	documentFixCache: Map<string, Map<string, XoFix>>;
+	/** Only show resolution errors one time per session */
 	hasShownResolutionError: boolean;
 	hasReceivedShutdownRequest?: boolean;
 
@@ -150,29 +155,21 @@ class LintServer {
 		this.connection.onDocumentRangeFormatting(this.handleDocumentFormattingRequest);
 		this.connection.onCodeAction(this.handleCodeActionRequest);
 
-		/**
-		 * A mapping of folderPaths to the resolved XO module
-		 */
+		/** Caches */
 		this.xoCache = new Map();
-
-		/**
-		 * A mapping of document uri strings to configuration options
-		 */
 		this.configurationCache = new Map();
-
-		/**
-		 * A mapping of folders to the location of their package.json
-		 */
 		this.foldersCache = new Map();
-
-		/**
-		 * A mapping of document uri strings to their last calculated fixes
-		 */
 		this.documentFixCache = new Map();
 
+		/** Internal state */
 		this.hasShownResolutionError = false;
 	}
 
+	/**
+	 * listen
+	 *
+	 * Start the language server connection and document event listeners
+	 */
 	listen() {
 		this.connection.listen();
 		// Listen for text document create, change
@@ -225,7 +222,7 @@ class LintServer {
 	 * handle connection.onDidChangeWatchedFiles
 	 */
 	async handleDidChangeWatchedFiles() {
-		return this.lintDocuments(this.documents.all());
+		await this.connection.sendRequest('workspace/xo/restart');
 	}
 
 	/**
@@ -246,7 +243,9 @@ class LintServer {
 
 					resolve(documentFix);
 				} catch (error: unknown) {
-					reject(error);
+					if (error instanceof Error) {
+						reject(error);
+					}
 				}
 			});
 		});
@@ -299,9 +298,8 @@ class LintServer {
 				} catch (error: unknown) {
 					if (error instanceof Error) {
 						this.logError(error);
+						reject(error);
 					}
-
-					reject(error);
 				}
 			};
 
@@ -310,8 +308,11 @@ class LintServer {
 	}
 
 	/**
-	 * Handle LSP code action request
-	 * these happen at the time of an error/warning hover
+	 * handleCodeActionRequest
+	 *
+	 * Handle LSP code action requests
+	 * that happen at the time of an error/warning hover
+	 * or code action menu request
 	 */
 	async handleCodeActionRequest(
 		params: CodeActionParams,
@@ -351,7 +352,10 @@ class LintServer {
 					}
 
 					const codeActions: CodeAction[] = [];
-					if (context.only?.includes(CodeActionKind.SourceFixAll)) {
+					if (
+						context.only?.includes(CodeActionKind.SourceFixAll) || // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing
+						context.only?.includes(`${CodeActionKind.SourceFixAll}.xo`)
+					) {
 						const fixes = await this.getDocumentFormatting(params.textDocument.uri);
 						const codeAction: CodeAction = {
 							title: 'Fix all XO auto-fixable problems',
@@ -376,8 +380,10 @@ class LintServer {
 
 					resolve(codeActions);
 				} catch (error: unknown) {
-					if (error instanceof Error) this.logError(error);
-					reject(error);
+					if (error instanceof Error) {
+						this.logError(error);
+						reject(error);
+					}
 				}
 			};
 
