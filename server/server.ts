@@ -137,10 +137,9 @@ class LintServer {
 		this.connection.onExit(this.exit);
 
 		/**
-		 * handle workspace and xo configuration changes
+		 * handle xo configuration changes
 		 */
 		this.connection.onDidChangeConfiguration(this.handleDidChangeConfiguration);
-		this.connection.onDidChangeWatchedFiles(this.handleDidChangeWatchedFiles);
 
 		/**
 		 * handle document formatting requests
@@ -216,13 +215,6 @@ class LintServer {
 		// recache each folder config
 		this.configurationCache.clear();
 		return this.lintDocuments(this.documents.all());
-	}
-
-	/**
-	 * handle connection.onDidChangeWatchedFiles
-	 */
-	async handleDidChangeWatchedFiles() {
-		await this.connection.sendRequest('workspace/xo/restart');
 	}
 
 	/**
@@ -442,13 +434,32 @@ class LintServer {
 		});
 	}
 
+	/**
+	 * handle shutdown request according to LSP spec
+	 * https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown
+	 */
 	async handleShutdown() {
 		this.log('XO Server recieved shut down request');
 		this.hasReceivedShutdownRequest = true;
+
+		if (this.queue.length > 0) {
+			await new Promise((resolve) => {
+				this.queue.on('end', () => {
+					this.queue.stop();
+					resolve(undefined);
+				});
+			});
+		}
+
 		this.queue.end();
-		this.connection.dispose();
 	}
 
+	/**
+	 * exit
+	 *
+	 * Handle server exit notification according to LSP spec
+	 * https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#exit
+	 */
 	async exit() {
 		if (this.hasReceivedShutdownRequest) {
 			this.log('XO Server exiting');

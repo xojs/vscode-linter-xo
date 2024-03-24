@@ -1,3 +1,4 @@
+import process from 'node:process';
 import {
 	type ConfigurationChangeEvent,
 	type ExtensionContext,
@@ -5,10 +6,15 @@ import {
 	window,
 	commands
 } from 'vscode';
-import {type LanguageClient, type DocumentSelector, RequestType} from 'vscode-languageclient/node';
+import {
+	LanguageClient,
+	TransportKind,
+	type DocumentSelector,
+	type LanguageClientOptions,
+	type ServerOptions
+} from 'vscode-languageclient/node';
 import Queue from 'queue';
 import pkg from '../package.json';
-import {createLanguageClient} from './create-language-client';
 import {updateStatusBar} from './status-bar';
 import {xoRootCache} from './cache';
 import {fixAllProblems} from './fix-all-problems';
@@ -25,13 +31,49 @@ export async function activate(context: ExtensionContext) {
 
 	const xoConfig = workspace.getConfiguration('xo');
 	const runtime = xoConfig.get<string>('runtime');
-	const languages = xoConfig.get<string[]>('validate');
 	const hasValidXoRoot = await xoRootCache.get(window.activeTextEditor?.document.uri.fsPath);
 
-	languageClient = await createLanguageClient({context, outputChannel: logger, runtime, languages});
+	const serverModule = context.asAbsolutePath('dist/server.js');
+
+	const serverOptions: ServerOptions = {
+		run: {
+			module: serverModule,
+			runtime,
+			transport: TransportKind.ipc,
+			options: {cwd: process.cwd()}
+		},
+		debug: {
+			module: serverModule,
+			runtime,
+			transport: TransportKind.ipc,
+			options: {
+				execArgv: ['--nolazy', '--inspect=6004'],
+				cwd: process.cwd()
+			}
+		}
+	};
+
+	const clientOptions: LanguageClientOptions = {
+		documentSelector: xoConfig.get<string[]>('validate', []).flatMap((language) => [
+			{language, scheme: 'file'},
+			{language, scheme: 'untitled'}
+		]),
+		outputChannel: logger,
+		synchronize: {
+			configurationSection: 'xo'
+		}
+	};
+	const languageClient = new LanguageClient('xo', serverOptions, clientOptions);
 
 	const restart = async () => {
-		await languageClient.restart();
+		try {
+			logger.info('[client] Restarting client');
+			await languageClient.restart();
+			logger.info('[client] Restarting client success');
+		} catch (error) {
+			languageClient.error(`[client] Restarting client failed`, error, 'force');
+			throw error;
+		}
 	};
 
 	/**
@@ -47,23 +89,15 @@ export async function activate(context: ExtensionContext) {
 		commands.registerCommand('xo.showOutputChannel', () => {
 			logger.show();
 		}),
-		commands.registerCommand('xo.restart', async () => {
-			try {
-				logger.info('[client] Restarting client');
-				await languageClient.restart();
-			} catch (error) {
-				languageClient.error(`[client] Restarting client failed`, error, 'force');
-			}
-		}),
-		/**
-		 * Allow the server to send a restart request to the client
-		 *
-		 * This restart request is sent by the server when the server
-		 * detects that the configuration has changed. This is the only
-		 * way to get all the configuration changes to take effect due to
-		 * inaccessible caches in ESLint and XO.
-		 */
-		languageClient.onRequest(new RequestType('workspace/xo/restart'), restart),
+		commands.registerCommand('xo.restart', restart),
+		...[
+			// we relint all open textDocuments whenever a config changes
+			// that may possibly affect the options xo should be using
+			workspace.createFileSystemWatcher('**/.eslintignore'),
+			workspace.createFileSystemWatcher('**/.xo-confi{g.cjs,g.json,g.js,g}'),
+			workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g}'),
+			workspace.createFileSystemWatcher('**/package.json')
+		].map((watcher) => watcher.onDidChange(restart)),
 		/**
 		 * react to config changes - if the `xo.validate` setting changes, we need to restart the client
 		 */
@@ -82,18 +116,14 @@ export async function activate(context: ExtensionContext) {
 						statusBar.text = '$(gear~spin)';
 						statusBar.show();
 
-						const languages = workspace.getConfiguration('xo').get<string[]>('validate');
+						languageClient.clientOptions.documentSelector = xoConfig
+							.get<string[]>('validate', [])
+							.flatMap((language) => [
+								{language, scheme: 'file'},
+								{language, scheme: 'untitled'}
+							]);
 
-						languageClient.clientOptions.documentSelector = [];
-						if (languages && languages.length > 0)
-							for (const language of languages) {
-								(languageClient.clientOptions.documentSelector as DocumentSelector).push(
-									{language, scheme: 'file'},
-									{language, scheme: 'untitled'}
-								);
-							}
-
-						await languageClient.restart();
+						await restart();
 
 						statusBar.text = '$(xo-logo)';
 

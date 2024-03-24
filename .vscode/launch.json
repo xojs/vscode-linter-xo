@@ -7,12 +7,9 @@
 			"request": "launch",
 			"name": "Launch Extension",
 			"runtimeExecutable": "${execPath}",
-			"args": [
-				// "--disable-extensions",
-				"--extensionDevelopmentPath=${workspaceFolder}"
-			],
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
 			"sourceMaps": true,
-			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
+			"outFiles": ["${workspaceFolder}/dist/**/*"],
 			"preLaunchTask": "npm: build:dev"
 		},
 		{
@@ -22,7 +19,7 @@
 			"address": "localhost",
 			"port": 6004,
 			"sourceMaps": true,
-			"outFiles": ["${workspaceFolder}/dist/**/*.js"]
+			"outFiles": ["${workspaceFolder}/dist/**/*"]
 		}
 	]
 }
