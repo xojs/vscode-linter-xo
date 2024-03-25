@@ -42,10 +42,11 @@
 		"clean": "rimraf dist & rimraf server/dist & rimraf client/dist",
 		"lint": "xo && npm run lint:md",
 		"lint:md": "prettier --parser markdown '**/*.md' --check",
+		"package": "rimraf *.vsix && vsce package",
 		"prepare": "husky",
-		"test": "NODE_NO_WARNINGS=1 node --require tsx/cjs --test test/index.ts",
-		"test:coverage": "NODE_NO_WARNINGS=1 c8 node --require tsx/cjs --test test/index.ts",
-		"test:watch": "NODE_NO_WARNINGS=1 node --require tsx/cjs --watch --test test/index.ts",
+		"test": "node --require tsx/cjs --test test/index.ts",
+		"test:coverage": "c8 node --require tsx/cjs --test test/index.ts",
+		"test:watch": "node --require tsx/cjs --watch --test test/index.ts",
 		"vscode:prepublish": "npm run check && npm run build"
 	},
 	"contributes": {
