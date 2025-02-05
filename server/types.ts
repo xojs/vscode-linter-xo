@@ -1,5 +1,6 @@
-import {type Options, type ResultReport} from 'xo';
-// eslint-disable-next-line import/no-extraneous-dependencies
+// @ts-expect-error this is fine since its just types imported from ESM module
+import {type XoConfigOptions, type XoLintResult, type LinterOptions} from 'xo';
+// eslint-disable-next-line import-x/no-extraneous-dependencies, n/no-extraneous-import
 import {type ESLint, type Rule} from 'eslint';
 import {type TextEdit} from 'vscode-languageserver/node';
 
@@ -10,9 +11,9 @@ export enum SeverityOption {
 	info = 'info'
 }
 
-export type XoResult = ResultReport & ESLint.LintResultData;
+export type XoResult = XoLintResult & ESLint.LintResultData;
 
-export interface LintTextOptions extends Options {
+export interface LintTextOptions extends XoConfigOptions, LinterOptions {
 	warnIgnored?: boolean;
 	filePath?: string;
 }
@@ -27,7 +28,7 @@ export interface FormatOption {
 
 export interface XoConfig {
 	enable?: boolean;
-	options?: Options;
+	options?: XoConfigOptions;
 	overrideSeverity?: SeverityOption;
 	debounce?: number;
 	path?: string;

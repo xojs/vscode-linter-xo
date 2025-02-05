@@ -1,4 +1,4 @@
-/* eslint-disable import/no-unassigned-import */
+/* eslint-disable import-x/no-unassigned-import */
 // since globs are not fully supported in node v18 and v20 we import the files manually here
 import process from 'node:process';
 // TODO: remove this file once node v21 is LTS

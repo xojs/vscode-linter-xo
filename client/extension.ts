@@ -19,7 +19,7 @@ import {updateStatusBar} from './status-bar';
 import {xoRootCache} from './cache';
 import {fixAllProblems} from './fix-all-problems';
 
-let languageClient: LanguageClient;
+const languageClient: LanguageClient | undefined = undefined;
 
 const queue = new Queue({autostart: true, concurrency: 1});
 

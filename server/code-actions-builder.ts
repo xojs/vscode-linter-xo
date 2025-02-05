@@ -16,11 +16,7 @@ export class QuickFixCodeActionsBuilder {
 		private readonly textDocument: TextDocument,
 		private readonly diagnostics: Diagnostic[],
 		private readonly fixCache: Map<string, XoFix> | undefined
-	) {
-		this.textDocument = textDocument;
-		this.diagnostics = diagnostics;
-		this.fixCache = fixCache;
-	}
+	) {}
 
 	build(): CodeAction[] {
 		return this.diagnostics

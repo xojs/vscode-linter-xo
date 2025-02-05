@@ -16,17 +16,21 @@ async function getLintResults(
 		this.getDocumentConfig(document)
 	]);
 
-	const lintTextOptions: LintTextOptions = {
-		...options
-	};
-
 	// if we can't find a valid folder, then the user
 	// has likely opened a JS file from another location
 	// so we will just bail out of linting early
 	if (!folderUri) {
 		const error = new Error('No valid xo folder could be found for this file. Skipping linting.');
 		this.logError(error);
-		return {cwd: folderUri, results: [], warningCount: 0, errorCount: 0, rulesMeta: {}};
+		return {
+			cwd: folderUri,
+			results: [],
+			warningCount: 0,
+			errorCount: 0,
+			fixableErrorCount: 0,
+			fixableWarningCount: 0,
+			rulesMeta: {}
+		};
 	}
 
 	const xo = await this.resolveXo(document);
@@ -35,12 +39,14 @@ async function getLintResults(
 	const {fsPath: folderFsPath} = URI.parse(folderUri);
 	const contents = _contents ?? document.getText();
 
-	// set the options needed for internal xo config resolution
-	lintTextOptions.cwd = folderFsPath;
-	lintTextOptions.filename = documentFsPath;
-	lintTextOptions.filePath = documentFsPath;
-	lintTextOptions.warnIgnored = false;
-	lintTextOptions.fix = fix;
+	const lintTextOptions: LintTextOptions = {
+		...options,
+		// set the options needed for internal xo config resolution
+		cwd: folderFsPath,
+		filePath: documentFsPath,
+		warnIgnored: false,
+		fix
+	};
 
 	/**
 	 * Changing the current working directory to the folder

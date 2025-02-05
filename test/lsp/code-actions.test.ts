@@ -85,7 +85,11 @@ describe('Server code actions', async () => {
 		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
 		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.deepEqual(codeActions, [
-			{title: 'Fix all XO auto-fixable problems', kind: 'source.fixAll', edit: {changes: {uri: []}}}
+			{
+				title: 'Fix all XO auto-fixable problems',
+				kind: 'source.fixAll',
+				edit: {changes: {uri: []}}
+			}
 		]);
 		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.equal(server.getDocumentFormatting.mock.callCount(), 1);
@@ -106,7 +110,11 @@ describe('Server code actions', async () => {
 		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
 		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.deepEqual(codeActions, [
-			{title: 'Fix all XO auto-fixable problems', kind: 'source.fixAll', edit: {changes: {uri: []}}}
+			{
+				title: 'Fix all XO auto-fixable problems',
+				kind: 'source.fixAll',
+				edit: {changes: {uri: []}}
+			}
 		]);
 		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
 		assert.equal(server.getDocumentFormatting.mock.callCount(), 1);

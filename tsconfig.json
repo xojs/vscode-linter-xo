@@ -10,6 +10,5 @@
 		"resolveJsonModule": true,
 		"skipLibCheck": true
 	},
-	"exclude": ["node_modules"],
-	"include": ["server/**/*.ts", "client/**/*.ts"]
+	"exclude": ["node_modules"]
 }

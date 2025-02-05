@@ -311,6 +311,7 @@ class LintServer {
 		token?: CancellationToken
 	): Promise<CodeAction[] | undefined> {
 		return new Promise<CodeAction[] | undefined>((resolve, reject) => {
+			// eslint-disable-next-line complexity
 			const codeActionRequestHandler = async () => {
 				try {
 					const {context} = params;
@@ -338,7 +339,7 @@ class LintServer {
 
 					const config = await this.getDocumentConfig(document);
 
-					if (config === undefined || !config.enable) {
+					if (!config?.enable) {
 						resolve(undefined);
 						return;
 					}
