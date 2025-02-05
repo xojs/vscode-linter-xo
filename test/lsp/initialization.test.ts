@@ -17,7 +17,7 @@ describe('Server.handleInitialize', async () => {
 				textDocumentSync: {openClose: true, change: 2},
 				documentFormattingProvider: true,
 				documentRangeFormattingProvider: true,
-				codeActionProvider: {codeActionKinds: ['quickfix', 'source.fixAll']}
+				codeActionProvider: {codeActionKinds: ['quickfix', 'source.fixAll', 'source.fixAll.xo']}
 			}
 		});
 	});

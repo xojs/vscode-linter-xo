@@ -112,7 +112,7 @@ describe('Server code actions', async () => {
 		assert.deepEqual(codeActions, [
 			{
 				title: 'Fix all XO auto-fixable problems',
-				kind: 'source.fixAll',
+				kind: 'source.fixAll.xo',
 				edit: {changes: {uri: []}}
 			}
 		]);

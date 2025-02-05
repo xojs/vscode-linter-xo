@@ -1,6 +1,7 @@
 import * as process from 'node:process';
 import * as path from 'node:path';
 import {
+	type CodeAction,
 	createConnection,
 	ProposedFeatures,
 	TextDocuments,
@@ -17,7 +18,6 @@ import {
 	type TextDocumentIdentifier,
 	type DidChangeConfigurationParams,
 	type TextDocumentChangeEvent,
-	type CodeAction,
 	type DocumentRangeFormattingParams
 } from 'vscode-languageserver/node';
 import {TextDocument} from 'vscode-languageserver-textdocument';
@@ -202,7 +202,11 @@ class LintServer {
 				documentFormattingProvider: true,
 				documentRangeFormattingProvider: true,
 				codeActionProvider: {
-					codeActionKinds: [CodeActionKind.QuickFix, CodeActionKind.SourceFixAll]
+					codeActionKinds: [
+						CodeActionKind.QuickFix,
+						CodeActionKind.SourceFixAll,
+						`${CodeActionKind.SourceFixAll}.xo`
+					]
 				}
 			}
 		};
@@ -345,14 +349,15 @@ class LintServer {
 					}
 
 					const codeActions: CodeAction[] = [];
-					if (
-						context.only?.includes(CodeActionKind.SourceFixAll) || // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing
-						context.only?.includes(`${CodeActionKind.SourceFixAll}.xo`)
-					) {
+
+					const isFixAll = context.only?.includes(CodeActionKind.SourceFixAll);
+					const isFixAllXo = context.only?.includes(`${CodeActionKind.SourceFixAll}.xo`);
+					// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+					if (isFixAll || isFixAllXo) {
 						const fixes = await this.getDocumentFormatting(params.textDocument.uri);
 						const codeAction: CodeAction = {
 							title: 'Fix all XO auto-fixable problems',
-							kind: CodeActionKind.SourceFixAll,
+							kind: isFixAllXo ? `${CodeActionKind.SourceFixAll}.xo` : CodeActionKind.SourceFixAll,
 							edit: {
 								changes: {
 									[document.uri]: fixes.edits

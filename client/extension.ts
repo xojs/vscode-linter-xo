@@ -9,7 +9,6 @@ import {
 import {
 	LanguageClient,
 	TransportKind,
-	type DocumentSelector,
 	type LanguageClientOptions,
 	type ServerOptions
 } from 'vscode-languageclient/node';
@@ -95,7 +94,7 @@ export async function activate(context: ExtensionContext) {
 			// that may possibly affect the options xo should be using
 			workspace.createFileSystemWatcher('**/.eslintignore'),
 			workspace.createFileSystemWatcher('**/.xo-confi{g.cjs,g.json,g.js,g}'),
-			workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g}'),
+			workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g.ts,g.cts,g.mts}'),
 			workspace.createFileSystemWatcher('**/package.json')
 		].map((watcher) => watcher.onDidChange(restart)),
 		/**
