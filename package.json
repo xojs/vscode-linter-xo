@@ -13,6 +13,7 @@
 		"formatter",
 		"linter",
 		"xo",
+		"xojs",
 		"vscode",
 		"lsp"
 	],
@@ -219,7 +220,7 @@
 	},
 	"engines": {
 		"node": ">=16",
-		"vscode": "^1.87.0"
+		"vscode": "^1.96.0"
 	},
 	"icon": "icon.png"
 }
