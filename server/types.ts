@@ -49,3 +49,6 @@ export interface DocumentFix {
 	documentVersion?: string | number;
 	edits: TextEdit[];
 }
+
+// eslint-disable-next-line import-x/no-extraneous-dependencies, n/no-extraneous-import
+export * from 'eslint';

@@ -8,14 +8,15 @@ import {
 	type CodeAction
 } from 'vscode-languageserver/node';
 import {type TextDocument} from 'vscode-languageserver-textdocument';
-import {type XoFix} from './types';
+import {type XoFix, type Linter} from './types';
 import * as utils from './utils.js';
 
 export class QuickFixCodeActionsBuilder {
 	constructor(
 		private readonly textDocument: TextDocument,
 		private readonly diagnostics: Diagnostic[],
-		private readonly fixCache: Map<string, XoFix> | undefined
+		private readonly fixCache: Map<string, XoFix> | undefined,
+		private readonly suggestionsCache: Map<string, Linter.LintSuggestion[]> | undefined
 	) {}
 
 	build(): CodeAction[] {
@@ -23,6 +24,12 @@ export class QuickFixCodeActionsBuilder {
 			.filter((diagnostic) => diagnostic.source === 'XO')
 			.flatMap<CodeAction>((diagnostic) => {
 				const diagnosticCodeActions: CodeAction[] = [];
+
+				const fix = this.getFix(diagnostic);
+				if (fix) diagnosticCodeActions.push(fix);
+
+				const suggestions = this.getSuggestions(diagnostic);
+				if (suggestions) diagnosticCodeActions.push(...suggestions);
 
 				const disableSameLineCodeAction = this.getDisableSameLine(diagnostic);
 				if (disableSameLineCodeAction) diagnosticCodeActions.push(disableSameLineCodeAction);
@@ -33,14 +40,11 @@ export class QuickFixCodeActionsBuilder {
 				const disableFileCodeAction = this.getDisableEntireFile(diagnostic);
 				if (disableFileCodeAction) diagnosticCodeActions.push(disableFileCodeAction);
 
-				const fix = this.getFix(diagnostic, CodeActionKind.QuickFix);
-				if (fix) diagnosticCodeActions.push(fix);
-
 				return diagnosticCodeActions;
 			});
 	}
 
-	getDisableSameLine(diagnostic: Diagnostic) {
+	getDisableSameLine(diagnostic: Diagnostic): CodeAction | undefined {
 		let changes = [];
 
 		const startPosition: Position = {
@@ -87,7 +91,7 @@ export class QuickFixCodeActionsBuilder {
 		return ignoreAction;
 	}
 
-	getDisableNextLine(diagnostic: Diagnostic) {
+	getDisableNextLine(diagnostic: Diagnostic): CodeAction | undefined {
 		let changes = [];
 
 		const ignoreRange = {
@@ -147,7 +151,7 @@ export class QuickFixCodeActionsBuilder {
 		return ignoreAction;
 	}
 
-	getDisableEntireFile(diagnostic: Diagnostic) {
+	getDisableEntireFile(diagnostic: Diagnostic): CodeAction | undefined {
 		const shebang = this.textDocument.getText(
 			Range.create(Position.create(0, 0), Position.create(0, 2))
 		);
@@ -170,14 +174,14 @@ export class QuickFixCodeActionsBuilder {
 		return ignoreFileAction;
 	}
 
-	getFix(diagnostic: Diagnostic, codeActionKind: CodeActionKind) {
+	getFix(diagnostic: Diagnostic): CodeAction | undefined {
 		const edit = this.fixCache?.get(utils.computeKey(diagnostic));
 
 		if (!edit) return;
 
 		return {
 			title: `Fix ${diagnostic.code} with XO`,
-			kind: codeActionKind,
+			kind: CodeActionKind.QuickFix,
 			diagnostics: [diagnostic],
 			edit: {
 				changes: {
@@ -193,5 +197,32 @@ export class QuickFixCodeActionsBuilder {
 				}
 			}
 		};
+	}
+
+	getSuggestions(diagnostic: Diagnostic): CodeAction[] | undefined {
+		const suggestions = this.suggestionsCache?.get(utils.computeKey(diagnostic));
+
+		if (!suggestions) return;
+
+		return suggestions.map((suggestion) => {
+			return {
+				title: `Suggestion ${diagnostic.code}: ${suggestion.desc}`,
+				kind: CodeActionKind.QuickFix,
+				diagnostics: [diagnostic],
+				edit: {
+					changes: {
+						[this.textDocument.uri]: [
+							TextEdit.replace(
+								Range.create(
+									this.textDocument.positionAt(suggestion?.fix?.range?.[0]),
+									this.textDocument.positionAt(suggestion?.fix?.range?.[1])
+								),
+								suggestion.fix.text || ''
+							)
+						]
+					}
+				}
+			};
+		});
 	}
 }

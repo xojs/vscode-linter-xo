@@ -32,7 +32,7 @@ import getLintResults from './get-lint-results.js';
 import {lintDocument, lintDocuments} from './lint-document.js';
 import {log, logError} from './logger';
 import resolveXo from './resolve-xo';
-import {type XoConfig, type DocumentFix, type Xo, type XoFix} from './types';
+import {type XoConfig, type DocumentFix, type Xo, type XoFix, type Linter} from './types';
 
 interface ChangeConfigurationParams extends DidChangeConfigurationParams {
 	settings: {xo: XoConfig};
@@ -59,8 +59,11 @@ class LintServer {
 	xoCache: Map<string, Xo>;
 	/** A mapping of document uri strings to their last calculated fixes */
 	documentFixCache: Map<string, Map<string, XoFix>>;
+	/** A mapping of document uri strings to their last calculated suggestions */
+	documentSuggestionsCache: Map<string, Map<string, Linter.LintSuggestion[]>>;
 	/** Only show resolution errors one time per session */
 	hasShownResolutionError: boolean;
+	/** flag which helps gracefully stopping and shutting down */
 	hasReceivedShutdownRequest?: boolean;
 
 	constructor({isTest}: {isTest?: boolean} = {}) {
@@ -159,6 +162,7 @@ class LintServer {
 		this.configurationCache = new Map();
 		this.foldersCache = new Map();
 		this.documentFixCache = new Map();
+		this.documentSuggestionsCache = new Map();
 
 		/** Internal state */
 		this.hasShownResolutionError = false;
@@ -371,7 +375,8 @@ class LintServer {
 						const codeActionBuilder = new QuickFixCodeActionsBuilder(
 							document,
 							context.diagnostics,
-							this.documentFixCache.get(document.uri)
+							this.documentFixCache.get(document.uri),
+							this.documentSuggestionsCache.get(document.uri)
 						);
 						codeActions.push(...codeActionBuilder.build());
 					}

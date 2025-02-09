@@ -7,9 +7,7 @@ import {
 	Range,
 	Position,
 	DiagnosticSeverity,
-	CodeActionKind,
-	uinteger,
-	type CodeActionParams
+	CodeActionKind
 } from 'vscode-languageserver';
 import {QuickFixCodeActionsBuilder} from '../server/code-actions-builder';
 
@@ -34,7 +32,12 @@ describe('QuickFixCodeActionsBuilder:', () => {
 			'non-xo'
 		);
 
-		const builder = new QuickFixCodeActionsBuilder(testTextDocument, [diagnostic], undefined);
+		const builder = new QuickFixCodeActionsBuilder(
+			testTextDocument,
+			[diagnostic],
+			undefined,
+			undefined
+		);
 
 		const codeAction = builder.build();
 
@@ -50,7 +53,12 @@ describe('QuickFixCodeActionsBuilder:', () => {
 			'XO'
 		);
 
-		const builder = new QuickFixCodeActionsBuilder(testTextDocument, [diagnostic], undefined);
+		const builder = new QuickFixCodeActionsBuilder(
+			testTextDocument,
+			[diagnostic],
+			undefined,
+			undefined
+		);
 		test('Creates ignore same line code action', (t) => {
 			const codeActions = builder.build();
 			assert.equal(Array.isArray(codeActions) && codeActions.length === 3, true);
