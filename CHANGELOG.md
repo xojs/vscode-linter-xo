@@ -1,9 +1,22 @@
+### v3.22.0
+
+- support eslint suggestions as quick fixes
+
+### v3.21.0
+
+- Updates deps
+- Switches to flat-xo beta linter
+- Fixes issues with source.fixAll.xo code actions on save
+
+### v3.20.0
+
+- adds source.fixAll.xo code action
+- restarts extension on config changes so all caches can be reset
+
 ### v3.19.0
 
 - switched lodash debounce to p-debounce to fix concurrency bugs (hopefully do not see performance regressions from this change)
 - added better checking and respect for the enable option (closes #139)
-
-**Full Changelog**: https://github.com/xojs/vscode-linter-xo/compare/v3.18.2...v3.19.0
 
 ### v3.18.0
 
