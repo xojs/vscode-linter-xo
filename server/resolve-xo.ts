@@ -49,7 +49,14 @@ async function resolveXo(this: LintServer, document: TextDocument): Promise<Xo> 
 	[{default: xo}, {version = ''} = {}] = await Promise.all([
 		import(xoUri) as Promise<{default: Xo}>,
 		xoFilePath
-			? loadJsonFile<{version: string}>(path.join(path.dirname(xoFilePath), 'package.json'))
+			? loadJsonFile<{version: string}>(
+					path.join(
+						xoFilePath.includes('dist')
+							? path.dirname(path.resolve(xoFilePath, '..'))
+							: path.dirname(xoFilePath),
+						'package.json'
+					)
+				)
 			: {version: 'custom'}
 	]);
 
