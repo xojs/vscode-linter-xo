@@ -411,7 +411,9 @@ class LintServer {
 
 				const config = await this.getDocumentConfig(event.document);
 				const {default: debounce} = await import('p-debounce');
-				await debounce(this.lintDocument, config.debounce ?? 0)(event.document);
+
+				const debouncedFunc = debounce(this.lintDocument, config.debounce ?? 0).bind(this);
+				await debouncedFunc(event.document);
 			} catch (error: unknown) {
 				if (error instanceof Error) this.logError(error);
 			}
