@@ -1,6 +1,6 @@
 import {Range, TextEdit} from 'vscode-languageserver/node';
-import {type TextDocument} from 'vscode-languageserver-textdocument';
-import {type XoFix} from './types';
+import type {TextDocument} from 'vscode-languageserver-textdocument';
+import type {XoFix} from './types.ts';
 
 class Fix {
 	static overlaps(lastEdit: XoFix, newEdit: XoFix) {
@@ -13,11 +13,10 @@ class Fix {
 
 	edits: Map<string, XoFix>;
 	textDocument: TextDocument;
-	hasOverlaps: boolean;
+	hasOverlaps = false;
 	range?: Range;
 
 	constructor(_textDocument: TextDocument, _edits: Map<string, XoFix>, _range?: Range) {
-		this.hasOverlaps = false;
 		this.edits = _edits;
 		this.textDocument = _textDocument;
 		this.range = _range;
@@ -32,7 +31,7 @@ class Fix {
 			throw new Error('No edits recorded.');
 		}
 
-		const {documentVersion} = [...this.edits.values()][0];
+		const [{documentVersion}] = this.edits.values();
 
 		return documentVersion;
 	}
@@ -56,25 +55,35 @@ class Fix {
 
 				isInRange =
 					// if given range completey covers the edit
-					(startOffset <= startEditPosition && endOffset >= endEditPosition) ||
+					(startOffset <= startEditPosition && endOffset >= endEditPosition)
 					// if edit start offset only is in range
-					(startOffset >= startEditPosition && startOffset <= endEditPosition) ||
+					|| (startOffset >= startEditPosition && startOffset <= endEditPosition)
 					// if edit end offset only is in range
-					(endOffset >= startEditPosition && endOffset <= endEditPosition);
+					|| (endOffset >= startEditPosition && endOffset <= endEditPosition);
 			}
 
-			if (edit.edit !== undefined && isInRange) result.push(edit);
+			if (isInRange && edit.edit !== undefined) {
+				result.push(edit);
+			}
 		}
 
-		return result.sort((a, b) => {
+		return result.toSorted((a, b) => {
 			const d = a.edit.range[0] - b.edit.range[0];
-			if (d !== 0) return d;
-			const aLen = a.edit.range[1] - a.edit.range[0];
-			const bLen = b.edit.range[1] - b.edit.range[0];
-			if (aLen !== bLen) return 0;
-			if (aLen === 0) return -1;
-			if (bLen === 0) return 1;
-			return aLen - bLen;
+			if (d !== 0) {
+				return d;
+			}
+
+			const aLength = a.edit.range[1] - a.edit.range[0];
+			const bLength = b.edit.range[1] - b.edit.range[0];
+			if (aLength !== bLength) {
+				return 0;
+			}
+
+			if (aLength === 0) {
+				return -1;
+			}
+
+			return bLength === 0 ? 1 : aLength - bLength;
 		});
 	}
 
@@ -95,11 +104,13 @@ class Fix {
 		result.push(last);
 		for (let i = 1; i < sorted.length; i++) {
 			const current = sorted[i];
-			if (!Fix.overlaps(last, current) && !Fix.sameRange(last, current)) {
-				this.hasOverlaps = true;
-				result.push(current);
-				last = current;
+			if (Fix.overlaps(last, current) || Fix.sameRange(last, current)) {
+				continue;
 			}
+
+			this.hasOverlaps = true;
+			result.push(current);
+			last = current;
 		}
 
 		return result;
@@ -113,14 +124,14 @@ class Fix {
 	getTextEdits() {
 		const overlapFree = this.getOverlapFree();
 
-		return overlapFree.map((editInfo) =>
+		return overlapFree.map(editInfo =>
 			TextEdit.replace(
 				Range.create(
 					this.textDocument.positionAt(editInfo.edit.range[0]),
-					this.textDocument.positionAt(editInfo.edit.range[1])
+					this.textDocument.positionAt(editInfo.edit.range[1]),
 				),
-				editInfo.edit.text || ''
-			)
+				editInfo.edit.text ?? '',
+			),
 		);
 	}
 }

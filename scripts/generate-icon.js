@@ -12,7 +12,7 @@ async function generateFont() {
 			normalize: true,
 			fontName: 'xo',
 			fontStyle: 'normal',
-			fontWeight: 400
+			fontWeight: 400,
 		});
 		const dest = path.join(__dirname, 'xo.woff');
 		fs.writeFileSync(dest, result.woff, 'binary');

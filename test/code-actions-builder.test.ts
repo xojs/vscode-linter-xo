@@ -1,5 +1,4 @@
-import {test, describe} from 'node:test';
-import assert from 'node:assert';
+import {test, describe, type TestContext} from 'node:test';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import {
 	CodeAction,
@@ -7,41 +6,41 @@ import {
 	Range,
 	Position,
 	DiagnosticSeverity,
-	CodeActionKind
+	CodeActionKind,
 } from 'vscode-languageserver';
-import {QuickFixCodeActionsBuilder} from '../server/code-actions-builder';
+import {QuickFixCodeActionsBuilder} from '../server/code-actions-builder.ts';
 
 const testTextDocument: TextDocument = TextDocument.create(
-	'file:///test.js',
+	'file:///test.ts',
 	'javascript',
 	1,
-	'const foo = 1;\nconst bar = 2;\n'
+	'const foo = 1;\nconst bar = 2;\n',
 );
 
 describe('QuickFixCodeActionsBuilder:', () => {
-	test('Server is a function', (t) => {
-		assert.strictEqual(typeof QuickFixCodeActionsBuilder, 'function');
+	test('Server is a function', (t: TestContext) => {
+		t.assert.strictEqual(typeof QuickFixCodeActionsBuilder, 'function');
 	});
 
-	test('ignores non xo code actions', (t) => {
+	test('ignores non xo code actions', (t: TestContext) => {
 		const diagnostic = Diagnostic.create(
 			Range.create(Position.create(0, 0), Position.create(0, 0)),
 			'test message',
 			DiagnosticSeverity.Error,
 			'test',
-			'non-xo'
+			'non-xo',
 		);
 
 		const builder = new QuickFixCodeActionsBuilder(
 			testTextDocument,
 			[diagnostic],
 			undefined,
-			undefined
+			undefined,
 		);
 
 		const codeAction = builder.build();
 
-		assert.deepStrictEqual(codeAction, []);
+		t.assert.deepStrictEqual(codeAction, []);
 	});
 
 	describe('Disable rule actions:', () => {
@@ -50,49 +49,49 @@ describe('QuickFixCodeActionsBuilder:', () => {
 			'test message',
 			DiagnosticSeverity.Error,
 			'test-rule',
-			'XO'
+			'XO',
 		);
 
 		const builder = new QuickFixCodeActionsBuilder(
 			testTextDocument,
 			[diagnostic],
 			undefined,
-			undefined
+			undefined,
 		);
-		test('Creates ignore same line code action', (t) => {
+		test('Creates ignore same line code action', (t: TestContext) => {
 			const codeActions = builder.build();
-			assert.equal(Array.isArray(codeActions) && codeActions.length === 3, true);
+			t.assert.strictEqual(Array.isArray(codeActions) && codeActions.length === 3, true);
 			const codeAction = codeActions.find(
-				(action) => action.title === `Ignore Rule ${diagnostic.code}: Same Line`
+				action => action.title === `Ignore Rule ${diagnostic.code}: Same Line`,
 			);
-			assert.strictEqual(codeAction?.kind, CodeActionKind.QuickFix);
-			assert.strictEqual(
+			t.assert.strictEqual(codeAction?.kind, CodeActionKind.QuickFix);
+			t.assert.strictEqual(
 				codeAction?.edit?.changes?.[testTextDocument.uri]?.[0].newText,
-				` // eslint-disable-line ${diagnostic.code}`
+				` // eslint-disable-line ${diagnostic.code}`,
 			);
 		});
 
-		test('Creates ignore line above code action', (t) => {
+		test('Creates ignore line above code action', (t: TestContext) => {
 			const codeActions = builder.build();
 			const codeAction = codeActions.find(
-				(action) => action.title === `Ignore Rule ${diagnostic.code}: Line Above`
+				action => action.title === `Ignore Rule ${diagnostic.code}: Line Above`,
 			);
-			assert.strictEqual(codeAction?.kind, CodeActionKind.QuickFix);
-			assert.strictEqual(
+			t.assert.strictEqual(codeAction?.kind, CodeActionKind.QuickFix);
+			t.assert.strictEqual(
 				codeAction?.edit?.changes?.[testTextDocument.uri]?.[0].newText,
-				`// eslint-disable-next-line ${diagnostic.code}\n`
+				`// eslint-disable-next-line ${diagnostic.code}\n`,
 			);
 		});
 
-		test('Creates ignore entire file code action', (t) => {
+		test('Creates ignore entire file code action', (t: TestContext) => {
 			const codeActions = builder.build();
 			const codeAction = codeActions.find(
-				(action) => action.title === `Ignore Rule ${diagnostic.code}: Entire File`
+				action => action.title === `Ignore Rule ${diagnostic.code}: Entire File`,
 			);
-			assert.strictEqual(codeAction?.kind, CodeActionKind.QuickFix);
-			assert.strictEqual(
+			t.assert.strictEqual(codeAction?.kind, CodeActionKind.QuickFix);
+			t.assert.strictEqual(
 				codeAction?.edit?.changes?.[testTextDocument.uri]?.[0].newText,
-				`/* eslint-disable ${diagnostic.code} */\n`
+				`/* eslint-disable ${diagnostic.code} */\n`,
 			);
 		});
 	});

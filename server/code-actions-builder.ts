@@ -5,40 +5,50 @@ import {
 	Position,
 	CodeActionKind,
 	type Diagnostic,
-	type CodeAction
+	type CodeAction,
 } from 'vscode-languageserver/node';
-import {type TextDocument} from 'vscode-languageserver-textdocument';
-import {type XoFix, type Linter} from './types';
-import * as utils from './utils.js';
+import type {TextDocument} from 'vscode-languageserver-textdocument';
+import type {XoFix, Linter} from './types.ts';
+import * as utils from './utils.ts';
 
 export class QuickFixCodeActionsBuilder {
 	constructor(
 		private readonly textDocument: TextDocument,
 		private readonly diagnostics: Diagnostic[],
 		private readonly fixCache: Map<string, XoFix> | undefined,
-		private readonly suggestionsCache: Map<string, Linter.LintSuggestion[]> | undefined
+		private readonly suggestionsCache: Map<string, Linter.LintSuggestion[]> | undefined,
 	) {}
 
 	build(): CodeAction[] {
 		return this.diagnostics
-			.filter((diagnostic) => diagnostic.source === 'XO')
-			.flatMap<CodeAction>((diagnostic) => {
+			.filter(diagnostic => diagnostic.source === 'XO')
+			.flatMap<CodeAction>(diagnostic => {
 				const diagnosticCodeActions: CodeAction[] = [];
 
 				const fix = this.getFix(diagnostic);
-				if (fix) diagnosticCodeActions.push(fix);
+				if (fix) {
+					diagnosticCodeActions.push(fix);
+				}
 
 				const suggestions = this.getSuggestions(diagnostic);
-				if (suggestions) diagnosticCodeActions.push(...suggestions);
+				if (suggestions) {
+					diagnosticCodeActions.push(...suggestions);
+				}
 
 				const disableSameLineCodeAction = this.getDisableSameLine(diagnostic);
-				if (disableSameLineCodeAction) diagnosticCodeActions.push(disableSameLineCodeAction);
+				if (disableSameLineCodeAction) {
+					diagnosticCodeActions.push(disableSameLineCodeAction);
+				}
 
 				const disableNextLineCodeAction = this.getDisableNextLine(diagnostic);
-				if (disableNextLineCodeAction) diagnosticCodeActions.push(disableNextLineCodeAction);
+				if (disableNextLineCodeAction) {
+					diagnosticCodeActions.push(disableNextLineCodeAction);
+				}
 
 				const disableFileCodeAction = this.getDisableEntireFile(diagnostic);
-				if (disableFileCodeAction) diagnosticCodeActions.push(disableFileCodeAction);
+				if (disableFileCodeAction) {
+					diagnosticCodeActions.push(disableFileCodeAction);
+				}
 
 				return diagnosticCodeActions;
 			});
@@ -49,17 +59,18 @@ export class QuickFixCodeActionsBuilder {
 
 		const startPosition: Position = {
 			line: diagnostic.range.start.line,
-			character: uinteger.MAX_VALUE
+			character: uinteger.MAX_VALUE,
 		};
 
 		const lineText = this.textDocument.getText({
 			start: Position.create(diagnostic.range.start.line, 0),
-			end: Position.create(diagnostic.range.start.line, uinteger.MAX_VALUE)
+			end: Position.create(diagnostic.range.start.line, uinteger.MAX_VALUE),
 		});
 
-		const matchedForIgnoreComment = lineText && /\/\/ eslint-disable-line/.exec(lineText);
+		const matchedForIgnoreComment =
+			lineText === '' ? null : /\/\/ eslint-disable-line/v.exec(lineText);
 
-		if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
+		if (matchedForIgnoreComment !== null && matchedForIgnoreComment.length > 0) {
 			const textEdit = TextEdit.insert(startPosition, `, ${diagnostic.code}`);
 
 			changes.push(textEdit);
@@ -69,9 +80,9 @@ export class QuickFixCodeActionsBuilder {
 			const newedit: TextEdit = {
 				range: {
 					start: startPosition,
-					end: startPosition
+					end: startPosition,
 				},
-				newText: ` // eslint-disable-line ${diagnostic.code}`
+				newText: ` // eslint-disable-line ${diagnostic.code}`,
 			};
 
 			changes = [newedit];
@@ -83,9 +94,9 @@ export class QuickFixCodeActionsBuilder {
 			diagnostics: [diagnostic],
 			edit: {
 				changes: {
-					[this.textDocument.uri]: changes
-				}
-			}
+					[this.textDocument.uri]: changes,
+				},
+			},
 		};
 
 		return ignoreAction;
@@ -96,42 +107,42 @@ export class QuickFixCodeActionsBuilder {
 
 		const ignoreRange = {
 			line: diagnostic.range.start.line,
-			character: 0
+			character: 0,
 		};
 
 		const lineText = this.textDocument.getText({
 			start: Position.create(diagnostic.range.start.line, 0),
-			end: Position.create(diagnostic.range.start.line, uinteger.MAX_VALUE)
+			end: Position.create(diagnostic.range.start.line, uinteger.MAX_VALUE),
 		});
 
 		const lineAboveText = this.textDocument.getText({
 			start: Position.create(diagnostic.range.start.line - 1, 0),
-			end: Position.create(diagnostic.range.start.line - 1, uinteger.MAX_VALUE)
+			end: Position.create(diagnostic.range.start.line - 1, uinteger.MAX_VALUE),
 		});
 
 		const matchedForIgnoreComment =
-			lineAboveText && /\/\/ eslint-disable-next-line/.exec(lineAboveText);
+			lineAboveText === '' ? null : /\/\/ eslint-disable-next-line/v.exec(lineAboveText);
 
-		if (matchedForIgnoreComment && matchedForIgnoreComment.length > 0) {
+		if (matchedForIgnoreComment !== null && matchedForIgnoreComment.length > 0) {
 			const textEdit = TextEdit.insert(
 				Position.create(diagnostic.range.start.line - 1, uinteger.MAX_VALUE),
-				`, ${diagnostic.code}`
+				`, ${diagnostic.code}`,
 			);
 
 			changes.push(textEdit);
 		}
 
 		if (changes.length === 0) {
-			const matches = /^([ |\t]*)/.exec(lineText);
+			const matches = /^[\t ]*/v.exec(lineText);
 
 			const indentation = Array.isArray(matches) && matches.length > 0 ? matches[0] : '';
 
 			const newedit = {
 				range: {
 					start: ignoreRange,
-					end: ignoreRange
+					end: ignoreRange,
 				},
-				newText: `${indentation}// eslint-disable-next-line ${diagnostic.code}\n`
+				newText: `${indentation}// eslint-disable-next-line ${diagnostic.code}\n`,
 			};
 
 			changes = [newedit];
@@ -143,9 +154,9 @@ export class QuickFixCodeActionsBuilder {
 			diagnostics: [diagnostic],
 			edit: {
 				changes: {
-					[this.textDocument.uri]: changes
-				}
-			}
+					[this.textDocument.uri]: changes,
+				},
+			},
 		};
 
 		return ignoreAction;
@@ -153,7 +164,7 @@ export class QuickFixCodeActionsBuilder {
 
 	getDisableEntireFile(diagnostic: Diagnostic): CodeAction | undefined {
 		const shebang = this.textDocument.getText(
-			Range.create(Position.create(0, 0), Position.create(0, 2))
+			Range.create(Position.create(0, 0), Position.create(0, 2)),
 		);
 
 		const line = shebang === '#!' ? 1 : 0;
@@ -165,10 +176,10 @@ export class QuickFixCodeActionsBuilder {
 			edit: {
 				changes: {
 					[this.textDocument.uri]: [
-						TextEdit.insert(Position.create(line, 0), `/* eslint-disable ${diagnostic.code} */\n`)
-					]
-				}
-			}
+						TextEdit.insert(Position.create(line, 0), `/* eslint-disable ${diagnostic.code} */\n`),
+					],
+				},
+			},
 		};
 
 		return ignoreFileAction;
@@ -177,7 +188,9 @@ export class QuickFixCodeActionsBuilder {
 	getFix(diagnostic: Diagnostic): CodeAction | undefined {
 		const edit = this.fixCache?.get(utils.computeKey(diagnostic));
 
-		if (!edit) return;
+		if (!edit) {
+			return;
+		}
 
 		return {
 			title: `Fix ${diagnostic.code} with XO`,
@@ -189,40 +202,40 @@ export class QuickFixCodeActionsBuilder {
 						TextEdit.replace(
 							Range.create(
 								this.textDocument.positionAt(edit?.edit?.range?.[0]),
-								this.textDocument.positionAt(edit?.edit?.range?.[1])
+								this.textDocument.positionAt(edit?.edit?.range?.[1]),
 							),
-							edit.edit.text || ''
-						)
-					]
-				}
-			}
+							edit.edit.text ?? '',
+						),
+					],
+				},
+			},
 		};
 	}
 
 	getSuggestions(diagnostic: Diagnostic): CodeAction[] | undefined {
 		const suggestions = this.suggestionsCache?.get(utils.computeKey(diagnostic));
 
-		if (!suggestions) return;
+		if (!suggestions) {
+			return;
+		}
 
-		return suggestions.map((suggestion) => {
-			return {
-				title: `Suggestion ${diagnostic.code}: ${suggestion.desc}`,
-				kind: CodeActionKind.QuickFix,
-				diagnostics: [diagnostic],
-				edit: {
-					changes: {
-						[this.textDocument.uri]: [
-							TextEdit.replace(
-								Range.create(
-									this.textDocument.positionAt(suggestion?.fix?.range?.[0]),
-									this.textDocument.positionAt(suggestion?.fix?.range?.[1])
-								),
-								suggestion.fix.text || ''
-							)
-						]
-					}
-				}
-			};
-		});
+		return suggestions.map(suggestion => ({
+			title: `Suggestion ${diagnostic.code}: ${suggestion.desc}`,
+			kind: CodeActionKind.QuickFix,
+			diagnostics: [diagnostic],
+			edit: {
+				changes: {
+					[this.textDocument.uri]: [
+						TextEdit.replace(
+							Range.create(
+								this.textDocument.positionAt(suggestion?.fix?.range?.[0]),
+								this.textDocument.positionAt(suggestion?.fix?.range?.[1]),
+							),
+							suggestion.fix.text ?? '',
+						),
+					],
+				},
+			},
+		}));
 	}
 }

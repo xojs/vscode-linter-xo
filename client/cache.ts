@@ -1,14 +1,14 @@
-import {type LogOutputChannel} from 'vscode';
-import {findXoRoot} from '../server/utils';
+import type {LogOutputChannel} from 'vscode';
+import {findXoRoot} from '../server/utils.ts';
 
 /**
  * Cache for file fspaths that have an xo root
  * in their directory tree.
  */
 export class XoRootCache {
-	logger?: LogOutputChannel;
-
 	private readonly cache: Map<string, boolean>;
+
+	logger?: LogOutputChannel;
 
 	constructor({logger}: {logger?: LogOutputChannel} = {}) {
 		this.cache = new Map();
@@ -17,7 +17,7 @@ export class XoRootCache {
 
 	async get(uri?: string) {
 		try {
-			if (!uri) {
+			if (uri === undefined || uri === '') {
 				return;
 			}
 
@@ -30,9 +30,7 @@ export class XoRootCache {
 
 			const isXoFile = Boolean(xoRoot?.pkgPath);
 
-			if (xoRoot) {
-				this.cache.set(uri, isXoFile);
-			}
+			this.cache.set(uri, isXoFile);
 
 			return isXoFile;
 		} catch (error) {

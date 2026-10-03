@@ -1,4 +1,4 @@
-import type LintServer from './server';
+import type LintServer from './server.ts';
 
 /**
  * log a message to the client console
@@ -9,12 +9,16 @@ export function log(this: LintServer, ...messages: unknown[]): void {
 	this.connection.console.log(
 		// eslint-disable-next-line unicorn/no-array-reduce
 		messages.reduce((acc: string, message: unknown) => {
-			if (message instanceof Map)
-				message = `Map(${JSON.stringify([...message.entries()], null, 2)})`;
-			if (typeof message === 'object') message = JSON.stringify(message, null, 2);
-			// eslint-disable-next-line unicorn/prefer-spread
+			if (message instanceof Map) {
+				message = `Map(${JSON.stringify([...message], null, 2)})`;
+			}
+
+			if (typeof message === 'object') {
+				message = JSON.stringify(message, null, 2);
+			}
+
 			return acc.concat(`${message as string} `);
-		}, '[server] ')
+		}, '[server] '),
 	);
 }
 

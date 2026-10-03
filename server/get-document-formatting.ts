@@ -1,8 +1,8 @@
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import {TextEdit, Range} from 'vscode-languageserver/node';
-import Fix from './fix-builder';
-import type LintServer from './server';
-import {type DocumentFix} from './types';
+import Fix from './fix-builder.ts';
+import type LintServer from './server.ts';
+import type {DocumentFix} from './types.ts';
 
 /**
  * Computes the TextEdits for a text document uri
@@ -10,16 +10,18 @@ import {type DocumentFix} from './types';
 async function getDocumentFormatting(
 	this: LintServer,
 	uri: string,
-	range?: Range
+	range?: Range,
 ): Promise<DocumentFix> {
 	const cachedTextDocument = this.documents.get(uri);
 
 	const defaultResponse = {
 		documentVersion: cachedTextDocument?.version,
-		edits: []
+		edits: [],
 	};
 
-	if (cachedTextDocument === undefined) return defaultResponse;
+	if (cachedTextDocument === undefined) {
+		return defaultResponse;
+	}
 
 	const documentFixCache = this.documentFixCache.get(uri);
 
@@ -44,7 +46,7 @@ async function getDocumentFormatting(
 	if (!documentFix.hasOverlaps) {
 		return {
 			documentVersion,
-			edits
+			edits,
 		};
 	}
 
@@ -55,7 +57,7 @@ async function getDocumentFormatting(
 		cachedTextDocument.uri,
 		cachedTextDocument.languageId,
 		cachedTextDocument.version,
-		originalText
+		originalText,
 	);
 
 	// apply the edits to the copy and get the edits that would be
@@ -64,7 +66,11 @@ async function getDocumentFormatting(
 
 	const report = await this.getLintResults(textDocument, editedContent, true);
 
-	if (report.results[0].output && report.results[0].output !== editedContent) {
+	if (
+		report.results[0].output !== undefined
+		&& report.results[0].output !== ''
+		&& report.results[0].output !== editedContent
+	) {
 		this.log('Experimental replace triggered');
 		const string0 = originalText;
 		const string1 = report.results[0].output;
@@ -77,9 +83,9 @@ async function getDocumentFormatting(
 		// length of common suffix
 		let j = 0;
 		while (
-			i + j < string0.length &&
-			i + j < string1.length &&
-			string0[string0.length - j - 1] === string1[string1.length - j - 1]
+			i + j < string0.length
+			&& i + j < string1.length
+			&& string0[string0.length - j - 1] === string1[string1.length - j - 1]
 		) {
 			++j;
 		}
@@ -91,13 +97,13 @@ async function getDocumentFormatting(
 
 		return {
 			documentVersion: documentFix.getDocumentVersion(),
-			edits: [TextEdit.replace(Range.create(pos0, pos1), newText)]
+			edits: [TextEdit.replace(Range.create(pos0, pos1), newText)],
 		};
 	}
 
 	return {
 		documentVersion,
-		edits: documentFix.getTextEdits()
+		edits: documentFix.getTextEdits(),
 	};
 }
 

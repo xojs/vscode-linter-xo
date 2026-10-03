@@ -1,24 +1,23 @@
-import {describe, test} from 'node:test';
-import assert from 'node:assert';
-import Server from '../../server/server.js';
+import {describe, test, type TestContext} from 'node:test';
+import Server from '../../server/server.ts';
 
-describe('Server.handleInitialize', async () => {
+describe('Server.handleInitialize', () => {
 	const server = new Server({isTest: true});
 
-	await test('Server.handleInitialize is a function', (t) => {
-		assert.equal(typeof server.handleInitialize, 'function');
+	test('Server.handleInitialize is a function', (t: TestContext) => {
+		t.assert.strictEqual(typeof server.handleInitialize, 'function');
 	});
 
-	await test('InitializeResult matches snapshot', async (t) => {
+	test('InitializeResult matches snapshot', async (t: TestContext) => {
 		const result = await server.handleInitialize();
-		assert.deepEqual(result, {
+		t.assert.deepStrictEqual(result, {
 			capabilities: {
 				workspace: {workspaceFolders: {supported: true}},
 				textDocumentSync: {openClose: true, change: 2},
 				documentFormattingProvider: true,
 				documentRangeFormattingProvider: true,
-				codeActionProvider: {codeActionKinds: ['quickfix', 'source.fixAll', 'source.fixAll.xo']}
-			}
+				codeActionProvider: {codeActionKinds: ['quickfix', 'source.fixAll', 'source.fixAll.xo']},
+			},
 		});
 	});
 });

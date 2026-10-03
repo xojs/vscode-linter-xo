@@ -1,7 +1,7 @@
 import path from 'node:path';
-import {type TextDocument} from 'vscode-languageserver-textdocument';
-import {findXoRoot, pathToUri, uriToPath} from './utils';
-import type LintServer from './server';
+import type {TextDocument} from 'vscode-languageserver-textdocument';
+import {findXoRoot, pathToUri, uriToPath} from './utils.ts';
+import type LintServer from './server.ts';
 
 /**
  * get the root folder document from a document
@@ -18,7 +18,7 @@ async function getDocumentFolder(this: LintServer, document: TextDocument) {
 	const documentDir = path.dirname(documentPath);
 	const {pkgPath} = (await findXoRoot(documentDir)) ?? {};
 
-	if (pkgPath) {
+	if (pkgPath !== undefined && pkgPath !== '') {
 		const packageDirUri = pathToUri(path.dirname(pkgPath));
 		this.foldersCache.set(documentDirUri, {uri: packageDirUri});
 	} else {

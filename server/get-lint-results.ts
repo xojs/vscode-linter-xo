@@ -1,25 +1,25 @@
 import process from 'node:process';
 import {URI} from 'vscode-uri';
-import {type TextDocument} from 'vscode-languageserver-textdocument';
-import type LintServer from './server';
-import {type XoResult, type LintTextOptions} from './types';
+import type {TextDocument} from 'vscode-languageserver-textdocument';
+import type LintServer from './server.ts';
+import type {XoResult, LintTextOptions} from './types.ts';
 
 async function getLintResults(
 	this: LintServer,
 	document: TextDocument,
 	_contents?: string,
-	fix?: boolean
+	shouldFix?: boolean,
 ): Promise<XoResult> {
 	// first we resolve all the configs we need
 	const [{uri: folderUri = ''} = {}, {options = {}}] = await Promise.all([
 		this.getDocumentFolder(document),
-		this.getDocumentConfig(document)
+		this.getDocumentConfig(document),
 	]);
 
 	// if we can't find a valid folder, then the user
 	// has likely opened a JS file from another location
 	// so we will just bail out of linting early
-	if (!folderUri) {
+	if (folderUri === '') {
 		const error = new Error('No valid xo folder could be found for this file. Skipping linting.');
 		this.logError(error);
 		return {
@@ -29,7 +29,7 @@ async function getLintResults(
 			errorCount: 0,
 			fixableErrorCount: 0,
 			fixableWarningCount: 0,
-			rulesMeta: {}
+			rulesMeta: {},
 		};
 	}
 
@@ -45,7 +45,7 @@ async function getLintResults(
 		cwd: folderFsPath,
 		filePath: documentFsPath,
 		warnIgnored: false,
-		fix
+		fix: shouldFix,
 	};
 
 	/**

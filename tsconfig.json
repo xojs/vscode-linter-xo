@@ -1,14 +1,16 @@
 {
 	"compilerOptions": {
-		"target": "ES2021",
+		"target": "ES2024",
 		"module": "Node16",
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
-		"lib": ["es2021"],
+		"lib": ["es2024"],
 		"strict": true,
+		"types": ["node"],
 		"noEmit": true,
 		"resolveJsonModule": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"allowImportingTsExtensions": true
 	},
 	"exclude": ["node_modules", "dist"]
 }

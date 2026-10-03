@@ -1,6 +1,10 @@
-import {test, describe, mock, type Mock} from 'node:test';
+import {
+	test,
+	describe,
+	type Mock,
+	type TestContext,
+} from 'node:test';
 import {setTimeout} from 'node:timers/promises';
-import assert from 'node:assert';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import {
 	Position,
@@ -8,22 +12,23 @@ import {
 	CodeActionKind,
 	type CodeActionParams,
 	type Range,
-	type TextDocumentIdentifier
+	type TextDocumentIdentifier,
 	// type Connection
 } from 'vscode-languageserver';
-import Server from '../../server/server.js';
+import Server from '../../server/server.ts';
+// eslint-disable-next-line node-test/no-import-test-files -- This shared helper contains no tests for the Node runner to execute.
 import {
-	getCodeActionParams,
+	getCodeActionParameters,
 	getIgnoreSameLineCodeAction,
 	getIgnoreNextLineCodeAction,
 	getIgnoreFileCodeAction,
-	getTextDocument
-} from '../stubs.js';
+	getTextDocument,
+} from '../stubs.ts';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 
-describe('Server code actions', async () => {
+describe('Server code actions', () => {
 	let server: Omit<Server, 'documents' | 'log'> & {
 		log: Mock<Server['log']>;
 		getDocumentFormatting: Mock<Server['getDocumentFormatting']>;
@@ -31,10 +36,15 @@ describe('Server code actions', async () => {
 		getDocumentConfig: Mock<Server['getDocumentConfig']>;
 	};
 
-	test.beforeEach((t) => {
+	/**
+	 * Creates a fresh server and context-owned mocks for one code-action test.
+	 * Keeping the mocks on the test context ensures Node restores them only after
+	 * the test and its cleanup hook have completed.
+	 */
+	function setupTest(t: TestContext) {
 		const documents: Map<string, TextDocument> & {all?: typeof Map.prototype.values} = new Map([
 			['uri', TextDocument.create('uri', 'javascript', 1, 'content')],
-			['uri/node_modules', TextDocument.create('uri/node_modules', 'javascript', 1, 'content')]
+			['uri/node_modules', TextDocument.create('uri/node_modules', 'javascript', 1, 'content')],
 		]);
 		documents.all = documents.values;
 		// @ts-expect-error readonly
@@ -42,146 +52,153 @@ describe('Server code actions', async () => {
 		// @ts-expect-error painfully difficult to type, but the declaration is correct
 		server = new Server({isTest: true});
 		server.documents = documents;
-		mock.method(server, 'log', noop);
-		mock.method(server, 'getDocumentFormatting');
-		mock.method(server, 'getDocumentConfig', async () => ({enable: true}));
+		t.mock.method(server, 'log', noop);
+		t.mock.method(server, 'getDocumentFormatting');
+		t.mock.method(server, 'getDocumentConfig', async () => ({enable: true}));
+		t.after(async () => {
+			await server.handleShutdown();
+			// @ts-expect-error this helps cleanup and keep types clean
+			server = undefined;
+		});
+	}
+
+	test('Server.handleCodeActionRequest is a function', (t: TestContext) => {
+		setupTest(t);
+		t.assert.strictEqual(typeof server.handleCodeActionRequest, 'function');
 	});
 
-	test.afterEach(async () => {
-		await server.handleShutdown();
-		// @ts-expect-error this helps cleanup and keep types clean
-		server = undefined;
-		mock.restoreAll();
-	});
-
-	test('Server.handleCodeActionRequest is a function', (t) => {
-		assert.equal(typeof server.handleCodeActionRequest, 'function');
-	});
-
-	await test('Server.handleCodeActionRequest returns an empty array if no code actions are available', async (t) => {
+	test('Server.handleCodeActionRequest returns an empty array if no code actions are available', async (t: TestContext) => {
+		setupTest(t);
 		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
 		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
-		const mockCodeActionParams: CodeActionParams = {
+		const mockCodeActionParameters: CodeActionParams = {
 			textDocument,
 			range,
-			context: {diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')]}
+			context: {diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')]},
 		};
-		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
-		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
-		assert.deepEqual(codeActions, []);
+		const codeActions = await server.handleCodeActionRequest(mockCodeActionParameters);
+		t.assert.strictEqual(server.getDocumentConfig.mock.callCount(), 1);
+		t.assert.deepStrictEqual(codeActions, []);
 	});
 
-	await test('codeActionKind source.fixAll calls getDocumentFormatting for the document', async (t) => {
+	test('codeActionKind source.fixAll calls getDocumentFormatting for the document', async (t: TestContext) => {
+		setupTest(t);
 		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
 		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
-		const mockCodeActionParams: CodeActionParams = {
+		const mockCodeActionParameters: CodeActionParams = {
 			textDocument,
 			range,
 			context: {
 				diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')],
-				only: ['source.fixAll']
-			}
+				only: ['source.fixAll'],
+			},
 		};
-		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
-		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
-		assert.deepEqual(codeActions, [
+		const codeActions = await server.handleCodeActionRequest(mockCodeActionParameters);
+		t.assert.strictEqual(server.getDocumentConfig.mock.callCount(), 1);
+		t.assert.deepStrictEqual(codeActions, [
 			{
 				title: 'Fix all XO auto-fixable problems',
 				kind: 'source.fixAll',
-				edit: {changes: {uri: []}}
-			}
+				edit: {changes: {uri: []}},
+			},
 		]);
-		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
-		assert.equal(server.getDocumentFormatting.mock.callCount(), 1);
-		assert.deepEqual(server.getDocumentFormatting.mock.calls[0].arguments, ['uri']);
+		t.assert.strictEqual(server.getDocumentConfig.mock.callCount(), 1);
+		t.assert.strictEqual(server.getDocumentFormatting.mock.callCount(), 1);
+		t.assert.deepStrictEqual(server.getDocumentFormatting.mock.calls[0].arguments, ['uri']);
 	});
 
-	await test('codeActionKind source.fixAll.xo calls getDocumentFormatting for the document', async (t) => {
+	test('codeActionKind source.fixAll.xo calls getDocumentFormatting for the document', async (t: TestContext) => {
+		setupTest(t);
 		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
 		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
-		const mockCodeActionParams: CodeActionParams = {
+		const mockCodeActionParameters: CodeActionParams = {
 			textDocument,
 			range,
 			context: {
 				diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')],
-				only: ['source.fixAll.xo']
-			}
+				only: ['source.fixAll.xo'],
+			},
 		};
-		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
-		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
-		assert.deepEqual(codeActions, [
+		const codeActions = await server.handleCodeActionRequest(mockCodeActionParameters);
+		t.assert.strictEqual(server.getDocumentConfig.mock.callCount(), 1);
+		t.assert.deepStrictEqual(codeActions, [
 			{
 				title: 'Fix all XO auto-fixable problems',
 				kind: 'source.fixAll.xo',
-				edit: {changes: {uri: []}}
-			}
+				edit: {changes: {uri: []}},
+			},
 		]);
-		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
-		assert.equal(server.getDocumentFormatting.mock.callCount(), 1);
-		assert.deepEqual(server.getDocumentFormatting.mock.calls[0].arguments, ['uri']);
+		t.assert.strictEqual(server.getDocumentConfig.mock.callCount(), 1);
+		t.assert.strictEqual(server.getDocumentFormatting.mock.callCount(), 1);
+		t.assert.deepStrictEqual(server.getDocumentFormatting.mock.calls[0].arguments, ['uri']);
 	});
 
-	await test('codeActionKind only source.quickfix does not call getDocumentFormatting for the document', async (t) => {
+	test('codeActionKind only source.quickfix does not call getDocumentFormatting for the document', async (t: TestContext) => {
+		setupTest(t);
 		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
 		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
-		const mockCodeActionParams: CodeActionParams = {
+		const mockCodeActionParameters: CodeActionParams = {
 			textDocument,
 			range,
 			context: {
 				diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')],
-				only: ['source.quickfix']
-			}
+				only: ['source.quickfix'],
+			},
 		};
-		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
-		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
-		assert.deepEqual(codeActions, []);
-		assert.equal(server.getDocumentFormatting.mock.callCount(), 0);
+		const codeActions = await server.handleCodeActionRequest(mockCodeActionParameters);
+		t.assert.strictEqual(server.getDocumentConfig.mock.callCount(), 1);
+		t.assert.deepStrictEqual(codeActions, []);
+		t.assert.strictEqual(server.getDocumentFormatting.mock.callCount(), 0);
 	});
 
-	await test('codeAction without "only" does not call getDocumentFormatting for the document', async (t) => {
+	test('codeAction without "only" does not call getDocumentFormatting for the document', async (t: TestContext) => {
+		setupTest(t);
 		const textDocument: TextDocumentIdentifier = {uri: 'uri'};
 		const range: Range = {start: Position.create(0, 0), end: Position.create(0, 0)};
-		const mockCodeActionParams: CodeActionParams = {
+		const mockCodeActionParameters: CodeActionParams = {
 			textDocument,
 			range,
 			context: {
-				diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')]
-			}
+				diagnostics: [Diagnostic.create(range, 'test message', 1, 'test', 'test')],
+			},
 		};
-		const codeActions = await server.handleCodeActionRequest(mockCodeActionParams);
-		assert.equal(server.getDocumentConfig.mock.callCount(), 1);
-		assert.deepEqual(codeActions, []);
-		assert.equal(server.getDocumentFormatting.mock.callCount(), 0);
+		const codeActions = await server.handleCodeActionRequest(mockCodeActionParameters);
+		t.assert.strictEqual(server.getDocumentConfig.mock.callCount(), 1);
+		t.assert.deepStrictEqual(codeActions, []);
+		t.assert.strictEqual(server.getDocumentFormatting.mock.callCount(), 0);
 	});
 
-	await test('codeAction without "only" produces quickfix code actions', async (t) => {
-		const codeActions = await server.handleCodeActionRequest(getCodeActionParams());
+	test('codeAction without "only" produces quickfix code actions', async (t: TestContext) => {
+		setupTest(t);
+		const codeActions = await server.handleCodeActionRequest(getCodeActionParameters());
 
-		assert.deepStrictEqual(codeActions, [
+		t.assert.deepStrictEqual(codeActions, [
 			getIgnoreSameLineCodeAction(),
 			getIgnoreNextLineCodeAction(),
-			getIgnoreFileCodeAction()
+			getIgnoreFileCodeAction(),
 		]);
 	});
 
-	await test('codeAction with only quickfix produces quickfix code actions', async (t) => {
-		const params = getCodeActionParams();
-		params.context.only = [CodeActionKind.QuickFix];
-		const codeActions = await server.handleCodeActionRequest(params);
+	test('codeAction with only quickfix produces quickfix code actions', async (t: TestContext) => {
+		setupTest(t);
+		const parameters = getCodeActionParameters();
+		parameters.context.only = [CodeActionKind.QuickFix];
+		const codeActions = await server.handleCodeActionRequest(parameters);
 
-		assert.deepStrictEqual(codeActions, [
+		t.assert.deepStrictEqual(codeActions, [
 			getIgnoreSameLineCodeAction(),
 			getIgnoreNextLineCodeAction(),
-			getIgnoreFileCodeAction()
+			getIgnoreFileCodeAction(),
 		]);
 	});
 
-	await test('codeAction with only quickfix produces quickfix code actions', async (t) => {
-		const params = getCodeActionParams();
-		params.context.only = [CodeActionKind.QuickFix];
-		mock.method(server, 'getDocumentConfig', async () => ({enable: false}));
-		const codeActions = await server.handleCodeActionRequest(params);
+	test('codeAction with only quickfix returns no actions when XO is disabled', async (t: TestContext) => {
+		setupTest(t);
+		const parameters = getCodeActionParameters();
+		parameters.context.only = [CodeActionKind.QuickFix];
+		t.mock.method(server, 'getDocumentConfig', async () => ({enable: false}));
+		const codeActions = await server.handleCodeActionRequest(parameters);
 
-		assert.deepStrictEqual(codeActions, undefined);
+		t.assert.strictEqual(codeActions, undefined);
 	});
 });

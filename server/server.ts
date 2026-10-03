@@ -18,23 +18,29 @@ import {
 	type TextDocumentIdentifier,
 	type DidChangeConfigurationParams,
 	type TextDocumentChangeEvent,
-	type DocumentRangeFormattingParams
+	type DocumentRangeFormattingParams,
 } from 'vscode-languageserver/node';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 import autoBind from 'auto-bind';
 import Queue from 'queue';
-import {type CodeActionParams} from 'vscode-languageclient';
-import {QuickFixCodeActionsBuilder} from './code-actions-builder.js';
-import getDocumentConfig from './get-document-config.js';
-import getDocumentFormatting from './get-document-formatting.js';
-import getDocumentFolder from './get-document-folder';
-import getLintResults from './get-lint-results.js';
-import {lintDocument, lintDocuments} from './lint-document.js';
-import {log, logError} from './logger';
-import resolveXo from './resolve-xo';
-import {type XoConfig, type DocumentFix, type Xo, type XoFix, type Linter} from './types';
+import type {CodeActionParams} from 'vscode-languageclient';
+import {QuickFixCodeActionsBuilder} from './code-actions-builder.ts';
+import getDocumentConfig from './get-document-config.ts';
+import getDocumentFormatting from './get-document-formatting.ts';
+import getDocumentFolder from './get-document-folder.ts';
+import getLintResults from './get-lint-results.ts';
+import {lintDocument, lintDocuments} from './lint-document.ts';
+import {log, logError} from './logger.ts';
+import resolveXo from './resolve-xo.ts';
+import type {
+	XoConfig,
+	DocumentFix,
+	Xo,
+	XoFix,
+	Linter,
+} from './types.ts';
 
-interface ChangeConfigurationParams extends DidChangeConfigurationParams {
+interface ChangeConfigurationParameters extends DidChangeConfigurationParams {
 	settings: {xo: XoConfig};
 }
 
@@ -51,19 +57,33 @@ class LintServer {
 	lintDocument: typeof lintDocument;
 	lintDocuments: typeof lintDocuments;
 	resolveXo: typeof resolveXo;
-	/** A mapping of folders to the location of their package.json */
+	/**
+	* A mapping of folders to the location of their package.json
+	*/
 	foldersCache: Map<string, Partial<TextDocument>>;
-	/** A mapping of document uri strings to configuration options */
+	/**
+	* A mapping of document uri strings to configuration options
+	*/
 	configurationCache: Map<string, XoConfig>;
-	/** A mapping of folderPaths to the resolved XO module */
+	/**
+	* A mapping of folderPaths to the resolved XO module
+	*/
 	xoCache: Map<string, Xo>;
-	/** A mapping of document uri strings to their last calculated fixes */
+	/**
+	* A mapping of document uri strings to their last calculated fixes
+	*/
 	documentFixCache: Map<string, Map<string, XoFix>>;
-	/** A mapping of document uri strings to their last calculated suggestions */
+	/**
+	* A mapping of document uri strings to their last calculated suggestions
+	*/
 	documentSuggestionsCache: Map<string, Map<string, Linter.LintSuggestion[]>>;
-	/** Only show resolution errors one time per session */
+	/**
+	* Only show resolution errors one time per session
+	*/
 	hasShownResolutionError: boolean;
-	/** flag which helps gracefully stopping and shutting down */
+	/**
+	* flag which helps gracefully stopping and shutting down
+	*/
 	hasReceivedShutdownRequest?: boolean;
 
 	constructor({isTest}: {isTest?: boolean} = {}) {
@@ -151,20 +171,24 @@ class LintServer {
 		 */
 		this.connection.onRequest(
 			new RequestType('textDocument/xo/allFixes').method,
-			this.handleAllFixesRequest
+			this.handleAllFixesRequest,
 		);
 		this.connection.onDocumentFormatting(this.handleDocumentFormattingRequest);
 		this.connection.onDocumentRangeFormatting(this.handleDocumentFormattingRequest);
 		this.connection.onCodeAction(this.handleCodeActionRequest);
 
-		/** Caches */
+		/**
+		* Caches
+		*/
 		this.xoCache = new Map();
 		this.configurationCache = new Map();
 		this.foldersCache = new Map();
 		this.documentFixCache = new Map();
 		this.documentSuggestionsCache = new Map();
 
-		/** Internal state */
+		/**
+		* Internal state
+		*/
 		this.hasShownResolutionError = false;
 	}
 
@@ -181,11 +205,10 @@ class LintServer {
 	}
 
 	/**
-	 * check if document is open
-	 *
-	 */
+	* check if document is open
+	*/
 	isDocumentOpen(document: TextDocument | TextDocumentIdentifier): boolean {
-		return Boolean(document?.uri && this.documents.get(document.uri));
+		return document.uri !== '' && this.documents.get(document.uri) !== undefined;
 	}
 
 	/**
@@ -196,12 +219,12 @@ class LintServer {
 			capabilities: {
 				workspace: {
 					workspaceFolders: {
-						supported: true
-					}
+						supported: true,
+					},
 				},
 				textDocumentSync: {
 					openClose: true,
-					change: TextDocumentSyncKind.Incremental
+					change: TextDocumentSyncKind.Incremental,
 				},
 				documentFormattingProvider: true,
 				documentRangeFormattingProvider: true,
@@ -209,17 +232,17 @@ class LintServer {
 					codeActionKinds: [
 						CodeActionKind.QuickFix,
 						CodeActionKind.SourceFixAll,
-						`${CodeActionKind.SourceFixAll}.xo`
-					]
-				}
-			}
+						`${CodeActionKind.SourceFixAll}.xo`,
+					],
+				},
+			},
 		};
 	}
 
 	/**
 	 * Handle connection.onDidChangeConfiguration
 	 */
-	async handleDidChangeConfiguration(params: ChangeConfigurationParams) {
+	async handleDidChangeConfiguration(parameters: ChangeConfigurationParameters) {
 		// recache each folder config
 		this.configurationCache.clear();
 		return this.lintDocuments(this.documents.all());
@@ -228,25 +251,29 @@ class LintServer {
 	/**
 	 * Handle custom all fixes request
 	 */
-	async handleAllFixesRequest(params: {
+	async handleAllFixesRequest(parameters: {
 		textDocument: TextDocumentIdentifier;
 	}): Promise<DocumentFix | void> {
 		return new Promise((resolve, reject) => {
-			this.queue.push(async () => {
-				try {
-					const documentFix = await this.getDocumentFormatting(params.textDocument.uri);
+			this.queue.push(done => {
+				void (async () => {
+					try {
+						const documentFix = await this.getDocumentFormatting(parameters.textDocument.uri);
 
-					if (documentFix === undefined) {
-						resolve();
-						return;
-					}
+						if (documentFix === undefined) {
+							resolve();
+							return;
+						}
 
-					resolve(documentFix);
-				} catch (error: unknown) {
-					if (error instanceof Error) {
-						reject(error);
+						resolve(documentFix);
+					} catch (error: unknown) {
+						if (error instanceof Error) {
+							reject(error);
+						}
 					}
-				}
+				})().finally(() => {
+					done?.();
+				});
 			});
 		});
 	}
@@ -255,27 +282,29 @@ class LintServer {
 	 * Handle LSP document formatting request
 	 */
 	async handleDocumentFormattingRequest(
-		params: DocumentFormattingParams | DocumentRangeFormattingParams,
-		token: CancellationToken
+		parameters: DocumentFormattingParams | DocumentRangeFormattingParams,
+		token: CancellationToken,
 	): Promise<TextEdit[]> {
 		return new Promise((resolve, reject) => {
 			const documentFormattingRequestHandler = async () => {
 				try {
-					if (!this.isDocumentOpen(params.textDocument)) return;
+					if (!this.isDocumentOpen(parameters.textDocument)) {
+						return;
+					}
 
 					if (token.isCancellationRequested) {
 						reject(new ResponseError(LSPErrorCodes.RequestCancelled, 'Request was cancelled'));
 						return;
 					}
 
-					const cachedTextDocument = this.documents.get(params.textDocument.uri);
+					const cachedTextDocument = this.documents.get(parameters.textDocument.uri);
 
 					if (cachedTextDocument === undefined) {
 						resolve([]);
 						return;
 					}
 
-					const config = await this.getDocumentConfig(params.textDocument);
+					const config = await this.getDocumentConfig(parameters.textDocument);
 
 					if (config === undefined || !config?.format?.enable || !config.enable) {
 						resolve([]);
@@ -283,14 +312,14 @@ class LintServer {
 					}
 
 					const {edits, documentVersion} = await this.getDocumentFormatting(
-						params.textDocument.uri,
-						'range' in params ? params.range : undefined
+						parameters.textDocument.uri,
+						'range' in parameters ? parameters.range : undefined,
 					);
 
 					if (documentVersion !== cachedTextDocument.version) {
 						throw new ResponseError(
 							LSPErrorCodes.ContentModified,
-							'Document version mismatch detected'
+							'Document version mismatch detected',
 						);
 					}
 
@@ -303,7 +332,11 @@ class LintServer {
 				}
 			};
 
-			this.queue.push(documentFormattingRequestHandler);
+			this.queue.push(done => {
+				void documentFormattingRequestHandler().finally(() => {
+					done?.();
+				});
+			});
 		});
 	}
 
@@ -315,20 +348,19 @@ class LintServer {
 	 * or code action menu request
 	 */
 	async handleCodeActionRequest(
-		params: CodeActionParams,
-		token?: CancellationToken
+		parameters: CodeActionParams,
+		token?: CancellationToken,
 	): Promise<CodeAction[] | undefined> {
 		return new Promise<CodeAction[] | undefined>((resolve, reject) => {
-			// eslint-disable-next-line complexity
 			const codeActionRequestHandler = async () => {
 				try {
-					const {context} = params;
-					if (!context?.diagnostics?.length) {
+					const {context} = parameters;
+					if (context.diagnostics.length === 0) {
 						resolve(undefined);
 						return;
 					}
 
-					if (!params?.textDocument?.uri) {
+					if (parameters.textDocument.uri === '') {
 						resolve(undefined);
 						return;
 					}
@@ -338,7 +370,7 @@ class LintServer {
 						return;
 					}
 
-					const document = this.documents.get(params.textDocument.uri);
+					const document = this.documents.get(parameters.textDocument.uri);
 
 					if (!document) {
 						resolve(undefined);
@@ -358,25 +390,25 @@ class LintServer {
 					const isFixAllXo = context.only?.includes(`${CodeActionKind.SourceFixAll}.xo`);
 					// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 					if (isFixAll || isFixAllXo) {
-						const fixes = await this.getDocumentFormatting(params.textDocument.uri);
+						const fixes = await this.getDocumentFormatting(parameters.textDocument.uri);
 						const codeAction: CodeAction = {
 							title: 'Fix all XO auto-fixable problems',
 							kind: isFixAllXo ? `${CodeActionKind.SourceFixAll}.xo` : CodeActionKind.SourceFixAll,
 							edit: {
 								changes: {
-									[document.uri]: fixes.edits
-								}
-							}
+									[document.uri]: fixes.edits,
+								},
+							},
 						};
 						codeActions.push(codeAction);
 					}
 
-					if (!context.only || context.only?.includes(CodeActionKind.QuickFix)) {
+					if (context.only === undefined || context.only.includes(CodeActionKind.QuickFix)) {
 						const codeActionBuilder = new QuickFixCodeActionsBuilder(
 							document,
 							context.diagnostics,
 							this.documentFixCache.get(document.uri),
-							this.documentSuggestionsCache.get(document.uri)
+							this.documentSuggestionsCache.get(document.uri),
 						);
 						codeActions.push(...codeActionBuilder.build());
 					}
@@ -390,19 +422,25 @@ class LintServer {
 				}
 			};
 
-			this.queue.push(codeActionRequestHandler);
+			this.queue.push(done => {
+				void codeActionRequestHandler().finally(() => {
+					done?.();
+				});
+			});
 		});
 	}
 
 	/**
 	 * Handle documents.onDidChangeContent
 	 * queues document content linting
-	 * @param {TextDocumentChangeEvent} event
+	 * @param event - The document change event whose current contents should be linted.
 	 */
 	handleDocumentsOnDidChangeContent(event: TextDocumentChangeEvent<TextDocument>) {
 		const onDidChangeContentHandler = async () => {
 			try {
-				if (event.document.version !== this.documents.get(event.document.uri)?.version) return;
+				if (event.document.version !== this.documents.get(event.document.uri)?.version) {
+					return;
+				}
 
 				if (event.document.uri.includes('node_modules')) {
 					this.log('skipping node_modules file');
@@ -415,11 +453,17 @@ class LintServer {
 				const debouncedFunc = debounce(this.lintDocument, config.debounce ?? 0).bind(this);
 				await debouncedFunc(event.document);
 			} catch (error: unknown) {
-				if (error instanceof Error) this.logError(error);
+				if (error instanceof Error) {
+					this.logError(error);
+				}
 			}
 		};
 
-		this.queue.push(onDidChangeContentHandler);
+		this.queue.push(done => {
+			void onDidChangeContentHandler().finally(() => {
+				done?.();
+			});
+		});
 	}
 
 	/**
@@ -429,21 +473,23 @@ class LintServer {
 	 */
 	async handleDocumentsOnDidClose(event: TextDocumentChangeEvent<TextDocument>): Promise<void> {
 		const folders = new Set(
-			[...this.documents.all()].map((document) => path.dirname(document.uri))
+			[...this.documents.all()].map(document => path.dirname(document.uri)),
 		);
 
 		this.documentFixCache.delete(event.document.uri);
 		for (const folder of this.foldersCache.keys()) {
-			if (!folders.has(folder)) {
-				this.foldersCache.delete(folder);
-				this.xoCache.delete(folder);
-				this.configurationCache.delete(folder);
+			if (folders.has(folder)) {
+				continue;
 			}
+
+			this.foldersCache.delete(folder);
+			this.xoCache.delete(folder);
+			this.configurationCache.delete(folder);
 		}
 
 		await this.connection?.sendDiagnostics({
-			uri: event.document.uri.toString(),
-			diagnostics: []
+			uri: event.document.uri,
+			diagnostics: [],
 		});
 	}
 
@@ -456,7 +502,7 @@ class LintServer {
 		this.hasReceivedShutdownRequest = true;
 
 		if (this.queue.length > 0) {
-			await new Promise((resolve) => {
+			await new Promise(resolve => {
 				this.queue.on('end', () => {
 					this.queue.stop();
 					resolve(undefined);

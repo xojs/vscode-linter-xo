@@ -1,5 +1,10 @@
-import {workspace, window, type StatusBarItem, type TextDocument} from 'vscode';
-import {xoRootCache} from './cache';
+import {
+	workspace,
+	window,
+	type StatusBarItem,
+	type TextDocument,
+} from 'vscode';
+import {xoRootCache} from './cache.ts';
 
 const statusBar = window.createStatusBarItem('xoStatusBarItem', 2, 0);
 statusBar.name = 'xo';
@@ -36,7 +41,7 @@ export async function updateStatusBar(textDocument?: TextDocument): Promise<Stat
 			'javascriptreact',
 			'typescript',
 			'typescriptreact',
-			'vue'
+			'vue',
 		]);
 		const isXoOutputChannel = textDocument.uri.fsPath === 'samverschueren.linter-xo.xo';
 		const isRelevantLanguage = languages.includes(textDocument.languageId);
@@ -44,8 +49,11 @@ export async function updateStatusBar(textDocument?: TextDocument): Promise<Stat
 
 		const isRelevant = isXoOutputChannel || (isRelevantLanguage && hasXoRoot);
 
-		if (isRelevant) statusBar.show();
-		else statusBar.hide();
+		if (isRelevant) {
+			statusBar.show();
+		} else {
+			statusBar.hide();
+		}
 
 		statusBar.text = '$(xo-logo)';
 		return statusBar;

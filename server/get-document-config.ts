@@ -1,7 +1,7 @@
 import path from 'node:path';
-import {type TextDocumentIdentifier} from 'vscode-languageserver';
-import {type XoConfig} from './types';
-import type LintServer from './server';
+import type {TextDocumentIdentifier} from 'vscode-languageserver';
+import type {XoConfig} from './types.ts';
+import type LintServer from './server.ts';
 
 /**
  * Gets document config
@@ -9,20 +9,18 @@ import type LintServer from './server';
  */
 async function getDocumentConfig(
 	this: LintServer,
-	document: TextDocumentIdentifier
+	document: TextDocumentIdentifier,
 ): Promise<XoConfig> {
 	if (this.configurationCache.has(document.uri)) {
 		const config: XoConfig = this.configurationCache.get(document.uri)!;
 
-		if (config !== undefined) return config;
-
-		return {};
+		return config ?? {};
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	const config: XoConfig = await this.connection.workspace.getConfiguration({
 		scopeUri: document.uri,
-		section: 'xo'
+		section: 'xo',
 	});
 
 	this.configurationCache.set(document.uri, config);

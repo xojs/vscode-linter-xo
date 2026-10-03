@@ -1,4 +1,4 @@
-import LintServer from './server';
+import LintServer from './server.ts';
 
 const server = new LintServer();
 

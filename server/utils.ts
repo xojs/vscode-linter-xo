@@ -3,7 +3,7 @@ import * as node from 'vscode-languageserver/node';
 import loadJsonFile from 'load-json-file';
 import {URI} from 'vscode-uri';
 // eslint-disable-next-line import-x/no-extraneous-dependencies, n/no-extraneous-import
-import {type Linter} from 'eslint';
+import type {Linter} from 'eslint';
 
 export interface XoResult {
 	xo?: string;
@@ -36,7 +36,7 @@ export function parseSeverity(severity: number): node.DiagnosticSeverity {
 
 export function makeDiagnostic(problem: Linter.LintMessage): node.Diagnostic {
 	const message =
-		problem.ruleId === null ? `${problem.message}` : `${problem.message} (${problem.ruleId})`;
+		problem.ruleId === null ? problem.message : `${problem.message} (${problem.ruleId})`;
 	return {
 		message,
 		severity: parseSeverity(problem.severity),
@@ -45,11 +45,10 @@ export function makeDiagnostic(problem: Linter.LintMessage): node.Diagnostic {
 		range: {
 			start: {line: problem.line - 1, character: problem.column - 1},
 			end: {
-				line: typeof problem.endLine === 'number' ? problem.endLine - 1 : problem.line - 1,
-				character:
-					typeof problem.endColumn === 'number' ? problem.endColumn - 1 : problem.column - 1
-			}
-		}
+				line: (problem.endLine ?? problem.line) - 1,
+				character: (problem.endColumn ?? problem.column) - 1,
+			},
+		},
 	};
 }
 
@@ -64,7 +63,7 @@ export function computeKey(diagnostic: node.Diagnostic): string {
  * Shortcut to convert a uri string to a path
  * URI.parse(uri).fsPath
  *
- * @param uri
+ * @param uri - The URI to convert into a local filesystem path.
  * @returns the uri fsPath
  */
 export function uriToPath(uri: string): string {
@@ -75,11 +74,11 @@ export function uriToPath(uri: string): string {
  * Shortcut to convert a path to a uri string
  * URI.file(path).toString()
  *
- * @param path
+ * @param filePath - The local filesystem path to convert into a URI.
  * @returns uri string
  */
-export function pathToUri(path: string): string {
-	return URI.file(path).toString();
+export function pathToUri(filePath: string): string {
+	return URI.file(filePath).toString();
 }
 
 /**
@@ -88,25 +87,34 @@ export function pathToUri(path: string): string {
  * dependency. Returns an empty object if none can be found.
  */
 export async function findXoRoot(cwd: string): Promise<XoResult> {
-	const {findUp} = await import('find-up');
-	const pkgPath = await findUp('package.json', {cwd});
+	const {findUpSync} = await import('find-up');
+	let searchDirectory = cwd;
 
-	if (!pkgPath) return {};
+	while (true) {
+		const pkgPath = findUpSync('package.json', {cwd: searchDirectory});
+		if (pkgPath === undefined || pkgPath === '') {
+			return {};
+		}
 
-	const pkgJson: PkgJson = await loadJsonFile(pkgPath);
-
-	const deps: Deps = {
-		...pkgJson?.dependencies,
-		...pkgJson?.devDependencies
-	};
-
-	if (deps?.xo) {
-		return {
-			xo: deps?.xo,
-			pkgPath,
-			pkgJson
+		const pkgJson = loadJsonFile.sync<PkgJson>(pkgPath);
+		const deps: Deps = {
+			...pkgJson.dependencies,
+			...pkgJson.devDependencies,
 		};
-	}
 
-	return findXoRoot(path.resolve(path.dirname(pkgPath), '..'));
+		if (deps.xo !== undefined && deps.xo !== '') {
+			return {
+				xo: deps.xo,
+				pkgPath,
+				pkgJson,
+			};
+		}
+
+		const parentDirectory = path.resolve(path.dirname(pkgPath), '..');
+		if (parentDirectory === path.dirname(pkgPath)) {
+			return {};
+		}
+
+		searchDirectory = parentDirectory;
+	}
 }
