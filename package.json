@@ -10,7 +10,7 @@
 	"type": "commonjs",
 	"main": "./dist/client.js",
 	"engines": {
-		"node": ">=16",
+		"node": ">=22",
 		"vscode": ">=1.97.0"
 	},
 	"scripts": {
@@ -23,9 +23,9 @@
 		"lint": "xo",
 		"package": "rimraf *.vsix && vsce package",
 		"prepare": "husky",
-		"test": "node --require tsx/cjs --test test/index.ts",
-		"test:coverage": "c8 node --require tsx/cjs --test test/index.ts",
-		"test:watch": "node --require tsx/cjs --watch --test test/index.ts",
+		"test": "node --import tsx --test \"test/**/*.test.ts\"",
+		"test:coverage": "c8 node --import tsx --test \"test/**/*.test.ts\"",
+		"test:watch": "node --import tsx --watch --test \"test/**/*.test.ts\"",
 		"vscode:prepublish": "npm run check && npm run build"
 	},
 	"files": [

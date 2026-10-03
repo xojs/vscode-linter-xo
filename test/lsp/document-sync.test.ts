@@ -1,6 +1,8 @@
 import {
-	test,
+	after,
+	beforeEach,
 	describe,
+	test,
 	type Mock,
 	type TestContext,
 } from 'node:test';
@@ -11,54 +13,59 @@ import Server from '../../server/server.ts';
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 
-describe('Server documents syncing', () => {
-	let server: Omit<
-		Server,
-		'lintDocument' | 'documents' | 'connection' | 'log' | 'getDocumentConfig'
-	> & {
-		lintDocument: Mock<Server['lintDocument']>;
-		log: Mock<Server['log']>;
-		documents: Map<string, TextDocument> & {all?: typeof Map.prototype.values};
-		getDocumentConfig: Mock<Server['getDocumentConfig']>;
-		connection: Omit<Connection, 'sendDiagnostics'> & {
-			sendDiagnostics: Mock<Connection['sendDiagnostics']>;
-		};
+type DocumentSyncTestServer = Omit<
+	Server,
+	'lintDocument' | 'documents' | 'connection' | 'log' | 'getDocumentConfig'
+> & {
+	lintDocument: Mock<Server['lintDocument']>;
+	log: Mock<Server['log']>;
+	documents: Map<string, TextDocument> & {all?: typeof Map.prototype.values};
+	getDocumentConfig: Mock<Server['getDocumentConfig']>;
+	connection: Omit<Connection, 'sendDiagnostics'> & {
+		sendDiagnostics: Mock<Connection['sendDiagnostics']>;
 	};
+};
+
+describe('Server documents syncing', () => {
+	const documents: Map<string, TextDocument> & {all?: typeof Map.prototype.values} = new Map([
+		['uri', TextDocument.create('uri', 'javascript', 1, 'content')],
+		['uri/node_modules', TextDocument.create('uri/node_modules', 'javascript', 1, 'content')],
+	]);
+	documents.all = documents.values;
+
+	// @ts-expect-error The test fixture intentionally replaces readonly server dependencies with mocks.
+	const server: DocumentSyncTestServer = new Server({isTest: true});
+	Object.defineProperties(server, {
+		documents: {value: documents},
+		log: {value: noop, writable: true},
+	});
 
 	/**
-	 * Creates a fresh server and context-owned mocks for one document-sync test.
-	 * Keeping the mocks on the test context ensures Node restores them only after
-	 * the test and its cleanup hook have completed.
+	 * Gives each test fresh context-owned mocks while reusing the suite's LSP
+	 * connection, which avoids accumulating stream listeners between tests.
 	 */
-	function setupTest(t: TestContext) {
-		const documents: Map<string, TextDocument> & {all?: typeof Map.prototype.values} = new Map([
-			['uri', TextDocument.create('uri', 'javascript', 1, 'content')],
-			['uri/node_modules', TextDocument.create('uri/node_modules', 'javascript', 1, 'content')],
-		]);
-		documents.all = documents.values;
-		// @ts-expect-error readonly headaches
-		Server.prototype.documents = documents;
-		// @ts-expect-error this is just too hard to type with mock and not worth it
-		server = new Server({isTest: true});
-		server.documents = documents;
+	beforeEach(context => {
+		const t = context as TestContext;
 		t.mock.method(server, 'log', noop);
 		t.mock.method(server, 'lintDocument', noop);
 		t.mock.method(server, 'getDocumentConfig', async () => ({enable: true}));
 		t.mock.method(server.connection, 'sendDiagnostics', noop);
-		t.after(async () => {
-			await server.handleShutdown();
-			// @ts-expect-error this helps cleanup and keep types clean
-			server = undefined;
-		});
-	}
+	});
+
+	/**
+	 * Shuts down the shared queue and connection after every test in this file
+	 * has completed so no LSP resources remain active after the suite exits.
+	 */
+	after(async () => {
+		await server.handleShutdown();
+		server.connection.dispose();
+	});
 
 	test('Server.handleDocumentsOnDidChangeContent is a function', (t: TestContext) => {
-		setupTest(t);
 		t.assert.strictEqual(typeof server.handleDocumentsOnDidChangeContent, 'function');
 	});
 
 	test('Server.handleDocumentsOnDidChangeContent calls lintDocument', async (t: TestContext) => {
-		setupTest(t);
 		server.handleDocumentsOnDidChangeContent({
 			document: TextDocument.create('uri', 'javascript', 1, 'content'),
 		});
@@ -72,7 +79,6 @@ describe('Server documents syncing', () => {
 	});
 
 	test('Server.handleDocumentsOnDidChangeContent does not lint document if version is mismatched', async (t: TestContext) => {
-		setupTest(t);
 		server.handleDocumentsOnDidChangeContent({
 			document: TextDocument.create('uri', 'javascript', 2, 'content'),
 		});
@@ -85,7 +91,6 @@ describe('Server documents syncing', () => {
 	});
 
 	test('Server.handleDocumentsOnDidChangeContent does not lint document if document is in node_modules and logs message', async (t: TestContext) => {
-		setupTest(t);
 		server.handleDocumentsOnDidChangeContent({
 			document: TextDocument.create('uri/node_modules', 'javascript', 1, 'content'),
 		});
@@ -100,7 +105,6 @@ describe('Server documents syncing', () => {
 	});
 
 	test('Server.handleDocumentsOnDidClose sends empty diagnostics for closed file', async (t: TestContext) => {
-		setupTest(t);
 		await server.handleDocumentsOnDidClose({
 			document: TextDocument.create('uri', 'javascript', 1, 'content'),
 		});
@@ -112,7 +116,6 @@ describe('Server documents syncing', () => {
 	});
 
 	test('Server.handleDocumentOnDidChangeContent does not send diagnostics if xo is disabled', async (t: TestContext) => {
-		setupTest(t);
 		t.mock.method(server, 'getDocumentConfig', async () => ({enable: false}));
 		server.handleDocumentsOnDidChangeContent({
 			document: TextDocument.create('uri', 'javascript', 1, 'content'),
