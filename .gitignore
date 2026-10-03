@@ -3,6 +3,7 @@ dist
 *.vsix
 
 coverage
+.test-workspace-*
 .history
 
 .DS_Store
