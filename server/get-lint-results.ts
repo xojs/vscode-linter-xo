@@ -4,6 +4,12 @@ import type {TextDocument} from 'vscode-languageserver-textdocument';
 import type LintServer from './server.ts';
 import type {XoResult, LintTextOptions} from './types.ts';
 
+/**
+ * Resolves the project and editor options needed to lint one document, then
+ * delegates to the workspace's XO installation. Some older XO releases depend
+ * on the process working directory, so it is changed only for the lint call and
+ * is always restored when configuration loading or linting fails.
+ */
 async function getLintResults(
 	this: LintServer,
 	document: TextDocument,
@@ -55,13 +61,13 @@ async function getLintResults(
 
 	process.chdir(lintTextOptions.cwd);
 
-	const report = await xo.lintText(contents, lintTextOptions);
-
-	if (cwd !== process.cwd()) {
-		process.chdir(cwd);
+	try {
+		return await xo.lintText(contents, lintTextOptions);
+	} finally {
+		if (cwd !== process.cwd()) {
+			process.chdir(cwd);
+		}
 	}
-
-	return report;
 }
 
 export default getLintResults;

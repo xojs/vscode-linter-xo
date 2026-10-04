@@ -14,10 +14,11 @@ import type LintServer from './server.ts';
  * to the current working directory if it is not
  */
 async function resolveXo(this: LintServer, document: TextDocument): Promise<Xo> {
-	const [{uri: folderUri = ''} = {}, {path: customPath = ''}] = await Promise.all([
+	const [{uri: folderUri = ''} = {}, config] = await Promise.all([
 		this.getDocumentFolder(document),
 		this.getDocumentConfig(document),
 	]);
+	const customPath = config.path ?? '';
 
 	const xoCacheKey = path.dirname(document.uri);
 

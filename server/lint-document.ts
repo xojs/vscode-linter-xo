@@ -5,9 +5,11 @@ import * as utils from './utils.ts';
 import type LintServer from './server.ts';
 
 /**
- * lintDocument
- *
- * first lints and sends diagnostics for a single file
+ * Lints one current document and replaces its diagnostics and cached code
+ * actions as one logical operation. Caches are invalidated before XO runs so a
+ * failed configuration reload cannot leave fixes from the previous rule set;
+ * failures also clear diagnostics rather than presenting stale results as if
+ * they came from the new configuration.
  */
 export async function lintDocument(this: LintServer, document: TextDocument): Promise<void> {
 	try {
@@ -19,22 +21,33 @@ export async function lintDocument(this: LintServer, document: TextDocument): Pr
 
 		const {overrideSeverity, enable} = await this.getDocumentConfig(document);
 
+		// Clean previously computed code actions before loading the potentially changed config.
+		this.documentFixCache.delete(document.uri);
+		this.documentSuggestionsCache.delete(document.uri);
+
 		if (!enable) {
+			await this.connection.sendDiagnostics({
+				uri: document.uri,
+				version: document.version,
+				diagnostics: [],
+			});
 			return;
 		}
 
 		const {results, rulesMeta} = await this.getLintResults(document);
+		const messages = results[0]?.messages;
 
-		// Clean previously computed code actions.
-		this.documentFixCache.delete(document.uri);
-		this.documentSuggestionsCache.delete(document.uri);
-
-		if (results.length === 0 || results[0]?.messages === undefined) {
+		if (messages === undefined) {
+			await this.connection.sendDiagnostics({
+				uri: document.uri,
+				version: document.version,
+				diagnostics: [],
+			});
 			return;
 		}
 
 		// eslint-disable-next-line complexity
-		const diagnostics = results[0].messages.map(problem => {
+		const diagnostics = messages.map(problem => {
 			const diagnostic = utils.makeDiagnostic(problem);
 
 			if (overrideSeverity !== undefined) {
@@ -114,12 +127,20 @@ export async function lintDocument(this: LintServer, document: TextDocument): Pr
 			diagnostics,
 		});
 	} catch (error: unknown) {
+		this.documentFixCache.delete(document.uri);
+		this.documentSuggestionsCache.delete(document.uri);
+		await this.connection.sendDiagnostics({
+			uri: document.uri,
+			version: document.version,
+			diagnostics: [],
+		});
+
 		if (error instanceof Error) {
 			if (error.message?.includes('Failed to resolve module')) {
 				error.message += '. Ensure that xo has been installed.';
 			}
 
-			this.connection.window.showErrorMessage(error?.message ?? 'Unknown Error');
+			this.connection.window.showErrorMessage(error.message);
 			this.logError(error);
 		}
 	}

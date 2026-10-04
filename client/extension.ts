@@ -22,6 +22,13 @@ let languageClient: LanguageClient;
 
 const queue = new Queue({autostart: true, concurrency: 1});
 
+/**
+ * Activates the extension, creates its single language client, and wires VS Code
+ * events to that client. Configuration-file events are deliberately coalesced
+ * here because editors commonly emit several filesystem events for one save,
+ * while the language client's stop/start lifecycle only supports one transition
+ * at a time.
+ */
 export async function activate(context: ExtensionContext) {
 	const logger = window.createOutputChannel('xo', {log: true});
 	xoRootCache.logger = logger;
@@ -32,7 +39,7 @@ export async function activate(context: ExtensionContext) {
 	const runtime = xoConfig.get<string>('runtime');
 	const hasValidXoRoot = await xoRootCache.get(window.activeTextEditor?.document.uri.fsPath);
 
-	const serverModule = context.asAbsolutePath('dist/server.ts');
+	const serverModule = context.asAbsolutePath('dist/server.js');
 
 	const serverOptions: ServerOptions = {
 		run: {
@@ -64,17 +71,50 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	languageClient = new LanguageClient('xo', serverOptions, clientOptions);
+	const {default: pDebounce} = await import('p-debounce');
 
-	const restart = async () => {
-		try {
-			logger.info('[client] Restarting client');
-			await languageClient.restart();
-			logger.info('[client] Restarting client success');
-		} catch (error) {
-			languageClient.error('[client] Restarting client failed', error, 'force');
-			throw error;
-		}
+	/**
+	 * Starts an inactive client or replaces its running server process. The
+	 * promise-level debounce prevents overlapping lifecycle transitions, and the
+	 * timed debounce folds the create/change/delete events from one atomic save
+	 * into a single operation.
+	 */
+	const restart = pDebounce(
+		pDebounce.promise(async () => {
+			try {
+				if (!languageClient.isRunning()) {
+					logger.info('[client] Starting client');
+					await languageClient.start();
+					logger.info('[client] Starting client success');
+					return;
+				}
+
+				logger.info('[client] Restarting client');
+				await languageClient.restart();
+				logger.info('[client] Restarting client success');
+			} catch (error) {
+				languageClient.error('[client] Restarting client failed', error, 'force');
+				throw error;
+			}
+		}),
+		200,
+	);
+
+	/**
+	 * Requests the shared restart from filesystem event callbacks without leaking
+	 * a rejected promise into VS Code's event dispatcher. The restart operation
+	 * already records the underlying failure in the language client output.
+	 */
+	const restartAfterConfigChange = () => {
+		void restart().catch(() => undefined);
 	};
+
+	const configWatchers = [
+		workspace.createFileSystemWatcher('**/.eslintignore'),
+		workspace.createFileSystemWatcher('**/.xo-confi{g.cjs,g.json,g.js,g}'),
+		workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g.mjs,g.ts,g.cts,g.mts}'),
+		workspace.createFileSystemWatcher('**/package.json'),
+	];
 
 	/**
 	 * Update status bar on activation, and dispose of the status bar when the extension is deactivated
@@ -90,14 +130,12 @@ export async function activate(context: ExtensionContext) {
 			logger.show();
 		}),
 		commands.registerCommand('xo.restart', restart),
-		...[
-			// we relint all open textDocuments whenever a config changes
-			// that may possibly affect the options xo should be using
-			workspace.createFileSystemWatcher('**/.eslintignore'),
-			workspace.createFileSystemWatcher('**/.xo-confi{g.cjs,g.json,g.js,g}'),
-			workspace.createFileSystemWatcher('**/xo.confi{g.cjs,g.js,g.ts,g.cts,g.mts}'),
-			workspace.createFileSystemWatcher('**/package.json'),
-		].map(watcher => watcher.onDidChange(restart)),
+		...configWatchers,
+		...configWatchers.flatMap(watcher => [
+			watcher.onDidCreate(restartAfterConfigChange),
+			watcher.onDidChange(restartAfterConfigChange),
+			watcher.onDidDelete(restartAfterConfigChange),
+		]),
 		/**
 		 * react to config changes - if the `xo.validate` setting changes, we need to restart the client
 		 */
@@ -173,7 +211,7 @@ export async function activate(context: ExtensionContext) {
 							&& (await xoRootCache.get(textDocument.uri.fsPath))
 						) {
 							logger.debug('[client] Starting Language Client');
-							await languageClient.start();
+							await restart();
 						}
 					} catch (error) {
 						if (error instanceof Error) {

@@ -113,4 +113,37 @@ describe('Server lint flow', () => {
 			diagnostics: [],
 		});
 	});
+
+	/**
+	 * Documents the process-level ESM cache that currently requires the extension
+	 * to replace its server after a JavaScript XO config changes. This assertion
+	 * should be inverted when linting moves behind a replaceable worker or XO
+	 * exposes reliable configuration invalidation.
+	 */
+	test('documents stale ESM configuration in a reused XO process', async (t: TestContext) => {
+		const workspacePath = await mkdtemp(path.join(process.cwd(), '.test-config-cache-'));
+		const configPath = path.join(workspacePath, 'xo.config.mjs');
+		const filePath = path.join(workspacePath, 'example.js');
+		const code = 'console.log(\'test\');\n';
+		const {default: xo} = await import('xo');
+
+		t.after(async () => {
+			await rm(workspacePath, {recursive: true, force: true});
+		});
+
+		await Promise.all([
+			writeFile(path.join(workspacePath, 'package.json'), JSON.stringify({type: 'module'})),
+			writeFile(configPath, 'export default [{rules: {\'no-console\': \'off\'}}];\n'),
+			writeFile(filePath, code),
+		]);
+
+		const options = {cwd: workspacePath, filePath, warnIgnored: false};
+		const first = await xo.lintText(code, options);
+
+		await writeFile(configPath, 'export default [{rules: {\'no-console\': \'error\'}}];\n');
+		const second = await xo.lintText(code, options);
+
+		t.assert.ok(first.results[0]?.messages.every(message => message.ruleId !== 'no-console'));
+		t.assert.ok(second.results[0]?.messages.every(message => message.ruleId !== 'no-console'));
+	});
 });

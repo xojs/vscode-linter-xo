@@ -240,11 +240,15 @@ class LintServer {
 	}
 
 	/**
-	 * Handle connection.onDidChangeConfiguration
+	 * Invalidates editor settings and resolved XO modules before relinting every
+	 * open document. In particular, `xo.path` can select a different module, so
+	 * retaining the old module cache across a settings notification is unsafe.
 	 */
-	async handleDidChangeConfiguration(parameters: ChangeConfigurationParameters) {
-		// recache each folder config
+	async handleDidChangeConfiguration(_parameters: ChangeConfigurationParameters) {
 		this.configurationCache.clear();
+		this.xoCache.clear();
+		this.documentFixCache.clear();
+		this.documentSuggestionsCache.clear();
 		return this.lintDocuments(this.documents.all());
 	}
 
@@ -494,22 +498,14 @@ class LintServer {
 	}
 
 	/**
-	 * handle shutdown request according to LSP spec
-	 * https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown
+	 * Acknowledges the LSP shutdown request without waiting for queued lint work.
+	 * The language client allows only two seconds for shutdown, while a valid XO
+	 * lint can take longer; queued diagnostics are disposable because the client
+	 * clears them and reopens documents after the replacement server starts.
 	 */
 	async handleShutdown() {
-		this.log('XO Server recieved shut down request');
+		this.log('XO Server received shutdown request');
 		this.hasReceivedShutdownRequest = true;
-
-		if (this.queue.length > 0) {
-			await new Promise(resolve => {
-				this.queue.on('end', () => {
-					this.queue.stop();
-					resolve(undefined);
-				});
-			});
-		}
-
 		this.queue.end();
 	}
 

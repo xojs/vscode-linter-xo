@@ -34,6 +34,13 @@ export function parseSeverity(severity: number): node.DiagnosticSeverity {
 	}
 }
 
+/**
+ * Converts XO's ESLint-style diagnostic into the zero-based coordinates used
+ * by LSP. Although ESLint normally reports one-based locations, synthetic
+ * messages and some plugins report zero for a line or column; clamping those
+ * values prevents one malformed location from invalidating the entire batch in
+ * VS Code's language client.
+ */
 export function makeDiagnostic(problem: Linter.LintMessage): node.Diagnostic {
 	const message =
 		problem.ruleId === null ? problem.message : `${problem.message} (${problem.ruleId})`;
@@ -43,10 +50,13 @@ export function makeDiagnostic(problem: Linter.LintMessage): node.Diagnostic {
 		code: problem.ruleId ?? '',
 		source: 'XO',
 		range: {
-			start: {line: problem.line - 1, character: problem.column - 1},
+			start: {
+				line: Math.max(0, problem.line - 1),
+				character: Math.max(0, problem.column - 1),
+			},
 			end: {
-				line: (problem.endLine ?? problem.line) - 1,
-				character: (problem.endColumn ?? problem.column) - 1,
+				line: Math.max(0, (problem.endLine ?? problem.line) - 1),
+				character: Math.max(0, (problem.endColumn ?? problem.column) - 1),
 			},
 		},
 	};
