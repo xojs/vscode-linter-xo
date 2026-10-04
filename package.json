@@ -14,12 +14,10 @@
 		"vscode": ">=1.97.0"
 	},
 	"scripts": {
-		"build": "npm run clean && npm run build:client -- --minify && npm run build:server -- --minify",
-		"build:client": "esbuild ./client/extension.ts --bundle --outfile=dist/client.js --external:vscode --format=cjs --platform=node",
-		"build:dev": "npm run clean && npm run build:client -- --sourcemap && npm run build:server -- --sourcemap",
-		"build:server": "esbuild ./server/index.ts --bundle --outfile=dist/server.js --external:vscode --format=cjs --platform=node",
+		"build": "npm run clean && esbuild client=./client/extension.ts server=./server/index.ts --bundle --outdir=dist --external:vscode --format=cjs --platform=node --sourcemap",
+		"build:dev": "npm run build",
 		"check": "tsc --project ./tsconfig.json",
-		"clean": "rimraf dist & rimraf server/dist & rimraf client/dist",
+		"clean": "rimraf dist",
 		"lint": "xo",
 		"package": "rimraf *.vsix && vsce package",
 		"prepare": "husky",

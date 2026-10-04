@@ -46,14 +46,17 @@ export async function activate(context: ExtensionContext) {
 			module: serverModule,
 			runtime,
 			transport: TransportKind.ipc,
-			options: {cwd: process.cwd()},
+			options: {
+				execArgv: ['--enable-source-maps'],
+				cwd: process.cwd(),
+			},
 		},
 		debug: {
 			module: serverModule,
 			runtime,
 			transport: TransportKind.ipc,
 			options: {
-				execArgv: ['--nolazy', '--inspect=6004'],
+				execArgv: ['--enable-source-maps', '--nolazy', '--inspect=6004'],
 				cwd: process.cwd(),
 			},
 		},
