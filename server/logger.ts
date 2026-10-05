@@ -1,28 +1,38 @@
+import {inspect} from 'node:util';
+import {formatErrorChain, toError} from './errors.ts';
 import type LintServer from './server.ts';
 
 /**
- * log a message to the client console
- * in a console.log type of way - primarily used
- * for development and debugging
+ * Writes server diagnostics through the LSP console without trusting values to
+ * be JSON-serializable. Logging is a recovery path used while connections are
+ * closing and plugins are failing, so neither formatting nor transport errors
+ * are allowed to escape into the operation being diagnosed.
  */
 export function log(this: LintServer, ...messages: unknown[]): void {
-	this.connection.console.log(
-		// eslint-disable-next-line unicorn/no-array-reduce
-		messages.reduce((acc: string, message: unknown) => {
-			if (message instanceof Map) {
-				message = `Map(${JSON.stringify([...message], null, 2)})`;
+	try {
+		const output = messages.map(message => {
+			if (typeof message === 'string') {
+				return message;
 			}
 
-			if (typeof message === 'object') {
-				message = JSON.stringify(message, null, 2);
+			try {
+				return inspect(message, {depth: 5});
+			} catch {
+				return '[Uninspectable value]';
 			}
+		}).join(' ');
 
-			return acc.concat(`${message as string} `);
-		}, '[server] '),
-	);
+		this.connection.console.log(`[server] ${output}`);
+	} catch {}
 }
 
-export function logError(this: LintServer, error: Error): void {
-	this.log(error?.message ?? 'Unknown Error');
-	this.log(error?.stack);
+/**
+ * Records an unknown thrown value with optional operation context and its full
+ * cycle-safe cause chain. Normalization is centralized here so every caller can
+ * accept JavaScript's unrestricted thrown values without losing diagnostics.
+ */
+export function logError(this: LintServer, error: unknown, context?: string): void {
+	try {
+		this.log([context, formatErrorChain(toError(error))].filter(Boolean).join('\n'));
+	} catch {}
 }

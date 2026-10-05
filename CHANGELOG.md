@@ -1,3 +1,9 @@
+### Unreleased
+
+- Deduplicate XO failure notifications while preserving complete nested error details in the output channel.
+- Ensure lint cleanup, formatting, code-action, and fix-all failures always settle safely.
+- Prevent fix-all from applying edits after the document version changes.
+
 ### v3.22.0
 
 - support eslint suggestions as quick fixes

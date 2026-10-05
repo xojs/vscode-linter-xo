@@ -129,40 +129,38 @@ export async function lintDocument(this: LintServer, document: TextDocument): Pr
 	} catch (error: unknown) {
 		this.documentFixCache.delete(document.uri);
 		this.documentSuggestionsCache.delete(document.uri);
-		await this.connection.sendDiagnostics({
-			uri: document.uri,
-			version: document.version,
-			diagnostics: [],
-		});
 
-		if (error instanceof Error) {
-			if (error.message?.includes('Failed to resolve module')) {
-				error.message += '. Ensure that xo has been installed.';
+		try {
+			await this.connection.sendDiagnostics({
+				uri: document.uri,
+				version: document.version,
+				diagnostics: [],
+			});
+		} catch (cleanupError: unknown) {
+			if (!this.hasReceivedShutdownRequest) {
+				this.logError(cleanupError, `Failed to clear diagnostics for ${document.uri}`);
 			}
-
-			this.connection.window.showErrorMessage(error.message);
-			this.logError(error);
 		}
+
+		this.reportError(error, `XO lint failed for ${document.uri}`, document.uri);
 	}
 }
 
 /**
- * helper to lint and sends diagnostics for multiple files
+ * Enqueues a snapshot of open documents for serial linting after configuration
+ * changes. Version checks discard stale snapshots, and lintDocument contains
+ * recoverable failures so each returned queue promise completes normally.
  */
 export async function lintDocuments(this: LintServer, documents: TextDocument[]): Promise<void> {
 	for (const document of documents) {
-		const queuedLintDocument = async () => {
+		// The queue runtime awaits returned promises, although its legacy typings only declare void workers.
+		// eslint-disable-next-line @typescript-eslint/strict-void-return
+		this.queue.push(async () => {
 			if (document.version !== this.documents.get(document.uri)?.version) {
 				return;
 			}
 
 			await this.lintDocument(document);
-		};
-
-		this.queue.push(done => {
-			void queuedLintDocument().finally(() => {
-				done?.();
-			});
 		});
 	}
 }

@@ -146,4 +146,74 @@ describe('Server lint flow', () => {
 		t.assert.ok(first.results[0]?.messages.every(message => message.ruleId !== 'no-console'));
 		t.assert.ok(second.results[0]?.messages.every(message => message.ruleId !== 'no-console'));
 	});
+
+	/**
+	 * Uses XO's real configuration loader to protect the cause-chain behavior that
+	 * motivated the error boundary. One broken workspace is linted through two
+	 * documents to verify stale diagnostics are cleared independently while the
+	 * project-wide notification remains deduplicated.
+	 */
+	test('reports one notification with the underlying invalid-config cause', async (t: TestContext) => {
+		const originalWorkingDirectory = process.cwd();
+		const workspacePath = await mkdtemp(path.join(originalWorkingDirectory, '.test-invalid-config-'));
+		const xoPath = path.join(originalWorkingDirectory, 'node_modules/xo/dist/index.js');
+		const documents = ['first.js', 'second.js'].map((filename, index) => {
+			const filePath = path.join(workspacePath, filename);
+			return TextDocument.create(URI.file(filePath).toString(), 'javascript', index + 1, 'const x = 1;\n');
+		});
+
+		await Promise.all([
+			writeFile(
+				path.join(workspacePath, 'package.json'),
+				JSON.stringify({type: 'module', devDependencies: {xo: '*'}}),
+			),
+			writeFile(
+				path.join(workspacePath, 'xo.config.js'),
+				// The fixture source itself contains a single-quoted module specifier.
+				// eslint-disable-next-line @stylistic/quotes
+				"import 'definitely-not-installed-for-xo-test';\nexport default [];\n",
+			),
+			...documents.map(async document => {
+				await writeFile(URI.parse(document.uri).fsPath, document.getText());
+			}),
+		]);
+
+		const documentMap = new Map(documents.map(document => [document.uri, document]));
+		const server = new Server({isTest: true});
+		Object.defineProperty(server, 'documents', {value: documentMap});
+		for (const document of documents) {
+			server.configurationCache.set(document.uri, {enable: true, path: xoPath});
+		}
+
+		const logs: string[] = [];
+		let notificationCount = 0;
+		t.mock.method(server, 'log', (...messages: unknown[]) => {
+			logs.push(JSON.stringify(messages));
+		});
+		t.mock.method(server.connection.window, 'showErrorMessage', () => {
+			notificationCount++;
+		});
+		const sendDiagnostics = t.mock.method(server.connection, 'sendDiagnostics', noop);
+
+		t.after(async () => {
+			process.chdir(originalWorkingDirectory);
+			await server.handleShutdown();
+			server.connection.dispose();
+			await rm(workspacePath, {recursive: true, force: true});
+		});
+
+		for (const document of documents) {
+			// Sequential execution mirrors the server queue and keeps process.cwd changes isolated.
+			// eslint-disable-next-line no-await-in-loop
+			await server.lintDocument(document);
+		}
+
+		t.assert.strictEqual(sendDiagnostics.mock.callCount(), 2);
+		t.assert.ok(sendDiagnostics.mock.calls.every(call => call.arguments[0]?.diagnostics.length === 0));
+		t.assert.strictEqual(notificationCount, 1);
+		t.assert.match(
+			logs.join('\n'),
+			/Cannot find (?:module|package) 'definitely-not-installed-for-xo-test'/v,
+		);
+	});
 });

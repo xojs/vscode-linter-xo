@@ -26,8 +26,7 @@ async function getLintResults(
 	// has likely opened a JS file from another location
 	// so we will just bail out of linting early
 	if (folderUri === '') {
-		const error = new Error('No valid xo folder could be found for this file. Skipping linting.');
-		this.logError(error);
+		this.log('No valid XO folder was found for this file; skipping linting.');
 		return {
 			cwd: folderUri,
 			results: [],

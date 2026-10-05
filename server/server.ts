@@ -9,6 +9,7 @@ import {
 	TextDocumentSyncKind,
 	ResponseError,
 	LSPErrorCodes,
+	ErrorCodes,
 	CodeActionKind,
 	type TextEdit,
 	type Connection,
@@ -31,6 +32,12 @@ import getDocumentFolder from './get-document-folder.ts';
 import getLintResults from './get-lint-results.ts';
 import {lintDocument, lintDocuments} from './lint-document.ts';
 import {log, logError} from './logger.ts';
+import {
+	getErrorFingerprint,
+	getXoErrorSummary,
+	isExpectedLspError,
+	toError,
+} from './errors.ts';
 import resolveXo from './resolve-xo.ts';
 import type {
 	XoConfig,
@@ -78,14 +85,20 @@ class LintServer {
 	*/
 	documentSuggestionsCache: Map<string, Map<string, Linter.LintSuggestion[]>>;
 	/**
-	* Only show resolution errors one time per session
-	*/
-	hasShownResolutionError: boolean;
+	 * Fingerprints already shown during this server session. Project-wide XO
+	 * failures omit document identity so relinting several files stays quiet.
+	 */
+	shownErrorNotifications: Set<string>;
 	/**
 	* flag which helps gracefully stopping and shutting down
 	*/
 	hasReceivedShutdownRequest?: boolean;
 
+	/**
+	 * Creates the LSP connection, serial work queue, caches, and bound handlers
+	 * used for one server process. Tests request stream-based transport but retain
+	 * the same error and queue behavior as the production IPC connection.
+	 */
 	constructor({isTest}: {isTest?: boolean} = {}) {
 		/**
 		 * Bind all imported methods
@@ -189,7 +202,7 @@ class LintServer {
 		/**
 		* Internal state
 		*/
-		this.hasShownResolutionError = false;
+		this.shownErrorNotifications = new Set();
 	}
 
 	/**
@@ -241,75 +254,117 @@ class LintServer {
 
 	/**
 	 * Invalidates editor settings and resolved XO modules before relinting every
-	 * open document. In particular, `xo.path` can select a different module, so
-	 * retaining the old module cache across a settings notification is unsafe.
+	 * open document. Notification fingerprints are also reset because an
+	 * in-process settings change may have corrected, then reintroduced, a failure.
 	 */
 	async handleDidChangeConfiguration(_parameters: ChangeConfigurationParameters) {
 		this.configurationCache.clear();
 		this.xoCache.clear();
 		this.documentFixCache.clear();
 		this.documentSuggestionsCache.clear();
+		this.shownErrorNotifications.clear();
 		return this.lintDocuments(this.documents.all());
 	}
 
 	/**
-	 * Handle custom all fixes request
+	 * Logs complete failure details and, for background work, emits at most one
+	 * concise notification for the same workspace error. Expected LSP races are
+	 * protocol control flow and bypass reporting. Explicit requests can leave the
+	 * user-facing message to their protocol/client boundary, avoiding two popups.
+	 */
+	reportError(
+		errorValue: unknown,
+		context: string,
+		documentUri?: string,
+		shouldNotify = true,
+	): Error {
+		const error = toError(errorValue);
+		if (isExpectedLspError(error)) {
+			return error;
+		}
+
+		this.logError(error, context);
+		if (!shouldNotify || this.hasReceivedShutdownRequest) {
+			return error;
+		}
+
+		const workspace = documentUri === undefined
+			? undefined
+			: this.foldersCache.get(path.dirname(documentUri))?.uri;
+		const fingerprint = getErrorFingerprint('xo', workspace, error);
+		if (this.shownErrorNotifications.has(fingerprint)) {
+			return error;
+		}
+
+		this.shownErrorNotifications.add(fingerprint);
+		try {
+			this.connection.window.showErrorMessage(getXoErrorSummary(error));
+		} catch {}
+
+		return error;
+	}
+
+	/**
+	 * Serializes the custom fix-all calculation with lint work and guarantees the
+	 * request settles for every JavaScript thrown value. The formatting helper
+	 * always returns a DocumentFix, including its intentional empty result.
 	 */
 	async handleAllFixesRequest(parameters: {
 		textDocument: TextDocumentIdentifier;
-	}): Promise<DocumentFix | void> {
+	}): Promise<DocumentFix> {
 		return new Promise((resolve, reject) => {
-			this.queue.push(done => {
-				void (async () => {
-					try {
-						const documentFix = await this.getDocumentFormatting(parameters.textDocument.uri);
-
-						if (documentFix === undefined) {
-							resolve();
-							return;
-						}
-
-						resolve(documentFix);
-					} catch (error: unknown) {
-						if (error instanceof Error) {
-							reject(error);
-						}
-					}
-				})().finally(() => {
-					done?.();
-				});
+			// The queue runtime awaits returned promises, although its legacy typings only declare void workers.
+			// eslint-disable-next-line @typescript-eslint/strict-void-return
+			this.queue.push(async () => {
+				try {
+					resolve(await this.getDocumentFormatting(parameters.textDocument.uri));
+				} catch (error: unknown) {
+					this.reportError(
+						error,
+						`XO fix-all failed for ${parameters.textDocument.uri}`,
+						parameters.textDocument.uri,
+						false,
+					);
+					reject(new ResponseError(
+						ErrorCodes.InternalError,
+						'XO could not calculate fixes. See the XO output for details.',
+					));
+				}
 			});
 		});
 	}
 
 	/**
-	 * Handle LSP document formatting request
+	 * Serializes formatting with lint work, returning ordinary empty edits for a
+	 * document that closed before execution. Typed cancellation and content races
+	 * pass through without alarming logs; actual XO failures are logged in full
+	 * and reduced to a stable protocol message for the client.
 	 */
 	async handleDocumentFormattingRequest(
 		parameters: DocumentFormattingParams | DocumentRangeFormattingParams,
 		token: CancellationToken,
 	): Promise<TextEdit[]> {
 		return new Promise((resolve, reject) => {
-			const documentFormattingRequestHandler = async () => {
+			// The queue runtime awaits returned promises, although its legacy typings only declare void workers.
+			// eslint-disable-next-line @typescript-eslint/strict-void-return
+			this.queue.push(async () => {
 				try {
 					if (!this.isDocumentOpen(parameters.textDocument)) {
+						resolve([]);
 						return;
 					}
 
 					if (token.isCancellationRequested) {
-						reject(new ResponseError(LSPErrorCodes.RequestCancelled, 'Request was cancelled'));
-						return;
+						throw new ResponseError(LSPErrorCodes.RequestCancelled, 'Request was cancelled');
 					}
 
 					const cachedTextDocument = this.documents.get(parameters.textDocument.uri);
-
 					if (cachedTextDocument === undefined) {
 						resolve([]);
 						return;
 					}
 
 					const config = await this.getDocumentConfig(parameters.textDocument);
-
 					if (config === undefined || !config?.format?.enable || !config.enable) {
 						resolve([]);
 						return;
@@ -329,82 +384,75 @@ class LintServer {
 
 					resolve(edits);
 				} catch (error: unknown) {
-					if (error instanceof Error) {
-						this.logError(error);
-						reject(error);
+					const normalized = toError(error);
+					if (isExpectedLspError(normalized)) {
+						reject(normalized);
+						return;
 					}
-				}
-			};
 
-			this.queue.push(done => {
-				void documentFormattingRequestHandler().finally(() => {
-					done?.();
-				});
+					this.reportError(
+						normalized,
+						`XO formatting failed for ${parameters.textDocument.uri}`,
+						parameters.textDocument.uri,
+						false,
+					);
+					reject(new ResponseError(
+						ErrorCodes.InternalError,
+						'XO could not format this document. See the XO output for details.',
+					));
+				}
 			});
 		});
 	}
 
 	/**
-	 * handleCodeActionRequest
-	 *
-	 * Handle LSP code action requests
-	 * that happen at the time of an error/warning hover
-	 * or code action menu request
+	 * Calculates background code actions without allowing XO failures to become
+	 * repetitive VS Code request popups. Closed documents and calculation errors
+	 * produce no actions, while cancellation remains a typed protocol response.
+	 * Every path settles before the serial queue advances.
 	 */
 	async handleCodeActionRequest(
 		parameters: CodeActionParams,
 		token?: CancellationToken,
 	): Promise<CodeAction[] | undefined> {
 		return new Promise<CodeAction[] | undefined>((resolve, reject) => {
-			const codeActionRequestHandler = async () => {
+			// The queue runtime awaits returned promises, although its legacy typings only declare void workers.
+			// eslint-disable-next-line @typescript-eslint/strict-void-return
+			this.queue.push(async () => {
 				try {
 					const {context} = parameters;
-					if (context.diagnostics.length === 0) {
-						resolve(undefined);
-						return;
-					}
-
-					if (parameters.textDocument.uri === '') {
+					if (context.diagnostics.length === 0 || parameters.textDocument.uri === '') {
 						resolve(undefined);
 						return;
 					}
 
 					if (token?.isCancellationRequested) {
-						reject(new ResponseError(LSPErrorCodes.RequestCancelled, 'Request got cancelled'));
-						return;
+						throw new ResponseError(LSPErrorCodes.RequestCancelled, 'Request got cancelled');
 					}
 
 					const document = this.documents.get(parameters.textDocument.uri);
-
 					if (!document) {
 						resolve(undefined);
 						return;
 					}
 
 					const config = await this.getDocumentConfig(document);
-
 					if (!config?.enable) {
 						resolve(undefined);
 						return;
 					}
 
 					const codeActions: CodeAction[] = [];
-
 					const isFixAll = context.only?.includes(CodeActionKind.SourceFixAll);
 					const isFixAllXo = context.only?.includes(`${CodeActionKind.SourceFixAll}.xo`);
 					// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 					if (isFixAll || isFixAllXo) {
 						const fixes = await this.getDocumentFormatting(parameters.textDocument.uri);
-						const codeAction: CodeAction = {
+						codeActions.push({
 							title: 'Fix all XO auto-fixable problems',
 							kind: isFixAllXo ? `${CodeActionKind.SourceFixAll}.xo` : CodeActionKind.SourceFixAll,
-							edit: {
-								changes: {
-									[document.uri]: fixes.edits,
-								},
-							},
-						};
-						codeActions.push(codeAction);
+							edit: {changes: {[document.uri]: fixes.edits}},
+						});
 					}
 
 					if (context.only === undefined || context.only.includes(CodeActionKind.QuickFix)) {
@@ -419,28 +467,35 @@ class LintServer {
 
 					resolve(codeActions);
 				} catch (error: unknown) {
-					if (error instanceof Error) {
-						this.logError(error);
-						reject(error);
+					const normalized = toError(error);
+					if (isExpectedLspError(normalized)) {
+						reject(normalized);
+						return;
 					}
-				}
-			};
 
-			this.queue.push(done => {
-				void codeActionRequestHandler().finally(() => {
-					done?.();
-				});
+					this.reportError(
+						normalized,
+						`XO code-action calculation failed for ${parameters.textDocument.uri}`,
+						parameters.textDocument.uri,
+					);
+					resolve([]);
+				}
 			});
 		});
 	}
 
 	/**
-	 * Handle documents.onDidChangeContent
-	 * queues document content linting
+	 * Queues current document changes for linting after the configured debounce.
+	 * The queue observes the returned promise directly, while this boundary
+	 * contains setup failures so an unusual thrown value cannot emit an unhandled
+	 * rejection or stop later document work.
+	 *
 	 * @param event - The document change event whose current contents should be linted.
 	 */
 	handleDocumentsOnDidChangeContent(event: TextDocumentChangeEvent<TextDocument>) {
-		const onDidChangeContentHandler = async () => {
+		// The queue runtime awaits returned promises, although its legacy typings only declare void workers.
+		// eslint-disable-next-line @typescript-eslint/strict-void-return
+		this.queue.push(async () => {
 			try {
 				if (event.document.version !== this.documents.get(event.document.uri)?.version) {
 					return;
@@ -453,20 +508,15 @@ class LintServer {
 
 				const config = await this.getDocumentConfig(event.document);
 				const {default: debounce} = await import('p-debounce');
-
 				const debouncedFunc = debounce(this.lintDocument, config.debounce ?? 0).bind(this);
 				await debouncedFunc(event.document);
 			} catch (error: unknown) {
-				if (error instanceof Error) {
-					this.logError(error);
-				}
+				this.reportError(
+					error,
+					`XO document-change handling failed for ${event.document.uri}`,
+					event.document.uri,
+				);
 			}
-		};
-
-		this.queue.push(done => {
-			void onDidChangeContentHandler().finally(() => {
-				done?.();
-			});
 		});
 	}
 
