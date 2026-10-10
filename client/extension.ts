@@ -13,7 +13,6 @@ import {
 	type ServerOptions,
 } from 'vscode-languageclient/node';
 import Queue from 'queue';
-import pkg from '../package.json';
 import {updateStatusBar} from './status-bar.ts';
 import {xoRootCache} from './cache.ts';
 import {fixAllProblems} from './fix-all-problems.ts';
@@ -34,7 +33,8 @@ export async function activate(context: ExtensionContext) {
 	const logger = window.createOutputChannel('xo', {log: true});
 	xoRootCache.logger = logger;
 
-	logger.info(`[client] Activating XO extension v${pkg.version}`);
+	const {version} = context.extension.packageJSON as {version: string};
+	logger.info(`[client] Activating XO extension v${version}`);
 
 	const xoConfig = workspace.getConfiguration('xo');
 	const runtime = xoConfig.get<string>('runtime');
