@@ -1,11 +1,15 @@
 import type {TextDocument, WorkspaceConfiguration} from 'vscode';
 import type {DocumentSelector} from 'vscode-languageclient/node';
 
-const defaultLanguages = [
+const legacyDefaultLanguages = new Set([
 	'javascript',
 	'javascriptreact',
 	'typescript',
 	'typescriptreact',
+]);
+
+const defaultLanguages = [
+	...legacyDefaultLanguages,
 	'vue',
 	'svelte',
 	'astro',
@@ -43,20 +47,30 @@ export function getDocumentSelector(xoConfig: WorkspaceConfiguration): DocumentS
 }
 
 /**
- * Reports whether a document is relevant to the configured validation scope.
- * A null setting selects candidates for the version-dependent defaults; the
- * server resolves XO and makes the final decision. Explicit arrays remain
- * authoritative, including arrays that happen to match a default language set.
+ * Reports whether the resolved XO installation will validate a document. Null
+ * selects version-dependent defaults, while explicit arrays remain authoritative
+ * even when they happen to match a default language set. Unknown and custom XO
+ * versions conservatively receive only the legacy defaults.
  */
 export function isValidatedDocument(
 	xoConfig: WorkspaceConfiguration,
 	textDocument: TextDocument,
+	xoVersion?: string,
 ): boolean {
 	// Null is the persisted sentinel for version-dependent defaults, not an absent JavaScript value.
 	// eslint-disable-next-line @typescript-eslint/no-restricted-types
 	const configuredLanguages = xoConfig.get<string[] | null>('validate', null);
 
-	return (configuredLanguages ?? defaultLanguages).includes(textDocument.languageId)
-		|| (configuredLanguages === null
-			&& /\.(?:vue|svelte|astro|html|md|json|jsonc|json5|css)$/iv.test(textDocument.uri.fsPath));
+	if (configuredLanguages !== null) {
+		return configuredLanguages.includes(textDocument.languageId);
+	}
+
+	if (legacyDefaultLanguages.has(textDocument.languageId)) {
+		return true;
+	}
+
+	const xoMajorVersion = Number(xoVersion?.split('.', 1)[0]);
+	return xoMajorVersion >= 5
+		&& (defaultLanguages.includes(textDocument.languageId)
+			|| /\.(?:vue|svelte|astro|html|md|json|jsonc|json5|css)$/iv.test(textDocument.uri.fsPath));
 }

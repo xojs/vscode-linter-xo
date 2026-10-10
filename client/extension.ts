@@ -102,12 +102,17 @@ export async function activate(context: ExtensionContext) {
 	);
 
 	/**
-	 * Requests the shared restart from filesystem event callbacks without leaking
-	 * a rejected promise into VS Code's event dispatcher. The restart operation
-	 * already records the underlying failure in the language client output.
+	 * Invalidates client-side XO metadata and requests the shared restart after a
+	 * watched package or configuration file changes. Once the replacement server
+	 * is ready, the active document is checked again so its status reflects a new
+	 * XO installation immediately rather than waiting for an editor switch.
 	 */
 	const restartAfterConfigChange = () => {
-		void restart().catch(() => undefined);
+		xoRootCache.clear();
+		void (async () => {
+			await restart();
+			await updateStatusBar(window.activeTextEditor?.document);
+		})().catch(() => undefined);
 	};
 
 	const configWatchers = [
@@ -147,6 +152,12 @@ export async function activate(context: ExtensionContext) {
 						logger.debug('[client] Configuration change detected');
 
 						const isValidateChanged = configChange.affectsConfiguration('xo.validate');
+						const isPathChanged = configChange.affectsConfiguration('xo.path');
+
+						if (isPathChanged) {
+							xoRootCache.clear();
+							await updateStatusBar(window.activeTextEditor?.document);
+						}
 
 						if (isValidateChanged) {
 							logger.info(
@@ -162,7 +173,7 @@ export async function activate(context: ExtensionContext) {
 
 							statusBar.text = '$(xo-logo)';
 
-							statusBar.hide();
+							await updateStatusBar(window.activeTextEditor?.document);
 							logger.info('[client] Restarted client with new xo.validate options.');
 						}
 					} catch (error) {

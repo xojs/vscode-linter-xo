@@ -14,10 +14,10 @@ statusBar.command = 'xo.showOutputChannel';
 statusBar.tooltip = 'Show XO output channel';
 
 /**
- * Updates the shared status item for the active document. Files added to XO 5's
- * defaults are considered relevant candidates here so users receive feedback
- * while the language server resolves the workspace's exact XO version and
- * decides whether to lint them.
+ * Updates the shared status item for the active document. Automatic validation
+ * uses the cached installed XO version so the icon appears only when the server
+ * will actually lint the active file; explicit validation lists are honored
+ * without applying a version restriction.
  */
 export async function updateStatusBar(textDocument?: TextDocument): Promise<StatusBarItem> {
 	try {
@@ -44,9 +44,14 @@ export async function updateStatusBar(textDocument?: TextDocument): Promise<Stat
 		}
 
 		const isXoOutputChannel = textDocument.uri.fsPath === 'samverschueren.linter-xo.xo';
-		const isRelevantLanguage = isValidatedDocument(xoConfig, textDocument);
 		const hasXoRoot = await xoRootCache.get(textDocument.uri.fsPath);
-
+		const xoVersion = hasXoRoot
+			? await xoRootCache.getVersion(
+				textDocument.uri.fsPath,
+				xoConfig.get<string>('path') ?? '',
+			)
+			: undefined;
+		const isRelevantLanguage = isValidatedDocument(xoConfig, textDocument, xoVersion);
 		const isRelevant = isXoOutputChannel || (isRelevantLanguage && hasXoRoot);
 
 		if (isRelevant) {

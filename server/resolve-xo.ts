@@ -1,11 +1,9 @@
 import path from 'node:path';
-import {Files} from 'vscode-languageserver/node';
-import {URI} from 'vscode-uri';
 import endent from 'endent';
-import loadJsonFile from 'load-json-file';
 import type {TextDocument} from 'vscode-languageserver-textdocument';
+import {resolveXoLocation} from '../shared/resolve-xo-location.ts';
 import type {ResolvedXo, Xo} from './types.ts';
-import {uriToPath, pathToUri} from './utils.ts';
+import {uriToPath} from './utils.ts';
 import type LintServer from './server.ts';
 
 /**
@@ -31,28 +29,11 @@ async function resolveXo(this: LintServer, document: TextDocument): Promise<Reso
 	}
 
 	const folderPath = uriToPath(folderUri);
-
-	let xoUri: string;
-
-	if (customPath === '') {
-		const xoFilePath = await Files.resolve('xo', undefined, folderPath, this.connection.tracer.log);
-		xoUri = URI.file(xoFilePath).toString();
-	} else if (customPath.startsWith('file://')) {
-		xoUri = customPath;
-	} else if (path.isAbsolute(customPath)) {
-		xoUri = pathToUri(customPath);
-	} else {
-		xoUri = pathToUri(path.join(folderPath, customPath));
-	}
-
-	const {findUp} = await import('find-up');
-	const packagePath = await findUp('package.json', {
-		cwd: path.dirname(uriToPath(xoUri)),
-	});
-	const packageInfo = packagePath === undefined
-		? {name: '', version: 'custom'}
-		: await loadJsonFile<{name?: string; version?: string}>(packagePath);
-	const version = packageInfo.name === 'xo' ? packageInfo.version ?? 'custom' : 'custom';
+	const {xoUri, version} = await resolveXoLocation(
+		folderPath,
+		customPath,
+		this.connection.tracer.log,
+	);
 	const {default: xo} = await import(xoUri) as {default: Xo};
 
 	if (typeof xo?.lintText !== 'function') {
