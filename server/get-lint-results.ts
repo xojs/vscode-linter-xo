@@ -4,6 +4,26 @@ import type {TextDocument} from 'vscode-languageserver-textdocument';
 import type LintServer from './server.ts';
 import type {XoResult, LintTextOptions} from './types.ts';
 
+const legacyDefaultLanguages = new Set([
+	'javascript',
+	'javascriptreact',
+	'typescript',
+	'typescriptreact',
+]);
+
+const defaultLanguages = new Set([
+	...legacyDefaultLanguages,
+	'vue',
+	'svelte',
+	'astro',
+	'html',
+	'markdown',
+	'json',
+	'jsonc',
+	'json5',
+	'css',
+]);
+
 /**
  * Resolves the project and editor options needed to lint one document, then
  * delegates to the workspace's XO installation. Some older XO releases depend
@@ -17,7 +37,13 @@ async function getLintResults(
 	shouldFix?: boolean,
 ): Promise<XoResult> {
 	// first we resolve all the configs we need
-	const [{uri: folderUri = ''} = {}, {options = {}}] = await Promise.all([
+	const [
+		{uri: folderUri = ''} = {},
+		{
+			options = {},
+			validate = null,
+		},
+	] = await Promise.all([
 		this.getDocumentFolder(document),
 		this.getDocumentConfig(document),
 	]);
@@ -39,7 +65,27 @@ async function getLintResults(
 		};
 	}
 
-	const xo = await this.resolveXo(document);
+	const {xo, version} = await this.resolveXo(document);
+	const isLegacyDefaultLanguage = legacyDefaultLanguages.has(document.languageId);
+	const isAdditionalDefaultDocument =
+		defaultLanguages.has(document.languageId)
+		|| /\.(?:vue|svelte|astro|html|md|json|jsonc|json5|css)$/iv.test(URI.parse(document.uri).fsPath);
+	const xoMajorVersion = Number(version.split('.', 1)[0]);
+	const shouldLint = validate === null
+		? isLegacyDefaultLanguage || (isAdditionalDefaultDocument && xoMajorVersion >= 5)
+		: validate.includes(document.languageId);
+
+	if (!shouldLint) {
+		return {
+			cwd: folderUri,
+			results: [],
+			warningCount: 0,
+			errorCount: 0,
+			fixableErrorCount: 0,
+			fixableWarningCount: 0,
+			rulesMeta: {},
+		};
+	}
 
 	const {fsPath: documentFsPath} = URI.parse(document.uri);
 	const {fsPath: folderFsPath} = URI.parse(folderUri);

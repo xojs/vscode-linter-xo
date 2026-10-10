@@ -22,13 +22,13 @@ $ yarn add -D xo
 
 The xo extension searches up when you open a file for a package.json with `xo` listed as a dependency.
 
-## Auto Format JS/TS Files XO
+## Auto-format with XO
 
-You can enable XO as a formatter for TypeScript and JavaScript.
+You can enable XO as a formatter for any file type supported by your installed XO version.
 
-In either your workspace or user settings add the following settings. Linter xo now supports `editor.formatOnSaveMode` set to `"modifications"` :tada:.
+In either your workspace or user settings, enable formatting and set XO as the default formatter for the VS Code language scopes you want to format. The extension supports `editor.formatOnSaveMode` set to `"modifications"`.
 
-> optionally turn on "editor.formatOnSave"
+For example:
 
 ```json
 {
@@ -36,15 +36,6 @@ In either your workspace or user settings add the following settings. Linter xo 
 	"xo.enable": true,
 	"xo.format.enable": true,
 	"[javascript]": {
-		"editor.defaultFormatter": "samverschueren.linter-xo"
-	},
-	"[javascriptreact]": {
-		"editor.defaultFormatter": "samverschueren.linter-xo"
-	},
-	"[typescript]": {
-		"editor.defaultFormatter": "samverschueren.linter-xo"
-	},
-	"[typescriptreact]": {
 		"editor.defaultFormatter": "samverschueren.linter-xo"
 	}
 }
@@ -85,7 +76,7 @@ Reloads XO server.
 | --------------------- | ------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `xo.enable`           | `boolean`                 | `true`                                                                                          | Turn the `xo` extension on and off in your workspace                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `xo.format.enable`    | `boolean`                 | `false`                                                                                         | Enable the `xo` extension to format documents. Requires `xo.enable` to be turned on.                                                                                                                                                                                                                                                                                                                                                                   |
-| `xo.validate`         | `string[]`                | "javascript", <br/> "javascriptreact", <br/> "typescript", <br/> "typescriptreact", <br/> "vue" | By default, the XO extension is configured to activate for Javascript, Javascript + React, Typescript, and Typescript + React. You may add more languages in the VS Code Settings.                                                                                                                                                                                                                                                                     |
+| `xo.validate`         | `string[] \| null`        | `null`                                                                                          | When `null`, the extension validates JavaScript and TypeScript with every XO version. With XO 5 or newer, it also validates XO's default Vue, Svelte, Astro, HTML, Markdown, JSON, JSONC, JSON5, and CSS file extensions. An explicit array for the `xo.validate` setting will override all defaults, no matter the XO version, and is not additive. |
 | `xo.options`          | `object`                  | `null`                                                                                          | Supply any [xo option](https://github.com/xojs/xo#config). The options set here will override any configurations found by `xo` in your local workspace                                                                                                                                                                                                                                                                                                 |
 | `xo.overrideSeverity` | `info\|warning\|error`    | `null`                                                                                          | XO extension will report all diagnostics in VSCode as the desired severity type. By default `xo` reports the severity type based on the linting rules set up in the local workspace                                                                                                                                                                                                                                                                    |
 | `xo.debounce`         | `number`                  | 0                                                                                               | You can adjust a debounce (in milliseconds) that helps optimize performance for large files. If you notice that lint results are jumping all over the place, or a long delay in fixing files, turn this up. The max is 350ms.                                                                                                                                                                                                                          |

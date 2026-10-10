@@ -28,6 +28,11 @@ export interface Xo {
 	lintText(text: string, options?: LintTextOptions): Promise<XoResult>;
 }
 
+export interface ResolvedXo {
+	xo: Xo;
+	version: string;
+}
+
 export interface FormatOption {
 	enable: boolean;
 }
@@ -39,7 +44,9 @@ export interface XoConfig {
 	debounce?: number;
 	path?: string;
 	runtime?: string;
-	validate?: string;
+	// Null explicitly requests defaults selected from the resolved XO version.
+	// eslint-disable-next-line @typescript-eslint/no-restricted-types
+	validate?: string[] | null;
 	statusBar?: string;
 	format?: FormatOption;
 }
