@@ -177,9 +177,18 @@
 						"javascript",
 						"javascriptreact",
 						"typescript",
-						"typescriptreact"
+						"typescriptreact",
+						"vue",
+						"svelte",
+						"astro",
+						"html",
+						"markdown",
+						"json",
+						"jsonc",
+						"json5",
+						"css"
 					],
-					"description": "An array of languages with which to activate the plugin. Defaults: [ \"javascript\", \"javascriptreact\", \"typescript\", \"typescriptreact\" ]"
+					"description": "An array of languages with which to activate the plugin. By default, XO 5 also validates its supported Vue, Svelte, Astro, HTML, Markdown, JSON, and CSS file extensions. Older XO versions default to JavaScript and TypeScript."
 				},
 				"xo.statusBar": {
 					"scope": "resource",

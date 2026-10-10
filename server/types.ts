@@ -28,6 +28,11 @@ export interface Xo {
 	lintText(text: string, options?: LintTextOptions): Promise<XoResult>;
 }
 
+export interface ResolvedXo {
+	xo: Xo;
+	version: string;
+}
+
 export interface FormatOption {
 	enable: boolean;
 }
@@ -39,7 +44,7 @@ export interface XoConfig {
 	debounce?: number;
 	path?: string;
 	runtime?: string;
-	validate?: string;
+	validate?: string[];
 	statusBar?: string;
 	format?: FormatOption;
 }

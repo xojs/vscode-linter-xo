@@ -17,6 +17,7 @@ import pkg from '../package.json';
 import {updateStatusBar} from './status-bar.ts';
 import {xoRootCache} from './cache.ts';
 import {fixAllProblems} from './fix-all-problems.ts';
+import {getDocumentSelector} from './language-validation.ts';
 
 let languageClient: LanguageClient;
 
@@ -63,10 +64,7 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	const clientOptions: LanguageClientOptions = {
-		documentSelector: xoConfig.get<string[]>('validate', []).flatMap(language => [
-			{language, scheme: 'file'},
-			{language, scheme: 'untitled'},
-		]),
+		documentSelector: getDocumentSelector(xoConfig),
 		outputChannel: logger,
 		synchronize: {
 			configurationSection: 'xo',
@@ -158,12 +156,7 @@ export async function activate(context: ExtensionContext) {
 							statusBar.text = '$(gear~spin)';
 							statusBar.show();
 
-							languageClient.clientOptions.documentSelector = xoConfig
-								.get<string[]>('validate', [])
-								.flatMap(language => [
-									{language, scheme: 'file'},
-									{language, scheme: 'untitled'},
-								]);
+							languageClient.clientOptions.documentSelector = getDocumentSelector(xoConfig);
 
 							await restart();
 

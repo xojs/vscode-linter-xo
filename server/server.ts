@@ -35,7 +35,7 @@ import resolveXo from './resolve-xo.ts';
 import type {
 	XoConfig,
 	DocumentFix,
-	Xo,
+	ResolvedXo,
 	XoFix,
 	Linter,
 } from './types.ts';
@@ -66,9 +66,9 @@ class LintServer {
 	*/
 	configurationCache: Map<string, XoConfig>;
 	/**
-	* A mapping of folderPaths to the resolved XO module
+	* A mapping of folderPaths to the resolved XO module and package version.
 	*/
-	xoCache: Map<string, Xo>;
+	xoCache: Map<string, ResolvedXo>;
 	/**
 	* A mapping of document uri strings to their last calculated fixes
 	*/

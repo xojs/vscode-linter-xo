@@ -5,6 +5,7 @@ import {
 	type TextDocument,
 } from 'vscode';
 import {xoRootCache} from './cache.ts';
+import {isValidatedDocument} from './language-validation.ts';
 
 const statusBar = window.createStatusBarItem('xoStatusBarItem', 2, 0);
 statusBar.name = 'xo';
@@ -12,6 +13,12 @@ statusBar.text = '$(xo-logo)';
 statusBar.command = 'xo.showOutputChannel';
 statusBar.tooltip = 'Show XO output channel';
 
+/**
+ * Updates the shared status item for the active document. Files added to XO 5's
+ * defaults are considered relevant candidates here so users receive feedback
+ * while the language server resolves the workspace's exact XO version and
+ * decides whether to lint them.
+ */
 export async function updateStatusBar(textDocument?: TextDocument): Promise<StatusBarItem> {
 	try {
 		const xoConfig = workspace.getConfiguration('xo', textDocument);
@@ -36,15 +43,8 @@ export async function updateStatusBar(textDocument?: TextDocument): Promise<Stat
 			return statusBar;
 		}
 
-		const languages = xoConfig.get<string[]>('validate', [
-			'javascript',
-			'javascriptreact',
-			'typescript',
-			'typescriptreact',
-			'vue',
-		]);
 		const isXoOutputChannel = textDocument.uri.fsPath === 'samverschueren.linter-xo.xo';
-		const isRelevantLanguage = languages.includes(textDocument.languageId);
+		const isRelevantLanguage = isValidatedDocument(xoConfig, textDocument);
 		const hasXoRoot = await xoRootCache.get(textDocument.uri.fsPath);
 
 		const isRelevant = isXoOutputChannel || (isRelevantLanguage && hasXoRoot);
