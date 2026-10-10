@@ -169,26 +169,15 @@
 				},
 				"xo.validate": {
 					"scope": "resource",
-					"type": "array",
+					"type": [
+						"array",
+						"null"
+					],
 					"items": {
 						"type": "string"
 					},
-					"default": [
-						"javascript",
-						"javascriptreact",
-						"typescript",
-						"typescriptreact",
-						"vue",
-						"svelte",
-						"astro",
-						"html",
-						"markdown",
-						"json",
-						"jsonc",
-						"json5",
-						"css"
-					],
-					"description": "An array of languages with which to activate the plugin. By default, XO 5 also validates its supported Vue, Svelte, Astro, HTML, Markdown, JSON, and CSS file extensions. Older XO versions default to JavaScript and TypeScript."
+					"default": null,
+					"description": "An array of languages with which to activate the plugin. The default null value selects defaults for the installed XO version: JavaScript and TypeScript for XO 4 and older, plus Vue, Svelte, Astro, HTML, Markdown, JSON, and CSS formats for XO 5 and newer. Explicit arrays are used as-is."
 				},
 				"xo.statusBar": {
 					"scope": "resource",

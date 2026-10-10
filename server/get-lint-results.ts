@@ -11,7 +11,7 @@ const legacyDefaultLanguages = new Set([
 	'typescriptreact',
 ]);
 
-const defaultLanguages = [
+const defaultLanguages = new Set([
 	...legacyDefaultLanguages,
 	'vue',
 	'svelte',
@@ -22,7 +22,7 @@ const defaultLanguages = [
 	'jsonc',
 	'json5',
 	'css',
-];
+]);
 
 /**
  * Resolves the project and editor options needed to lint one document, then
@@ -41,7 +41,7 @@ async function getLintResults(
 		{uri: folderUri = ''} = {},
 		{
 			options = {},
-			validate = defaultLanguages,
+			validate = null,
 		},
 	] = await Promise.all([
 		this.getDocumentFolder(document),
@@ -66,15 +66,12 @@ async function getLintResults(
 	}
 
 	const {xo, version} = await this.resolveXo(document);
-	const isUsingDefaultLanguages =
-		validate.length === defaultLanguages.length
-		&& defaultLanguages.every(language => validate.includes(language));
 	const isLegacyDefaultLanguage = legacyDefaultLanguages.has(document.languageId);
 	const isAdditionalDefaultDocument =
-		defaultLanguages.includes(document.languageId)
+		defaultLanguages.has(document.languageId)
 		|| /\.(?:vue|svelte|astro|html|md|json|jsonc|json5|css)$/iv.test(URI.parse(document.uri).fsPath);
 	const xoMajorVersion = Number(version.split('.', 1)[0]);
-	const shouldLint = isUsingDefaultLanguages
+	const shouldLint = validate === null
 		? isLegacyDefaultLanguage || (isAdditionalDefaultDocument && xoMajorVersion >= 5)
 		: validate.includes(document.languageId);
 

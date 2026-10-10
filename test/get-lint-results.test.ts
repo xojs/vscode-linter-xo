@@ -54,7 +54,9 @@ test('additional default file types require XO 5 unless explicitly validated', a
 	const documentPath = path.join(cwd, 'example.css');
 	const document = TextDocument.create(URI.file(documentPath).toString(), 'css', 1, 'a {}');
 	let version = '4.0.0';
-	let validate = defaultLanguages;
+	// Null exercises automatic defaults; arrays below verify that explicit settings remain authoritative.
+	// eslint-disable-next-line @typescript-eslint/no-restricted-types
+	let validate: string[] | null = null;
 	const lintText = t.mock.fn(async () => createEmptyReport(cwd));
 
 	t.mock.method(server, 'getDocumentFolder', async () => ({uri: URI.file(cwd).toString()}));
@@ -78,7 +80,11 @@ test('additional default file types require XO 5 unless explicitly validated', a
 	t.assert.strictEqual(lintText.mock.callCount(), 1);
 
 	version = '4.0.0';
-	validate = ['css'];
+	validate = defaultLanguages;
 	await server.getLintResults(document);
 	t.assert.strictEqual(lintText.mock.callCount(), 2);
+
+	validate = ['css'];
+	await server.getLintResults(document);
+	t.assert.strictEqual(lintText.mock.callCount(), 3);
 });
