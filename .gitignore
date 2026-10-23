@@ -7,3 +7,8 @@ coverage
 .history
 
 .DS_Store
+
+# Local Zed extension build artifacts
+zed/target
+zed/extension.wasm
+zed/.cargo/config.toml

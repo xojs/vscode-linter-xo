@@ -1,0 +1,16 @@
+id = "xo"
+name = "XO (local prototype)"
+version = "0.0.1"
+schema_version = 1
+authors = ["Spencer Snyder <sasnyde2@gmail.com>"]
+description = "Runs the XO language server from this checkout."
+repository = "https://github.com/xojs/vscode-linter-xo"
+
+[language_servers.xo]
+name = "XO"
+languages = ["JavaScript", "TypeScript", "TSX"]
+
+[language_servers.xo.language_ids]
+JavaScript = "javascript"
+TypeScript = "typescript"
+TSX = "typescriptreact"
