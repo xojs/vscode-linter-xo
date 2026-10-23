@@ -1,6 +1,10 @@
 import {type LanguageClient, type TextEdit, RequestType} from 'vscode-languageclient/node';
 import * as vscode from 'vscode';
-import type {DocumentFix} from '../server/types.ts';
+// The optional XO request is an extension to LSP, not a server implementation API.
+interface DocumentFix {
+	documentVersion?: string | number;
+	edits: TextEdit[];
+}
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const AllFixesRequest = {

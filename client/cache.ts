@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type {LogOutputChannel} from 'vscode';
-import {resolveXoLocation} from '../shared/resolve-xo-location.ts';
-import {findXoRoot} from '../server/utils.ts';
+import loadJsonFile from 'load-json-file';
+import {resolveXoLocation} from './resolve-xo-location.ts';
 
 interface XoRootCacheEntry {
 	folderPath?: string;
@@ -10,7 +10,7 @@ interface XoRootCacheEntry {
 
 /**
  * Caches the XO root and resolved versions associated with open documents. The
- * client uses the same package-resolution boundary as the server so UI state
+ * client mirrors the server package’s resolution behavior so UI state
  * reflects the XO installation that will actually lint each document.
  */
 export class XoRootCache {
@@ -31,7 +31,8 @@ export class XoRootCache {
 	/**
 	 * Reports whether a document belongs to a package that declares XO. Root
 	 * discovery is cached per document because active-editor and startup checks
-	 * commonly request the same path in quick succession.
+	 * commonly request the same path in quick succession. Packages without XO are
+	 * skipped so nested projects can inherit an installation from a parent.
 	 */
 	async get(uri?: string): Promise<boolean | undefined> {
 		try {
@@ -44,10 +45,34 @@ export class XoRootCache {
 				return cached.folderPath !== undefined;
 			}
 
-			const xoRoot = await findXoRoot(uri);
-			const folderPath = xoRoot.pkgPath === undefined
-				? undefined
-				: path.dirname(xoRoot.pkgPath);
+			const {findUpSync} = await import('find-up');
+			let searchDirectory = uri;
+			let folderPath: string | undefined;
+
+			while (true) {
+				const pkgPath = findUpSync('package.json', {cwd: searchDirectory});
+				if (pkgPath === undefined) {
+					break;
+				}
+
+				const pkgJson = loadJsonFile.sync<{
+					dependencies?: Record<string, string>;
+					devDependencies?: Record<string, string>;
+				}>(pkgPath);
+				const dependencies = {...pkgJson.dependencies, ...pkgJson.devDependencies};
+				if (dependencies.xo !== undefined && dependencies.xo !== '') {
+					folderPath = path.dirname(pkgPath);
+					break;
+				}
+
+				const parentDirectory = path.resolve(path.dirname(pkgPath), '..');
+				if (parentDirectory === path.dirname(pkgPath)) {
+					break;
+				}
+
+				searchDirectory = parentDirectory;
+			}
+
 			this.cache.set(uri, {folderPath, versions: new Map()});
 
 			return folderPath !== undefined;

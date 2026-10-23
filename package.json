@@ -10,16 +10,16 @@
 	"type": "commonjs",
 	"main": "./dist/client.js",
 	"engines": {
-		"node": ">=22",
+		"node": ">=24",
 		"vscode": ">=1.140.0"
 	},
 	"scripts": {
-		"build": "npm run clean && esbuild client=./client/extension.ts server=./server/index.ts --bundle --outdir=dist --external:vscode --format=cjs --platform=node --sourcemap",
+		"build": "npm run clean && esbuild client=./client/extension.ts server=./client/start-server.mts --bundle --outdir=dist --external:vscode --format=cjs --platform=node --sourcemap",
 		"build:dev": "npm run build",
 		"check": "tsc --project ./tsconfig.json",
 		"clean": "rimraf dist",
 		"lint": "xo",
-		"package": "rimraf *.vsix && vsce package",
+		"package": "rimraf *.vsix && vsce package --no-dependencies",
 		"prepare": "husky",
 		"test": "node --import tsx --test \"test/**/*.test.ts\"",
 		"test:coverage": "c8 node --import tsx --test \"test/**/*.test.ts\"",
@@ -43,17 +43,14 @@
 		"lsp"
 	],
 	"dependencies": {
-		"auto-bind": "^4.0.0",
-		"endent": "^2.1.0",
-		"eslint-rule-docs": "^1.1.235",
 		"find-up": "^8.0.0",
 		"load-json-file": "^6.2.0",
 		"p-debounce": "^5.1.1",
 		"queue": "^6.0.2",
 		"vscode-languageclient": "^10.1.2",
 		"vscode-languageserver": "^10.1.2",
-		"vscode-languageserver-textdocument": "^1.0.15",
-		"vscode-uri": "^3.2.0"
+		"vscode-uri": "^3.2.0",
+		"xo-language-server": "file:../xo-language-server"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^21.2.3",

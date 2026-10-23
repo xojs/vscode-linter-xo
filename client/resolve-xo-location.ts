@@ -10,8 +10,8 @@ export interface ResolvedXoLocation {
 
 /**
  * Resolves the XO entry point and package version without loading the module.
- * Both the extension host and language server use this boundary so status-bar
- * relevance and actual lint routing agree for normal, relative, absolute, and
+ * The extension mirrors the server package’s resolution so status-bar relevance
+ * and actual lint routing agree for normal, relative, absolute, and
  * file-URI `xo.path` values. A custom entry point without a neighboring XO
  * package manifest receives an unknown version and therefore cannot opt into
  * version-dependent defaults.

@@ -24,7 +24,9 @@ const queue = new Queue({autostart: true, concurrency: 1});
 
 /**
  * Activates the extension, creates its single language client, and wires VS Code
- * events to that client. Configuration-file events are deliberately coalesced
+ * events to that client. The bundled launcher starts the external server package
+ * over Node IPC rather than relying on a server implementation in this repository.
+ * Configuration-file events are deliberately coalesced
  * here because editors commonly emit several filesystem events for one save,
  * while the language client's stop/start lifecycle only supports one transition
  * at a time.
