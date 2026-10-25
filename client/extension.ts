@@ -16,7 +16,7 @@ import {
 import Queue from 'queue';
 import {
 	updateStatusBar,
-	languageStatus,
+	statusItems,
 	updateServerStatus,
 	resetServerStatus,
 	updateRestartStatus,
@@ -177,9 +177,9 @@ export async function activate(context: ExtensionContext) {
 	];
 
 	/**
-	 * Update status bar on activation, and dispose of the status bar when the extension is deactivated
+	 * Update both status surfaces on activation; their shared lifetime is registered below.
 	 */
-	const statusBar = await updateStatusBar(window.activeTextEditor?.document);
+	await updateStatusBar(window.activeTextEditor?.document);
 
 	context.subscriptions.push(
 		/**
@@ -297,10 +297,9 @@ export async function activate(context: ExtensionContext) {
 			});
 		}),
 		/**
-		 * Dispose of the status bar when the extension is deactivated
+		 * Dispose of both status items and cancel pending highlight timers on deactivation
 		 */
-		statusBar,
-		languageStatus,
+		statusItems,
 	);
 
 	if (hasValidXoRoot) {

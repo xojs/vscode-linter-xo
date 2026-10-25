@@ -16,7 +16,7 @@ statusBar.command = 'xo.showOutputChannel';
 
 // An empty selector keeps the menu entry hidden until active-file relevance is
 // known. It is independent of xo.statusBar, which controls only the standalone icon.
-export const languageStatus = languages.createLanguageStatusItem('xoLanguageStatus', []);
+const languageStatus = languages.createLanguageStatusItem('xoLanguageStatus', []);
 languageStatus.name = 'XO';
 languageStatus.text = 'XO';
 languageStatus.command = {command: 'xo.showOutputChannel', title: 'Open XO logs'};
@@ -32,6 +32,22 @@ const failures = new Map<string, Map<string, string>>();
 let isRestarting = false;
 let restartFailure: string | undefined;
 let updateRevision = 0;
+let highlightedFailure = '';
+let isErrorHighlighted = false;
+let errorFlashTimer: ReturnType<typeof setTimeout> | undefined;
+
+export const statusItems = {
+	/**
+	 * Disposes both UI surfaces and cancels any pending flash timeout. Keeping
+	 * their lifetimes together prevents a timer from refreshing disposed items
+	 * after extension shutdown.
+	 */
+	dispose() {
+		clearTimeout(errorFlashTimer);
+		statusBar.dispose();
+		languageStatus.dispose();
+	},
+};
 
 /**
  * Retains failures independently by project and operation, then refreshes the
@@ -85,8 +101,10 @@ export function updateRestartStatus(isInProgress: boolean, error?: unknown): voi
  *
  * Each refresh invalidates older asynchronous checks and immediately removes the
  * previous document's menu entry. Its selector is restored only after the current
- * document is known to be relevant. Errors tint the standalone logo using the
- * theme's error foreground, while the menu uses VS Code's native severity/busy UI.
+ * document is known to be relevant. A newly displayed error briefly highlights
+ * the icon's background using VS Code's theme-aware error color. The timeout
+ * refreshes through this renderer rather than changing appearance itself; the
+ * tooltip and native menu retain the error after the highlight expires.
  */
 export async function updateStatusBar(textDocument?: TextDocument): Promise<StatusBarItem> {
 	const revision = ++updateRevision;
@@ -99,7 +117,29 @@ export async function updateStatusBar(textDocument?: TextDocument): Promise<Stat
 	const failure = restartFailure ?? messages.join('\n');
 	const hasFailure = failure !== '';
 	statusBar.text = isRestarting ? '$(gear~spin)' : '$(xo-logo)';
-	statusBar.color = hasFailure && !isRestarting ? new ThemeColor('errorForeground') : undefined;
+	// Refreshes of the same visible failure must not restart the flash. Hiding
+	// the icon, restarting, or recovering cancels it; a newly visible failure
+	// gets one short highlight rather than a persistent or repeating animation.
+	const visibleFailure = option === 'Never' || isRestarting ? '' : failure;
+	if (visibleFailure !== highlightedFailure) {
+		highlightedFailure = visibleFailure;
+		clearTimeout(errorFlashTimer);
+		errorFlashTimer = undefined;
+		isErrorHighlighted = visibleFailure !== '';
+		if (isErrorHighlighted) {
+			/**
+			 * Ends only the visual highlight, not the stored failure. Rendering the
+			 * latest active editor also keeps timeout expiry safe across switches.
+			 */
+			errorFlashTimer = setTimeout(() => {
+				isErrorHighlighted = false;
+				errorFlashTimer = undefined;
+				void updateStatusBar(window.activeTextEditor?.document);
+			}, 2000);
+		}
+	}
+
+	statusBar.backgroundColor = isErrorHighlighted ? new ThemeColor('statusBarItem.errorBackground') : undefined;
 	statusBar.tooltip = isRestarting
 		? 'XO is restarting'
 		: (hasFailure ? `${failure}\nClick to open XO logs` : 'Show XO output channel');
