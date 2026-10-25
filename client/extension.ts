@@ -8,12 +8,19 @@ import {
 } from 'vscode';
 import {
 	LanguageClient,
+	State,
 	TransportKind,
 	type LanguageClientOptions,
 	type ServerOptions,
 } from 'vscode-languageclient/node';
 import Queue from 'queue';
-import {updateStatusBar} from './status-bar.ts';
+import {
+	updateStatusBar,
+	languageStatus,
+	updateServerStatus,
+	resetServerStatus,
+	updateRestartStatus,
+} from './status-bar.ts';
 import {xoRootCache} from './cache.ts';
 import {fixAllProblems} from './fix-all-problems.ts';
 import {getDocumentSelector} from './language-validation.ts';
@@ -74,6 +81,46 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	languageClient = new LanguageClient('xo', serverOptions, clientOptions);
+	languageClient.registerFeature({
+		/**
+		 * Advertises the optional UI without requiring server support. Older
+		 * servers ignore this experimental capability and still supply logs.
+		 */
+		fillClientCapabilities(capabilities) {
+			const experimental = capabilities.experimental as Record<string, unknown> | undefined;
+			capabilities.experimental = {...experimental, xo: {status: true}};
+		},
+		/**
+		 * The notification listener is registered before start, so this feature
+		 * has no initialization-time subscriptions to install.
+		 */
+		initialize() {
+			// The pre-start notification subscription survives server replacement.
+		},
+		/**
+		 * Status support is permanent for this client rather than a dynamic
+		 * registration negotiated separately for each document.
+		 */
+		getState() {
+			return {kind: 'static'};
+		},
+		/**
+		 * Server reports cannot survive a disconnect or replacement. Keeping
+		 * this reset in the lifecycle feature also covers automatic restarts.
+		 */
+		clear() {
+			resetServerStatus();
+		},
+	});
+	context.subscriptions.push(
+		languageClient,
+		languageClient.onNotification('xo/status', updateServerStatus),
+		languageClient.onDidChangeState(({newState}) => {
+			if (newState === State.Starting) {
+				resetServerStatus();
+			}
+		}),
+	);
 	const {default: pDebounce} = await import('p-debounce');
 
 	/**
@@ -84,18 +131,23 @@ export async function activate(context: ExtensionContext) {
 	 */
 	const restart = pDebounce(
 		pDebounce.promise(async () => {
+			resetServerStatus();
+			updateRestartStatus(true);
 			try {
 				if (!languageClient.isRunning()) {
 					logger.info('[client] Starting client');
 					await languageClient.start();
 					logger.info('[client] Starting client success');
+					updateRestartStatus(false);
 					return;
 				}
 
 				logger.info('[client] Restarting client');
 				await languageClient.restart();
 				logger.info('[client] Restarting client success');
+				updateRestartStatus(false);
 			} catch (error) {
+				updateRestartStatus(false, error);
 				languageClient.error('[client] Restarting client failed', error, 'force');
 				throw error;
 			}
@@ -161,19 +213,21 @@ export async function activate(context: ExtensionContext) {
 							await updateStatusBar(window.activeTextEditor?.document);
 						}
 
+						if (
+							configChange.affectsConfiguration('xo.statusBar')
+							|| configChange.affectsConfiguration('xo.enable')
+						) {
+							await updateStatusBar(window.activeTextEditor?.document);
+						}
+
 						if (isValidateChanged) {
 							logger.info(
 								'[client] xo.validate change detected, restarting client with new options.',
 							);
 
-							statusBar.text = '$(gear~spin)';
-							statusBar.show();
-
 							languageClient.clientOptions.documentSelector = getDocumentSelector(xoConfig);
 
 							await restart();
-
-							statusBar.text = '$(xo-logo)';
 
 							await updateStatusBar(window.activeTextEditor?.document);
 							logger.info('[client] Restarted client with new xo.validate options.');
@@ -195,6 +249,7 @@ export async function activate(context: ExtensionContext) {
 		 * server for the first time if xo wasn't originally in the workspace
 		 */
 		window.onDidChangeActiveTextEditor(textEditor => {
+			void updateStatusBar(textEditor?.document);
 			queue.push(done => {
 				void (async () => {
 					try {
@@ -211,8 +266,6 @@ export async function activate(context: ExtensionContext) {
 							return;
 						}
 
-						await updateStatusBar(textDocument);
-
 						if (
 							isEnabled
 							&& textDocument
@@ -224,7 +277,6 @@ export async function activate(context: ExtensionContext) {
 						}
 					} catch (error) {
 						if (error instanceof Error) {
-							statusBar.text = '$(xo-logo)';
 							logger.error('[client] There was a problem handling the active text editor change.');
 							logger.error(error);
 						}
@@ -248,12 +300,12 @@ export async function activate(context: ExtensionContext) {
 		 * Dispose of the status bar when the extension is deactivated
 		 */
 		statusBar,
+		languageStatus,
 	);
 
 	if (hasValidXoRoot) {
 		logger.info('[client] XO is enabled and is needed for linting file, server is now starting.');
-		await languageClient.start();
-		context.subscriptions.push(languageClient);
+		await restart();
 		return;
 	}
 
@@ -262,6 +314,10 @@ export async function activate(context: ExtensionContext) {
 	}
 }
 
+/**
+ * Stops the language client during extension shutdown so its server process and
+ * transport do not outlive the extension host's subscriptions.
+ */
 export async function deactivate() {
 	await languageClient?.stop();
 }
