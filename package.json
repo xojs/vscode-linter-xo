@@ -1,6 +1,6 @@
 {
 	"name": "linter-xo",
-	"version": "4.0.1",
+	"version": "4.1.0",
 	"description": "Linter for XO",
 	"license": "MIT",
 	"repository": "github:xojs/vscode-linter-xo",
