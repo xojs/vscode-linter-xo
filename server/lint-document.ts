@@ -140,7 +140,6 @@ export async function lintDocument(this: LintServer, document: TextDocument): Pr
 				error.message += '. Ensure that xo has been installed.';
 			}
 
-			this.connection.window.showErrorMessage(error.message);
 			this.logError(error);
 		}
 	}

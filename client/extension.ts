@@ -75,14 +75,26 @@ export async function activate(context: ExtensionContext) {
 	const {default: pDebounce} = await import('p-debounce');
 
 	/**
-	 * Starts an inactive client or replaces its running server process. The
-	 * promise-level debounce prevents overlapping lifecycle transitions, and the
+	 * Starts or restarts only when an open file still belongs to a package that
+	 * declares XO. Rechecking here also covers manual restarts and removed dependencies.
+	 * The promise-level debounce prevents overlapping lifecycle transitions, and the
 	 * timed debounce folds the create/change/delete events from one atomic save
 	 * into a single operation.
 	 */
 	const restart = pDebounce(
 		pDebounce.promise(async () => {
 			try {
+				xoRootCache.clear();
+				const xoRoots = await Promise.all(
+					workspace.textDocuments
+						.filter(document => document.uri.scheme === 'file')
+						.map(async document => xoRootCache.get(document.uri.fsPath)),
+				);
+				if (!xoRoots.some(Boolean)) {
+					logger.debug('[client] Skipping restart: no open file belongs to a package declaring XO.');
+					return;
+				}
+
 				if (!languageClient.isRunning()) {
 					logger.info('[client] Starting client');
 					await languageClient.start();
@@ -94,7 +106,7 @@ export async function activate(context: ExtensionContext) {
 				await languageClient.restart();
 				logger.info('[client] Restarting client success');
 			} catch (error) {
-				languageClient.error('[client] Restarting client failed', error, 'force');
+				languageClient.error('[client] Restarting client failed', error, false);
 				throw error;
 			}
 		}),
@@ -102,15 +114,17 @@ export async function activate(context: ExtensionContext) {
 	);
 
 	/**
-	 * Invalidates client-side XO metadata and requests the shared restart after a
-	 * watched package or configuration file changes. Once the replacement server
-	 * is ready, the active document is checked again so its status reflects a new
-	 * XO installation immediately rather than waiting for an editor switch.
+	 * Invalidates XO metadata after package or configuration changes. Only an
+	 * already-running client needs a restart; unrelated file changes must not
+	 * start XO in projects that do not use it.
 	 */
 	const restartAfterConfigChange = () => {
 		xoRootCache.clear();
 		void (async () => {
-			await restart();
+			if (languageClient.isRunning()) {
+				await restart();
+			}
+
 			await updateStatusBar(window.activeTextEditor?.document);
 		})().catch(() => undefined);
 	};
@@ -143,7 +157,8 @@ export async function activate(context: ExtensionContext) {
 			watcher.onDidDelete(restartAfterConfigChange),
 		]),
 		/**
-		 * react to config changes - if the `xo.validate` setting changes, we need to restart the client
+		 * Keep the selector current for the next start, but only restart a running
+		 * client so changing validation settings cannot activate XO by itself.
 		 */
 		workspace.onDidChangeConfiguration((configChange: ConfigurationChangeEvent) => {
 			queue.push(done => {
@@ -160,21 +175,22 @@ export async function activate(context: ExtensionContext) {
 						}
 
 						if (isValidateChanged) {
-							logger.info(
-								'[client] xo.validate change detected, restarting client with new options.',
-							);
-
-							statusBar.text = '$(gear~spin)';
-							statusBar.show();
-
 							languageClient.clientOptions.documentSelector = getDocumentSelector(xoConfig);
 
-							await restart();
+							if (languageClient.isRunning()) {
+								logger.info(
+									'[client] xo.validate change detected, restarting client with new options.',
+								);
+								statusBar.text = '$(gear~spin)';
+								statusBar.show();
 
-							statusBar.text = '$(xo-logo)';
+								await restart();
+
+								statusBar.text = '$(xo-logo)';
+								logger.info('[client] Restarted client with new xo.validate options.');
+							}
 
 							await updateStatusBar(window.activeTextEditor?.document);
-							logger.info('[client] Restarted client with new xo.validate options.');
 						}
 					} catch (error) {
 						if (error instanceof Error) {
